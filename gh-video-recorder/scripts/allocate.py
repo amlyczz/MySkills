@@ -18,6 +18,24 @@ import argparse
 import html as html_module
 import random
 
+# ── Read proxy config ──────────────────────────────────────────────
+def read_proxy_config():
+    """Read proxy.json from project root, return (server_url, None) or (None, None)."""
+    project_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    proxy_path = os.path.join(project_dir, 'proxy.json')
+    try:
+        if os.path.exists(proxy_path):
+            cfg = json.load(open(proxy_path))
+            if cfg.get('enabled'):
+                host = cfg.get('host', cfg.get('platform') == 'wsl' and 'host.docker.internal' or '127.0.0.1')
+                port = cfg.get('port', 7890)
+                return f'http://{host}:{port}'
+    except Exception:
+        pass
+    return None
+
+PROXY_SERVER = read_proxy_config()
+
 # Ensure we can import from the templates package (one level up)
 _this_dir = os.path.dirname(os.path.abspath(__file__))
 _parent_dir = os.path.dirname(_this_dir)
@@ -117,6 +135,11 @@ def generate_simple_info(repo_url):
 
 ANIMATION_CSS = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+body, .card, .container { font-family: 'Inter', 'Noto Sans SC', -apple-system, 'Segoe UI', Roboto, sans-serif !important; }
+.title, .card .title, h1, h2, h3 { font-family: 'Inter', 'Noto Sans SC', sans-serif !important; font-weight: 700 !important; }
+.tagline, .card .tagline, .points li, .points, p, span, div { font-family: 'Inter', 'Noto Sans SC', sans-serif !important; }
+.url, .card .url, .stats, .card .stats, .summary, .card .summary { font-family: 'Inter', 'Noto Sans SC', sans-serif !important; }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(40px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -175,14 +198,18 @@ const fs = require('fs');
     const outDir = process.argv[3];          // frames output dir
     const totalFrames = parseInt(process.argv[4], 10);
     const fps = parseInt(process.argv[5], 10);
+    const proxyServer = process.argv[6] || '';  // proxy URL
     const intervalMs = Math.floor(1000 / fps);
 
-    const browser = await chromium.launch({ headless: true });
+    const launchOpts = { headless: true };
+    if (proxyServer) launchOpts.proxy = { server: proxyServer };
+    const browser = await chromium.launch(launchOpts);
     const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 
     // Load HTML and wait for it to fully render
-    await page.goto('file://' + htmlPath, { waitUntil: 'networkidle', timeout: 15000 });
-    // Wait for CSS animations to start rendering (~500ms after page paint)
+    await page.goto('file://' + htmlPath, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    // Wait for CSS animations and fonts to load
+    await page.waitForTimeout(2000);
     await page.waitForTimeout(500);
 
     // Take screenshots at regular intervals
@@ -211,7 +238,7 @@ const fs = require('fs');
         env['NODE_PATH'] = node_modules
 
         result = subprocess.run(
-            ['node', script_path, tmp_html, work_dir, str(total_frames), str(fps)],
+            ['node', script_path, tmp_html, work_dir, str(total_frames), str(fps), PROXY_SERVER or ''],
             capture_output=True, text=True, timeout=120, env=env
         )
         if result.returncode != 0:
@@ -269,14 +296,14 @@ def generate_intro_outro(output_dir, content_dir, repo_url):
     intro_duration = 10
     intro_mp4 = os.path.join(output_dir, 'intro.mp4')
     if html_to_video(intro_html, intro_mp4, intro_duration):
-        print(f"Generated intro.mp4 (5s, animated)")
+        print(f"Generated intro.mp4 ({intro_duration}s, animated)")
     else:
         subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=1920x1080:d=5',
+            'ffmpeg', '-y', '-f', 'lavfi', '-i', f'color=c=black:s=1920x1080:d={intro_duration}',
             '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
             intro_mp4
         ], check=True, capture_output=True)
-        print(f"Generated intro.mp4 (5s, black fallback)")
+        print(f"Generated intro.mp4 ({intro_duration}s, black fallback)")
 
     # Build enriched outro summary
     outro_parts = []
@@ -296,16 +323,17 @@ def generate_intro_outro(output_dir, content_dir, repo_url):
     outro_html = outro_html.replace('{stats}', html_module.escape(info.get('stats', '')))
     outro_html = outro_html.replace('{summary}', html_module.escape(outro_summary))
 
+    outro_duration = 10
     outro_mp4 = os.path.join(output_dir, 'outro.mp4')
-    if html_to_video(outro_html, outro_mp4, 10):
-        print(f"Generated outro.mp4 (5s, animated)")
+    if html_to_video(outro_html, outro_mp4, outro_duration):
+        print(f"Generated outro.mp4 ({outro_duration}s, animated)")
     else:
         subprocess.run([
-            'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=1920x1080:d=5',
+            'ffmpeg', '-y', '-f', 'lavfi', '-i', f'color=c=black:s=1920x1080:d={outro_duration}',
             '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
             outro_mp4
         ], check=True, capture_output=True)
-        print(f"Generated outro.mp4 (5s, black fallback)")
+        print(f"Generated outro.mp4 ({outro_duration}s, black fallback)")
 
 
 def image_to_video_clip(image_path, mp4_path, duration):

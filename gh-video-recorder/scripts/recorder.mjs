@@ -2,12 +2,13 @@ import { chromium } from 'playwright';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 // ── Dependency check ──────────────────────────────────────────────
 try {
   execSync('which ffmpeg ffprobe', { stdio: 'pipe' });
 } catch {
-  console.error('ERROR: ffmpeg and ffprobe are required. Install via: brew install ffmpeg');
+  console.error('ERROR: ffmpeg and ffprobe are required.');
   process.exit(1);
 }
 
@@ -28,13 +29,16 @@ function repoNameFromUrl(url) {
   return parsed.pathname.replace(/\//g, '_').replace(/^_/, '');
 }
 
+// ── Path resolution ───────────────────────────────────────────────
+const __filename = fileURLToPath(import.meta.url);
+const SCRIPT_DIR = path.dirname(__filename);
+const PROJECT_DIR = path.dirname(SCRIPT_DIR); // gh-video-recorder/
+
 // ── Environment variables ─────────────────────────────────────────
 const REPO_URL = process.env.REPO_URL;
 if (!REPO_URL) { console.error('ERROR: REPO_URL is required'); process.exit(1); }
 
 const URLS_RAW = process.env.URLS || '';
-const SCRIPT_DIR = path.dirname(path.resolve(process.argv[1]));
-const PROJECT_DIR = path.dirname(SCRIPT_DIR); // gh-video-recorder/
 const PROXY_CONFIG_PATH = path.join(PROJECT_DIR, 'proxy.json');
 
 // Read proxy config
@@ -43,11 +47,13 @@ try {
   if (fs.existsSync(PROXY_CONFIG_PATH)) {
     PROXY_CONFIG = JSON.parse(fs.readFileSync(PROXY_CONFIG_PATH, 'utf8'));
   }
-} catch {}
+} catch (e) {
+  console.warn(`Warning: Failed to read proxy.json: ${e.message}`);
+}
 if (PROXY_CONFIG && PROXY_CONFIG.enabled) {
-  const host = PROXY_CONFIG.platform === 'wsl' ? 'host.docker.internal' : '127.0.0.1';
+  const host = PROXY_CONFIG.host || (PROXY_CONFIG.platform === 'wsl' ? 'host.docker.internal' : '127.0.0.1');
   const proxyUrl = `http://${host}:${PROXY_CONFIG.port}`;
-  console.log(`Proxy: ${proxyUrl} (${PROXY_CONFIG.platform}, port ${PROXY_CONFIG.port})`);
+  console.log(`Proxy: ${proxyUrl}`);
 }
 
 const DEFAULT_OUTPUT_DIR = path.join(
@@ -59,7 +65,7 @@ const OUTPUT_DIR = process.env.OUTPUT_DIR || DEFAULT_OUTPUT_DIR;
 const TOTAL_DURATION = parseInt(process.env.TOTAL_DURATION || '180', 10);
 const MATERIALS_DIR = path.join(OUTPUT_DIR, 'materials');
 
-// URL blacklist for image filtering
+// URL blacklist for image filtering (checked against both src and data-canonical-src)
 const URL_BLACKLIST = [
   'shields.io',
   'gravatar.com',
@@ -71,18 +77,22 @@ const URL_BLACKLIST = [
   'sentry.io',
   'star-history',
   'starchart',
+  'api.star-history.com',
 ];
 
 // ── Helper: dynamic scroll duration ──────────────────────────────
 function computeScrollDuration(totalHeight, totalDurationSec) {
-  const maxScrollTime = Math.min(totalDurationSec * 0.75 * 1000, 240000);
-  const heightBasedTime = totalHeight * 20;
-  return Math.max(15000, Math.min(heightBasedTime, maxScrollTime));
+  // Target ~350px/s average speed (natural browsing pace)
+  // Cap at 50% of total video duration to leave room for intro/outro/images
+  const speedBasedTime = (totalHeight / 350) * 1000;
+  const maxScrollTime = totalDurationSec * 0.50 * 1000;
+  return Math.max(10000, Math.min(speedBasedTime, maxScrollTime));
 }
 
-// ── Helper: scroll using page.mouse.wheel() with variable speed ──
-// Uses a human-like velocity curve: accelerate → cruise → decelerate → pause
-async function humanScroll(page, scrollDurationMs) {
+// ── Helper: smooth scrolling via mouse.wheel() at 60fps ────────────
+// Three-phase velocity: quick ramp-up → cruise → gentle slow-down
+// mouse.wheel() is the only scroll method that Playwright video recording captures.
+async function smoothScroll(page, scrollDurationMs) {
   const totalHeight = await page.evaluate(() => document.body.scrollHeight);
   const viewportHeight = await page.evaluate(() => window.innerHeight);
   const scrollDistance = Math.max(0, totalHeight - viewportHeight);
@@ -93,58 +103,54 @@ async function humanScroll(page, scrollDurationMs) {
     return;
   }
 
-  console.log(`  Scrolling ${scrollDistance}px over ${(scrollDurationMs / 1000).toFixed(1)}s`);
+  const avgSpeed = (scrollDistance / (scrollDurationMs / 1000)).toFixed(0);
+  console.log(`  Scrolling ${scrollDistance}px over ${(scrollDurationMs / 1000).toFixed(1)}s (${avgSpeed}px/s)`);
 
-  // Wait briefly for page rendering to settle before starting scroll
+  // Scroll to top first
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(500);
 
-  // Velocity curve: phases of normalized time [0.0, 1.0]
-  //   accelerate  0%–15%  speed 100 → 400 px/s
-  //   cruise     15%–85%  speed 400 → 500 px/s
-  //   decelerate 85%–100% speed 500 → 50  px/s (no settle phase)
-  const phases = [
-    { tStart: 0.00, tEnd: 0.15, vStart: 100, vEnd: 400 },
-    { tStart: 0.15, tEnd: 0.85, vStart: 400, vEnd: 500 },
-    { tStart: 0.85, tEnd: 1.00, vStart: 500, vEnd: 50  },
-  ];
-
-  function getSpeed(progress) {
-    for (const p of phases) {
-      if (progress >= p.tStart && progress <= p.tEnd) {
-        const segProgress = (progress - p.tStart) / (p.tEnd - p.tStart);
-        return p.vStart + (p.vEnd - p.vStart) * segProgress;
-      }
-    }
-    return 0;
-  }
-
-  // Run at ~60fps with small frequent wheel events for smooth CDP capture
   const fpsTarget = 60;
   const intervalMs = Math.floor(1000 / fpsTarget);
   const totalSteps = Math.ceil(scrollDurationMs / intervalMs);
 
-  let accumulatedDelta = 0;
-  let accumulatedPixels = 0;
+  // Three-phase velocity curve:
+  //   ramp-up  0%–8%    fast accelerate (quick start, not sluggish)
+  //   cruise   8%–90%   steady high speed
+  //   slow-down 90%–100% gentle deceleration to stop
+  function progressCurve(t) {
+    if (t < 0.08) {
+      // Quadratic ease-in (fast ramp, not cubic sluggishness)
+      const seg = t / 0.08;
+      return 0.08 * 0.5 * seg * seg; // covers ~3.2% of distance in 8% of time
+    } else if (t < 0.90) {
+      // Linear cruise: map [0.08, 0.90] → [~0.032, ~0.93]
+      const cruiseStart = 0.032;
+      const cruiseEnd = 0.93;
+      return cruiseStart + (cruiseEnd - cruiseStart) * ((t - 0.08) / 0.82);
+    } else {
+      // Quadratic ease-out
+      const seg = (t - 0.90) / 0.10;
+      return 0.93 + 0.07 * (1 - (1 - seg) * (1 - seg));
+    }
+  }
+
+  let lastScrollPos = 0;
 
   for (let step = 0; step < totalSteps; step++) {
     const progress = (step + 1) / totalSteps;
-    const speed = getSpeed(progress);                         // px/s
-    const targetPixels = (speed / fpsTarget);                  // px this frame
-    accumulatedPixels += targetPixels;
+    const easedProgress = progressCurve(progress);
+    const targetScrollPos = Math.round(easedProgress * scrollDistance);
+    const wheelDelta = targetScrollPos - lastScrollPos;
 
-    const wheelDelta = Math.floor(accumulatedPixels);
     if (wheelDelta > 0) {
       await page.mouse.wheel(0, wheelDelta);
-      accumulatedPixels -= wheelDelta;
-      accumulatedDelta += wheelDelta;
+      lastScrollPos = targetScrollPos;
     }
 
     await page.waitForTimeout(intervalMs);
 
-    // Early exit if we've scrolled enough or reached bottom
-    if (accumulatedDelta >= scrollDistance) break;
-
-    // Every ~0.5s, check actual scroll position to avoid lingering at bottom
+    // Early exit if reached bottom
     if (step % 30 === 0) {
       const atBottom = await page.evaluate(() => {
         const scrollPos = window.scrollY + window.innerHeight;
@@ -165,17 +171,23 @@ async function extractMedia(page, materialsDir) {
     const imgs = Array.from(document.querySelectorAll('img'));
     return imgs.map(img => ({
       src: img.src,
+      // GitHub camo: data-canonical-src holds the original URL
+      canonicalSrc: img.getAttribute('data-canonical-src') || '',
       naturalWidth: img.naturalWidth,
       naturalHeight: img.naturalHeight,
     })).filter(item => {
       if (!item.src.startsWith('http')) return false;
       if (item.naturalWidth < 200 || item.naturalHeight < 200) return false;
+      // Check blacklist against both src and canonicalSrc
       for (const domain of blacklist) {
         if (item.src.includes(domain)) return false;
+        if (item.canonicalSrc && item.canonicalSrc.includes(domain)) return false;
       }
       return true;
     });
   }, URL_BLACKLIST.join(','));
+
+  console.log(`  Found ${candidates.length} candidate images after filtering`);
 
   fs.mkdirSync(materialsDir, { recursive: true });
   const downloaded = [];
@@ -183,14 +195,30 @@ async function extractMedia(page, materialsDir) {
 
   for (const item of candidates) {
     try {
-      const res = await fetch(item.src, { signal: AbortSignal.timeout(10000) });
-      const buffer = Buffer.from(await res.arrayBuffer());
+      // Download via page context (goes through Playwright proxy automatically)
+      const result = await page.evaluate(async (url) => {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 15000);
+          const res = await fetch(url, { signal: controller.signal });
+          clearTimeout(timer);
+          if (!res.ok) return null;
+          const contentType = res.headers.get('content-type') || '';
+          const buffer = await res.arrayBuffer();
+          return { data: Array.from(new Uint8Array(buffer)), contentType };
+        } catch (e) {
+          return null;
+        }
+      }, item.src);
+
+      if (!result || !result.data) continue;
+      const buffer = Buffer.from(result.data);
 
       // File size filter: skip < 10KB
       if (buffer.length < 10 * 1024) continue;
 
       // Determine extension from Content-Type header
-      const contentType = res.headers.get('content-type') || '';
+      const contentType = result.contentType;
       let ext = '.png';
       if (contentType.includes('svg')) ext = '.svg';
       else if (contentType.includes('jpeg')) ext = '.jpg';
@@ -220,14 +248,16 @@ async function extractMedia(page, materialsDir) {
           downloaded.push(pngName);
           idx++;
           continue;
-        } catch {
-          // Fallback: keep original SVG filename
+        } catch (e) {
+          console.warn(`    SVG→PNG failed for ${filename}: ${e.message}`);
         }
       }
 
       downloaded.push(filename);
       idx++;
-    } catch {}
+    } catch (e) {
+      console.warn(`    Failed to download image: ${e.message}`);
+    }
   }
 
   return downloaded;
@@ -253,8 +283,8 @@ async function dismissPopups(page) {
   } catch {}
 }
 
-// ── Main: record a single page (record + extract in one pass) ─────
-// Returns { webmName, mp4Name, duration, images } or null on failure
+// ── Main: record a single page (record + extract + trim) ──────────
+// Returns { mp4Name, duration, images } or null on failure
 async function recordAndExtract(browser, url, outputName) {
   const contextOptions = {
     viewport: { width: 1920, height: 1080 },
@@ -264,59 +294,124 @@ async function recordAndExtract(browser, url, outputName) {
     },
   };
   if (PROXY_CONFIG && PROXY_CONFIG.enabled) {
-    const host = PROXY_CONFIG.platform === 'wsl' ? 'host.docker.internal' : '127.0.0.1';
+    const host = PROXY_CONFIG.host || (PROXY_CONFIG.platform === 'wsl' ? 'host.docker.internal' : '127.0.0.1');
     contextOptions.proxy = { server: `http://${host}:${PROXY_CONFIG.port}` };
   }
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
 
+  // Track wall-clock time from context creation (≈ video start)
+  const videoStartTime = Date.now();
   let images = [];
+
   try {
     console.log(`Loading: ${url}`);
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+
+    // Use 'domcontentloaded' — 'load'/'networkidle' can hang forever on GitHub (JS resources never finish)
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    console.log('  Page DOM ready');
+
+    // Wait for README content to render (GitHub-specific)
+    try {
+      await page.waitForSelector('article.markdown-body, .repository-content', { timeout: 30000 });
+      console.log('  README content rendered');
+    } catch {
+      // Non-GitHub pages — continue
+    }
+
+    // Wait for lazy images to load
+    try {
+      await page.waitForFunction(() => {
+        const imgs = document.querySelectorAll('img');
+        return Array.from(imgs).every(img => img.complete);
+      }, { timeout: 15000 });
+    } catch {}
+    await page.waitForTimeout(2000);
+
     await dismissPopups(page);
-    await page.waitForTimeout(1000);
+
+    // === Record scroll start time for trimming ===
+    const scrollStartTime = Date.now();
+    const preScrollSec = (scrollStartTime - videoStartTime) / 1000;
 
     // Compute scroll duration based on page height
     const totalHeight = await page.evaluate(() => document.body.scrollHeight);
     const scrollDurationMs = computeScrollDuration(totalHeight, TOTAL_DURATION);
 
-    // Scroll using mouse wheel (captures in video)
-    await humanScroll(page, scrollDurationMs);
+    console.log(`  Pre-scroll wait: ${preScrollSec.toFixed(1)}s → will be trimmed`);
 
-    // Extract images from the loaded page (same context, no reload)
+    // Smooth scroll via mouse.wheel() at 60fps with easeInOutCubic
+    await smoothScroll(page, scrollDurationMs);
+
+    // Extract images from the loaded page
     console.log('  Extracting images...');
     images = await extractMedia(page, MATERIALS_DIR);
     console.log(`  Extracted ${images.length} images`);
+
+    // Record time AFTER all page interactions (before context.close)
+    const scrollEndTime = Date.now();
+    const usefulEndSec = (scrollEndTime - videoStartTime) / 1000;
+
+    // Store trim info for post-processing
+    context._trimStart = preScrollSec;
+    context._trimEnd = usefulEndSec;
+
   } finally {
-    // context.close() is required for Playwright to flush the video file
+    const trimStart = context._trimStart || 0;
+    const trimEnd = context._trimEnd;
     await context.close();
+
+    // Find the video file (newest webm)
+    const files = fs.readdirSync(OUTPUT_DIR)
+      .filter(f => f.endsWith('.webm'))
+      .map(f => ({ name: f, mtime: fs.statSync(path.join(OUTPUT_DIR, f)).mtime }))
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (files.length === 0) {
+      console.warn('  Warning: no webm file found after recording');
+      return { mp4Name: null, images };
+    }
+
+    const rawVideo = path.join(OUTPUT_DIR, files[0].name);
+    const webmName = outputName + '.webm';
+    fs.renameSync(rawVideo, path.join(OUTPUT_DIR, webmName));
+
+    // Step 1: Convert webm → raw mp4
+    const rawMp4Name = outputName + '_raw.mp4';
+    const webmPath = path.join(OUTPUT_DIR, webmName);
+    const rawMp4Path = path.join(OUTPUT_DIR, rawMp4Name);
+
+    console.log(`Converting ${webmName} → ${rawMp4Name}`);
+    execSync(`ffmpeg -y -i "${webmPath}" -c:v libx264 -preset fast -pix_fmt yuv420p "${rawMp4Path}"`, { stdio: 'pipe' });
+    fs.unlinkSync(webmPath);
+
+    // Step 2: Trim pre-scroll wait from video
+    // Add 1s buffer before scroll starts so the viewer sees a brief still of the loaded page
+    const trimFrom = Math.max(0, trimStart - 1.5);
+    const mp4Name = outputName + '.mp4';
+    const mp4Path = path.join(OUTPUT_DIR, mp4Name);
+
+    if (trimFrom > 2) {
+      console.log(`Trimming pre-scroll wait: -ss ${trimFrom.toFixed(1)}s`);
+      if (trimEnd) {
+        // Trim both start and end (remove image extraction time at end)
+        const duration = (trimEnd - trimFrom + 1.5).toFixed(1);
+        execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -t ${duration} -c:v libx264 -preset fast -pix_fmt yuv420p "${mp4Path}"`, { stdio: 'pipe' });
+      } else {
+        execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -c:v libx264 -preset fast -pix_fmt yuv420p "${mp4Path}"`, { stdio: 'pipe' });
+      }
+      fs.unlinkSync(rawMp4Path);
+    } else {
+      // No significant pre-scroll wait, just rename
+      fs.renameSync(rawMp4Path, mp4Path);
+    }
+
+    // Get duration via ffprobe
+    const probe = execSync(`ffprobe -v quiet -print_format json -show_format "${mp4Path}"`).toString();
+    const duration = parseFloat(JSON.parse(probe).format.duration);
+
+    return { mp4Name, duration: Math.round(duration * 10) / 10, images };
   }
-
-  // After context.close(), the webm file is finalized. Find and rename it.
-  const files = fs.readdirSync(OUTPUT_DIR).filter(f => f.endsWith('.webm'));
-  if (files.length === 0) {
-    return { webmName: null, images };
-  }
-
-  const rawVideo = path.join(OUTPUT_DIR, files[0]);
-  const webmName = outputName + '.webm';
-  fs.renameSync(rawVideo, path.join(OUTPUT_DIR, webmName));
-
-  // Convert webm → mp4
-  const mp4Name = webmName.replace('.webm', '.mp4');
-  const webmPath = path.join(OUTPUT_DIR, webmName);
-  const mp4Path = path.join(OUTPUT_DIR, mp4Name);
-
-  console.log(`Converting ${webmName} → ${mp4Name}`);
-  execSync(`ffmpeg -y -i "${webmPath}" -c:v libx264 -preset fast -pix_fmt yuv420p "${mp4Path}"`, { stdio: 'pipe' });
-  fs.unlinkSync(webmPath);
-
-  // Get duration via ffprobe
-  const probe = execSync(`ffprobe -v quiet -print_format json -show_format "${mp4Path}"`).toString();
-  const duration = parseFloat(JSON.parse(probe).format.duration);
-
-  return { webmName, mp4Name, duration: Math.round(duration * 10) / 10, images };
 }
 
 // ── Main entry ─────────────────────────────────────────────────────
