@@ -1,0 +1,8 @@
+{
+  "name": "gh-video-recorder",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.60.0"
+  }
+}

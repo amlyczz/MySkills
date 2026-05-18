@@ -3,3 +3,16 @@ github-repo/
 
 # macOS
 .DS_Store
+
+# dependencies
+node_modules/
+
+# video recorder outputs
+output/
+gh-video-recorder/output/
+*.webm
+*.mp4
+workspace/
+
+# IDE
+.idea/
