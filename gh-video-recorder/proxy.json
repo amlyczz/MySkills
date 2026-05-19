@@ -1,5 +1,4 @@
 {
-  "enabled": false,
-  "platform": "mac",
-  "port": 7890
+  "mac": { "host": "127.0.0.1", "port": 7890 },
+  "wsl": { "host": "172.28.0.1", "port": 10808 }
 }
