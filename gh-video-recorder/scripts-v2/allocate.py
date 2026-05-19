@@ -735,6 +735,37 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
     with open(timeline_path, 'w') as f:
         json.dump(timeline, f, indent=2)
 
+    # Normalize all video files to consistent params before concat
+    # (yuv420p + 30fps) to avoid ffmpeg concat demuxer issues
+    for entry in timeline:
+        src = os.path.join(output_dir, entry['file'])
+        if not os.path.exists(src) or not entry['file'].endswith('.mp4'):
+            continue
+        probe = subprocess.run([
+            'ffprobe', '-v', 'error', '-select_streams', 'v:0',
+            '-show_entries', 'stream=pix_fmt,r_frame_rate',
+            '-of', 'json', src
+        ], capture_output=True, text=True, timeout=15)
+        needs_normalize = False
+        try:
+            info = json.loads(probe.stdout)['streams'][0]
+            if info.get('pix_fmt') != 'yuv420p':
+                needs_normalize = True
+            if info.get('r_frame_rate', '30/1') != '30/1':
+                needs_normalize = True
+        except (IndexError, KeyError, json.JSONDecodeError):
+            needs_normalize = True
+
+        if needs_normalize:
+            tmp = src + '.norm.mp4'
+            print(f"  Normalizing {entry['file']} → yuv420p/30fps")
+            subprocess.run([
+                'ffmpeg', '-y', '-i', src,
+                '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', '-r', '30',
+                tmp
+            ], check=True, capture_output=True, timeout=120)
+            os.replace(tmp, src)
+
     # Generate concat_list.txt
     concat_path = os.path.join(output_dir, 'concat_list.txt')
     with open(concat_path, 'w') as f:

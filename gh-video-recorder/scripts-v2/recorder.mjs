@@ -494,7 +494,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
     const rawMp4Path = path.join(OUTPUT_DIR, rawMp4Name);
 
     console.log(`Converting ${webmName} → ${rawMp4Name}`);
-    execSync(`ffmpeg -y -i "${webmPath}" -c:v libx264 -preset fast -pix_fmt yuv420p "${rawMp4Path}"`, { stdio: 'pipe' });
+    execSync(`ffmpeg -y -i "${webmPath}" -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${rawMp4Path}"`, { stdio: 'pipe' });
     fs.unlinkSync(webmPath);
 
     // Step 2: Download and save images (after recording stops)
@@ -524,11 +524,11 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
     if (trimFrom > 2 && trimEnd) {
       const duration = (trimEnd - trimFrom).toFixed(1);
       console.log(`Trimming: -ss ${trimFrom.toFixed(1)}s, duration ${duration}s`);
-      execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -t ${duration} -c:v libx264 -preset fast -pix_fmt yuv420p "${mp4Path}"`, { stdio: 'pipe' });
+      execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -t ${duration} -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${mp4Path}"`, { stdio: 'pipe' });
       fs.unlinkSync(rawMp4Path);
     } else if (trimFrom > 2) {
       console.log(`Trimming pre-scroll wait: -ss ${trimFrom.toFixed(1)}s`);
-      execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -c:v libx264 -preset fast -pix_fmt yuv420p "${mp4Path}"`, { stdio: 'pipe' });
+      execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${mp4Path}"`, { stdio: 'pipe' });
       fs.unlinkSync(rawMp4Path);
     } else {
       fs.renameSync(rawMp4Path, mp4Path);
