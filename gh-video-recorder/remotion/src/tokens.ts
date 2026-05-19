@@ -1,9 +1,10 @@
 /**
- * tokens.ts — 从 themes 推导的 CSS 属性对象。
+ * tokens.ts — Design Token 系统。
  *
- * 提供预计算的主题派生值，减少组件中的重复计算。
+ * 从 StyleTemplate 推导出组件可直接使用的 CSS 属性对象。
+ * 替代旧版直接从 Theme 推导的零散函数。
  */
-import { Theme } from "./themes";
+import { StyleTemplate, StyleTokens } from "./types";
 import {
   SHADOW_NEON,
   SHADOW_WARM,
@@ -27,8 +28,8 @@ export function hexToRgba(hex: string, alpha: number): string {
 }
 
 /** 半透明遮罩渐变色 */
-export function overlayGradient(theme: Theme): string {
-  const base = extractBaseColor(theme.bg);
+export function overlayGradient(style: StyleTemplate): string {
+  const base = extractBaseColor(style.colors.background);
   return `linear-gradient(135deg, ${hexToRgba(base, 0.88)}, ${hexToRgba(base, 0.72)})`;
 }
 
@@ -38,17 +39,38 @@ export function underlineGradient(accent: string): string {
 }
 
 /** 获取标题 text-shadow */
-export function titleShadow(themeName: string, context: "intro" | "outro" = "intro"): string {
-  if (themeName === "neon-blue") {
+function resolveTitleShadow(
+  style: StyleTemplate,
+  context: "intro" | "outro" = "intro",
+): string {
+  const preset = style.effects?.shadowPreset;
+  if (preset === "neon") {
     return context === "intro" ? SHADOW_NEON : SHADOW_NEON_OUTRO;
   }
-  if (themeName === "warm-orange") return SHADOW_WARM;
+  if (preset === "warm") return SHADOW_WARM;
   return SHADOW_DEFAULT;
 }
 
 /** 是否需要大写转换 */
-export function shouldUppercase(themeName: string): "uppercase" | undefined {
-  return themeName === "minimal-bw" || themeName === "matte-metal"
+export function resolveTextTransform(
+  style: StyleTemplate,
+): "uppercase" | "none" {
+  return style.decoration.textTransform === "uppercase"
     ? "uppercase"
-    : undefined;
+    : "none";
+}
+
+/** 从 StyleTemplate 解析完整的 Design Tokens */
+export function resolveStyleTokens(style: StyleTemplate): StyleTokens {
+  return {
+    bgBaseColor: extractBaseColor(style.colors.background),
+    overlayBg: overlayGradient(style),
+    titleShadow: resolveTitleShadow(style),
+    bodyColor: style.colors.text,
+    mutedColor: style.colors.textMuted,
+    underlineBg: underlineGradient(style.colors.accent),
+    bulletColor: style.colors.accent,
+    titleFont: style.typography.fontFamily,
+    titleTransform: resolveTextTransform(style),
+  };
 }

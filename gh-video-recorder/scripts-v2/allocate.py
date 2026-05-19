@@ -425,7 +425,211 @@ def generate_intro_outro(output_dir, content_dir, repo_url, bg_type='starfield')
         output_dir, info, repo_name, repo_url,
         theme_index, bg_type, intro_duration, outro_duration
     )
-    return intro_result, outro_result
+    return intro_result, outro_result, info
+
+
+# ── VideoComposer rendering ──────────────────────────────────
+
+def build_video_config(info, repo_url, bg_type='starfield', style_id=None, structure_id=None):
+    """Build a VideoConfig JSON using rule-based matching.
+
+    Uses the content info to select style, layout, and motion for each scene.
+    """
+    # Valid style IDs (must match styles.ts)
+    valid_style_ids = {
+        'dark-purple', 'sakura-pink', 'neon-blue', 'warm-orange',
+        'deep-green', 'matte-metal', 'ocean-cyan', 'tech-grid',
+        'paper-light', 'ink-dark', 'corporate-gray', 'retro-warm',
+    }
+
+    # Style selection
+    if style_id:
+        if style_id not in valid_style_ids:
+            print(f"  WARNING: style '{style_id}' not found, using auto-match")
+            style_id = None
+
+    if not style_id:
+        # Simple language-based matching (mirrors styleMeta.ts logic)
+        language = info.get('language', '').lower()
+        style_id = 'dark-purple'  # default
+        lang_map = {
+            'python': 'tech-grid', 'rust': 'matte-metal', 'go': 'dark-purple',
+            'javascript': 'sakura-pink', 'typescript': 'sakura-pink',
+            'css': 'sakura-pink', 'html': 'sakura-pink',
+            'java': 'dark-purple', 'c++': 'tech-grid', 'c': 'matte-metal',
+            'ruby': 'warm-orange', 'swift': 'neon-blue', 'kotlin': 'dark-purple',
+        }
+        style_id = lang_map.get(language, 'dark-purple')
+
+    # Build scene configs
+    title = info.get('title', repo_url.rstrip('/').split('/')[-1])
+    tagline = info.get('tagline', '')
+    points = info.get('points', [])
+    url = info.get('url', repo_url)
+    stats = info.get('stats', '')
+    summary = info.get('summary', '')
+
+    # Structure selection
+    valid_structure_ids = {'funnel', 'timeline', 'product-showcase'}
+    if structure_id and structure_id not in valid_structure_ids:
+        print(f"  WARNING: structure '{structure_id}' not found, using auto-match")
+        structure_id = None
+    if not structure_id:
+        structure_id = 'funnel'
+
+    config = {
+        "structureId": structure_id,
+        "styleId": style_id,
+        "bgType": bg_type,
+        "sceneConfigs": {
+            "hook": {
+                "layoutId": "hero-center",
+                "motionMap": {"headline": "bounce-in"},
+                "content": {"headline": title},
+            },
+            "problem": {
+                "layoutId": "hero-center",
+                "motionMap": {},
+                "content": {
+                    "title": "Why This Matters",
+                    "points": [f"• {p}" for p in points[:3]] if points else [],
+                },
+            },
+            "solution": {
+                "layoutId": "split-left-text",
+                "motionMap": {},
+                "content": {
+                    "title": title,
+                    **({"subtitle": tagline} if tagline else {}),
+                },
+            },
+            "showcase": {
+                "layoutId": "media-full",
+                "motionMap": {},
+                "content": {},
+            },
+            "features": {
+                "layoutId": "hero-center",
+                "motionMap": {},
+                "content": {
+                    "title": "Key Features",
+                    "points": points[:5] if points else [],
+                },
+            },
+            "cta": {
+                "layoutId": "hero-center",
+                "motionMap": {},
+                "content": {
+                    "title": url,
+                    **({"stats": stats} if stats else {}),
+                    **({"summary": summary} if summary else {}),
+                },
+            },
+        },
+        "audio": {
+            "sfxEnabled": True,
+            "voiceover": [],
+            "voiceoverEnabled": False,
+        },
+    }
+
+    return config
+
+
+def render_video_composer(output_dir, config, total_duration_frames):
+    """Render VideoComposer composition with given config.
+
+    Returns True on success, False on failure.
+    """
+    config_path = os.path.join(output_dir, 'video_config.json')
+    with open(config_path, 'w') as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+    props = {"config": config}
+    output_path = os.path.join(output_dir, 'video_composer.mp4')
+
+    # Write props file for Remotion
+    props_path = output_path.replace('.mp4', '_props.json')
+    with open(props_path, 'w') as f:
+        json.dump(props, f, ensure_ascii=False)
+
+    cmd = [
+        'npx', 'remotion', 'render', 'VideoComposer',
+        output_path,
+        '--props', props_path,
+        '--codec', 'h264',
+        '--crf', '18',
+    ]
+    print(f"\n  [VC] Rendering VideoComposer (style: {config.get('styleId')}, bg: {config.get('bgType')})...")
+    print(f"  [VC] cmd: {' '.join(cmd[:4])} ... --props ...")
+
+    result = subprocess.run(cmd, cwd=REMOTION_DIR, capture_output=True, text=True, timeout=300)
+    if result.returncode != 0:
+        print(f"  [VC] WARNING: VideoComposer render failed: {result.stderr.strip()}")
+        return False
+
+    # Clean up props file
+    if os.path.exists(props_path):
+        os.unlink(props_path)
+
+    print(f"  [VC] VideoComposer done: {output_path}")
+    return True
+
+
+def split_video_composer(output_dir, composer_path):
+    """Split video_composer.mp4 into intro.mp4 and outro.mp4.
+
+    Uses the funnel structure timings to extract hook+problem+solution as intro,
+    and cta as outro. The middle showcase+features part is kept as main content.
+    Returns (intro_path, outro_path, main_content_path).
+    """
+    # Funnel structure timings (hardcoded for now)
+    # hook(5) + problem(6) + solution(6) = 17s intro
+    intro_end = 17.0
+    # cta = last 6s
+    total_dur = get_video_duration(composer_path)
+
+    intro_path = os.path.join(output_dir, 'intro.mp4')
+    outro_path = os.path.join(output_dir, 'outro.mp4')
+    main_path = os.path.join(output_dir, 'main_content.mp4')
+
+    try:
+        # Extract intro (first 17s)
+        subprocess.run([
+            'ffmpeg', '-y', '-i', composer_path,
+            '-t', str(intro_end),
+            '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
+            intro_path
+        ], check=True, capture_output=True, timeout=60)
+        print(f"  Extracted intro: {intro_path} ({intro_end}s)")
+
+        # Extract outro (last 6s)
+        outro_start = max(0, total_dur - 6)
+        subprocess.run([
+            'ffmpeg', '-y', '-i', composer_path,
+            '-ss', str(outro_start),
+            '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
+            outro_path
+        ], check=True, capture_output=True, timeout=60)
+        print(f"  Extracted outro: {outro_path} ({total_dur - outro_start:.1f}s)")
+
+        # Extract main content (between intro and outro)
+        main_dur = max(0, total_dur - intro_end - 6)
+        if main_dur > 1:
+            subprocess.run([
+                'ffmpeg', '-y', '-i', composer_path,
+                '-ss', str(intro_end), '-t', str(main_dur),
+                '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
+                main_path
+            ], check=True, capture_output=True, timeout=60)
+            print(f"  Extracted main content: {main_path} ({main_dur:.1f}s)")
+        else:
+            main_path = None
+
+        return intro_path, outro_path, main_path
+    except Exception as e:
+        print(f"  WARNING: Split failed: {e}")
+        return None, None, None
 
 
 def image_to_video_clip(image_path, mp4_path, duration):
@@ -525,7 +729,7 @@ def trim_video(src_path, dst_path, target_duration):
 
 # ── Time allocation ─────────────────────────────────────────
 
-def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False):
+def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False, style=None, structure=None):
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -563,7 +767,59 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
         outro_duration = 1
 
     # Generate intro/outro videos via Remotion
-    generate_intro_outro(output_dir, content_dir, repo_url, bg_type)
+    # Try VideoComposer first (Phase 3+), fall back to old Intro/Outro
+    repo_name = repo_url.rstrip('/').split('/')[-1] if repo_url else 'unknown'
+    if content_dir and os.path.isdir(content_dir):
+        info = read_content(content_dir, repo_name)
+    else:
+        info = generate_simple_info(repo_url) if repo_url else {'title': 'Video', 'tagline': '', 'points': [], 'summary': '', 'stats': '', 'url': ''}
+
+    vc_success = False
+    main_content_path = None
+    try:
+        config = build_video_config(info, repo_url or '', bg_type, style_id=style, structure_id=structure)
+        # Calculate scene durations from structure definition
+        structure_id_used = config['structureId']
+        structure_scene_defs = {
+            'funnel': [
+                ('hook', 5), ('problem', 6), ('solution', 6),
+                ('showcase', max(0, available)), ('features', 8), ('cta', 6),
+            ],
+            'timeline': [
+                ('hook', 4), ('origin', 6), ('milestones', 8),
+                ('showcase', max(0, available)), ('today', 6), ('cta', 6),
+            ],
+            'product-showcase': [
+                ('hook', 4), ('problem', 5), ('demo', max(0, available)),
+                ('features', 8), ('proof', 5), ('cta', 6),
+            ],
+        }
+        structure_scenes = structure_scene_defs.get(structure_id_used, structure_scene_defs['funnel'])
+        vc_duration = sum(d for _, d in structure_scenes)
+        vc_frames = int(vc_duration * 30)
+
+        # Update dynamic showcase/demo duration in config
+        dynamic_scene = 'demo' if structure_id_used == 'product-showcase' else 'showcase'
+        if dynamic_scene in config.get('sceneConfigs', {}):
+            config['sceneConfigs'][dynamic_scene]['durationSeconds'] = max(0, available)
+
+        if vc_duration > 20:  # Only use VideoComposer for reasonable durations
+            vc_success = render_video_composer(output_dir, config, vc_frames)
+    except Exception as e:
+        print(f"  [VC] VideoComposer approach failed: {e}")
+        vc_success = False
+
+    if vc_success:
+        composer_path = os.path.join(output_dir, 'video_composer.mp4')
+        intro_result_path, outro_result_path, main_content_path = split_video_composer(output_dir, composer_path)
+
+        if not intro_result_path or not outro_result_path:
+            print("  [VC] Split failed, falling back to old intro/outro")
+            vc_success = False
+
+    if not vc_success:
+        # Fallback: old Intro/Outro path
+        intro_result, outro_result, info = generate_intro_outro(output_dir, content_dir, repo_url, bg_type)
 
     extracted_count = len(extracted_videos)
     image_count = len(images)
@@ -809,6 +1065,10 @@ if __name__ == '__main__':
                         help='Background animation type (default: starfield)')
     parser.add_argument('--strict', action='store_true',
                         help='Enable strict manifest schema validation (rejects non-standard manifests)')
+    parser.add_argument('--style', default=None,
+                        help='Style template ID (e.g. dark-purple, tech-grid). Auto-matched if not specified.')
+    parser.add_argument('--structure', default=None,
+                        help='Structure template ID (e.g. funnel, timeline, product-showcase). Auto-matched if not specified.')
 
     args = parser.parse_args()
-    allocate(args.manifest, args.total_duration, args.output_dir, args.content_dir, args.repo_url, args.bg_type, strict=args.strict)
+    allocate(args.manifest, args.total_duration, args.output_dir, args.content_dir, args.repo_url, args.bg_type, strict=args.strict, style=args.style, structure=args.structure)

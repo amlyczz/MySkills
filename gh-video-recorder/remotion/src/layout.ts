@@ -85,3 +85,43 @@ export const SHADOW_WARM = "0 2px 8px rgba(0,0,0,0.3)";
 export const SHADOW_DEFAULT = "0 2px 12px rgba(0,0,0,0.15)";
 /** Outro Neon 阴影 */
 export const SHADOW_NEON_OUTRO = "0 0 15px rgba(100,100,255,0.6)";
+
+// ── 排版尺寸 (StatHighlight) ──
+/** Stat 大数字字号 */
+export const FONT_SIZE_STAT_BIG = 120;
+/** Stat 标签字号 */
+export const FONT_SIZE_STAT_LABEL = 28;
+/** Stat 大数字字重 */
+export const FONT_WEIGHT_STAT_BIG = 800;
+/** Stat 标签字重 */
+export const FONT_WEIGHT_STAT_LABEL = 400;
+/** Stat 与标签间距 */
+export const GAP_STAT_LABEL = 20;
+
+// ── CardGrid ──
+/** 卡片间距 */
+export const CARD_GAP = 24;
+/** 卡片内边距 */
+export const CARD_PADDING = 32;
+/** 卡片圆角 */
+export const CARD_BORDER_RADIUS = 12;
+/** 卡片背景透明度 */
+export const CARD_BG_ALPHA = 0.15;
+/** 卡片字号 */
+export const FONT_SIZE_CARD = 24;
+/** 卡片字重 */
+export const FONT_WEIGHT_CARD = 400;
+/** 卡片最大宽度 */
+export const CARD_MAX_WIDTH = 400;
+
+// ── QuoteStyle ──
+/** 引号标记字号 */
+export const FONT_SIZE_QUOTE_MARK = 200;
+/** 引用正文字号 */
+export const FONT_SIZE_QUOTE_BODY = 36;
+/** 引用署名字号 */
+export const FONT_SIZE_QUOTE_ATTR = 24;
+/** 引号标记字重 */
+export const FONT_WEIGHT_QUOTE_MARK = 700;
+/** 引用正文最大宽度 */
+export const QUOTE_BODY_MAX_WIDTH = 900;
