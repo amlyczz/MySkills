@@ -1,7 +1,7 @@
 # GitHub Repo → 视频 Pipeline 架构设计
 
 > 最后更新：2026-05-20（v2）
-> 实现状态：Phase 1 ✅ + Phase 2 ✅ + Phase 4 75%，Phase 3/5 未开始
+> 实现状态：Phase 1 ✅ + Phase 2 ✅ + Phase 4 ✅ + Phase 5 60%，Phase 3 未开始
 
 ## 目标
 
@@ -756,16 +756,16 @@ Props:
 - [ ] 完善 material 元数据（source/capture/metadata 字段）
 - [ ] recorder.mjs 输出 material_manifest.json v2
 
-### Phase 4: Layer 2 独立 — 75% 完成
+### Phase 4: Layer 2 独立 — 100% 完成
 - [x] 实现口播-素材匹配算法 → `timeline_composer.py` `_match_materials()` / `_score_material()`
 - [x] 实现章节自动划分 → `_divide_chapters()` (从 seg label 生成)
 - [x] 实现 BGM/SFX 编排 → `_build_layout_and_audio()` (hook→whoosh, code→keypress, features→pop, cta→fade_out)
 - [x] 输出 timeline.json v2 → 完整 schema 验证通过
-- [ ] 字幕烧录整合 (SRT 输出格式 — subtitles 已在 timeline 中，SRT 转换后续补充)
+- [x] SRT 字幕输出 → `_write_srt()` 自动生成 `.srt` 文件
 
-### Phase 5: Layer 3/4 增强 — 未开始
-- [ ] 新增 CodeDisplay 模板
-- [ ] 新增 ChapterProgressBar 组件（5 种样式）
-- [ ] VideoComposer 支持动态 seg 序列（不再硬编码 funnel）
-- [ ] 字幕烧录管道
+### Phase 5: Layer 3/4 增强 — 60% 完成
+- [x] 新增 CodeDisplay 模板 → `layouts/CodeDisplay.tsx`（终端风格 + 语法高亮 + type/fade/scroll 动画）
+- [x] 新增 ChapterProgressBar 组件（5 种样式）→ `components/ChapterProgressBar.tsx`
+- [x] VideoComposer 支持动态 seg 序列（不再硬编码 funnel）
+- [x] 字幕烧录管道 → `allocate.py --srt` + `burn_subtitles()`
 - [ ] 音频混音管道

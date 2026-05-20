@@ -92,6 +92,13 @@ export const SceneBase: React.FC<SceneProps> = ({
         mediaUrl={
           typeof content.visual === "string" ? content.visual : undefined
         }
+        code={typeof content.code === "string" ? content.code : undefined}
+        language={typeof content.language === "string" ? content.language : undefined}
+        codeAnimation={
+          typeof content.codeAnimation === "string"
+            ? (content.codeAnimation as "type" | "fade" | "scroll")
+            : undefined
+        }
         style={tokens}
         theme={style}
         motionMap={motionMap}

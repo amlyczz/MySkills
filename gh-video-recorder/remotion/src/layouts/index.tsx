@@ -11,6 +11,7 @@ import { MediaFull } from "./MediaFull";
 import { StatHighlight } from "./StatHighlight";
 import { CardGrid } from "./CardGrid";
 import { QuoteStyle } from "./QuoteStyle";
+import { CodeDisplay } from "./CodeDisplay";
 
 export type { LayoutType };
 export type { LayoutProps };
@@ -36,6 +37,8 @@ export const LayoutDispatcher: React.FC<LayoutDispatcherProps> = ({
       return <CardGrid {...props} />;
     case "quote-style":
       return <QuoteStyle {...props} />;
+    case "code-display":
+      return <CodeDisplay {...props} />;
     case "split-right-text":
     case "full-screen-text":
     default:

@@ -153,7 +153,8 @@ export type LayoutType =
   | "card-grid" // 2×2 或 3×1 卡片网格
   | "quote-style" // 引用式：大引号 + 文字
   | "stat-highlight" // 大数字 + 说明文字
-  | "media-full"; // 纯素材展示（视频/图片铺满）
+  | "media-full" // 纯素材展示（视频/图片铺满）
+  | "code-display"; // 代码展示（终端风格 + 语法高亮）
 
 /** 布局组件统一 props */
 export interface LayoutProps {
@@ -163,6 +164,17 @@ export interface LayoutProps {
   points?: string[];
   mediaUrl?: string;
   stats?: string;
+
+  /** CodeDisplay: 代码文本 */
+  code?: string;
+  /** CodeDisplay: 编程语言 */
+  language?: string;
+  /** CodeDisplay: 高亮行号数组 */
+  highlightLines?: number[];
+  /** CodeDisplay: 是否显示行号 */
+  showLineNumbers?: boolean;
+  /** CodeDisplay: 入场动画类型 */
+  codeAnimation?: "type" | "fade" | "scroll";
 
   style: StyleTokens;
   theme: StyleTemplate;
@@ -341,4 +353,20 @@ export interface VideoConfig {
   bgType: BgType;
   sceneConfigs: Record<string, SceneConfig>;
   audio: AudioConfig;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  章节进度条
+// ═══════════════════════════════════════════════════════════════
+
+export type ProgressBarStyle =
+  | "minimal-dots"
+  | "labeled-bar"
+  | "gradient-fill"
+  | "segment-blocks"
+  | "timeline-ticks";
+
+export interface Chapter {
+  label: string;
+  time: number;
 }

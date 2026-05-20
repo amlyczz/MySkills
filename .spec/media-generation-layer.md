@@ -2,7 +2,7 @@
 
 > 将图片、语音、音乐、视频、文本的生成能力抽象为统一接口，支持多 Provider 可替换、可组合。
 >
-> 实现状态：P0 完成（MiniMax image/speech/music/video + 降级路由 + Pydantic 模型），DeepSeek/OpenAI Provider + SpecializedText + 缓存 P1+ 未开始
+> 实现状态：P0 完成（MiniMax image/speech/music/video + 降级路由 + Pydantic 模型 + pyproject.toml），DeepSeek/OpenAI Provider + SpecializedText + 缓存 P1+ 未开始
 
 ---
 

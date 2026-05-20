@@ -9,11 +9,12 @@
  */
 import React from "react";
 import { AbsoluteFill, Sequence, Audio, staticFile } from "remotion";
-import { VideoConfig, SceneConfig, SceneDef, StyleTemplate } from "./types";
+import { VideoConfig, SceneConfig, SceneDef, StyleTemplate, Chapter } from "./types";
 import { styleTemplates } from "./styles";
 import { getStructure } from "./structures";
 import { sceneRegistry } from "./scenes";
 import { BgType } from "./backgrounds";
+import { ChapterProgressBar } from "./components/ChapterProgressBar";
 
 export interface VideoComposerProps {
   config: VideoConfig;
@@ -39,18 +40,45 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
   }
 
   const style = styleTemplates.find((s) => s.id === config.styleId) ?? styleTemplates[0];
+
+  // 计算章节（每个场景=一个章节）和时间轴
+  const chapters: Chapter[] = [];
+  const sceneFrameMap: Array<{
+    id: string;
+    startFrame: number;
+    endFrame: number;
+  }> = [];
   let currentFrame = 0;
+
+  for (const sceneDef of structure.scenes) {
+    const durationFrames =
+      sceneDef.durationSeconds > 0
+        ? sceneDef.durationSeconds * 30
+        : 10 * 30;
+    const sceneConfig = config.sceneConfigs[sceneDef.id];
+    const label = sceneConfig?.content?.title as string
+      || sceneConfig?.content?.headline as string
+      || sceneDef.id;
+
+    chapters.push({
+      label: typeof label === "string" ? label : sceneDef.id,
+      time: currentFrame / 30,
+    });
+    sceneFrameMap.push({
+      id: sceneDef.id,
+      startFrame: currentFrame,
+      endFrame: currentFrame + durationFrames,
+    });
+    currentFrame += durationFrames;
+  }
+
+  const totalDuration = currentFrame / 30;
 
   return (
     <AbsoluteFill>
-      {structure.scenes.map((sceneDef) => {
-        const startFrame = currentFrame;
-        const durationFrames =
-          sceneDef.durationSeconds > 0
-            ? sceneDef.durationSeconds * 30
-            : 10 * 30; // showcase 动态时长默认 10s
-        currentFrame += durationFrames;
-
+      {structure.scenes.map((sceneDef, idx) => {
+        const fm = sceneFrameMap[idx];
+        const durationFrames = fm.endFrame - fm.startFrame;
         const sceneConfig = config.sceneConfigs[sceneDef.id] ?? {
           layoutId: "hero-center" as const,
           motionMap: {},
@@ -66,7 +94,7 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
         return (
           <Sequence
             key={sceneDef.id}
-            from={startFrame}
+            from={fm.startFrame}
             durationInFrames={durationFrames}
           >
             <SceneComponent
@@ -79,6 +107,13 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
           </Sequence>
         );
       })}
+
+      {/* 章节进度条 overlay */}
+      <ChapterProgressBar
+        chapters={chapters}
+        totalDuration={totalDuration}
+        style="labeled-bar"
+      />
 
       {/* BGM — 全片铺底 */}
       {config.audio.bgm && config.audio.bgm.src && (

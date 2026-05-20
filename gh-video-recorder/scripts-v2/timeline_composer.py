@@ -591,12 +591,44 @@ def main():
     with open(args.output, "w") as f:
         json.dump(timeline, f, indent=2, ensure_ascii=False)
 
+    # Write SRT subtitle file
+    srt_path = os.path.splitext(args.output)[0] + ".srt"
+    _write_srt(timeline["subtitles"], srt_path)
+
     # Summary
     n_segs = len(timeline["segments"])
     n_chapters = len(timeline["chapters"])
     n_subs = len(timeline["subtitles"])
     print(f"Timeline composed: {n_segs} segments, {n_chapters} chapters, {n_subs} subtitles")
     print(f"Output: {args.output}")
+    print(f"SRT:     {srt_path}")
+
+
+def _write_srt(subtitles: list[dict], output_path: str) -> None:
+    """Convert subtitle entries to standard .srt format and write to disk."""
+    if not subtitles:
+        print("  (no subtitles to write)")
+        return
+
+    def _fmt_srt_time(seconds: float) -> str:
+        h = int(seconds // 3600)
+        m = int((seconds % 3600) // 60)
+        s = int(seconds % 60)
+        ms = int((seconds % 1) * 1000)
+        return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+    lines = []
+    for i, sub in enumerate(subtitles, 1):
+        start = sub.get("time_start", 0)
+        end = sub.get("time_end", start + 2)
+        text = sub.get("text", "")
+        lines.append(str(i))
+        lines.append(f"{_fmt_srt_time(start)} --> {_fmt_srt_time(end)}")
+        lines.append(text)
+        lines.append("")  # blank line separator
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
 
 
 if __name__ == "__main__":
