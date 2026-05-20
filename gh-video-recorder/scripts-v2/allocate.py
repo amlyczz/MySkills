@@ -19,7 +19,8 @@ import argparse
 import random
 import shutil
 from typing import List, Optional
-from dataclasses import dataclass, field, asdict
+
+from pydantic import BaseModel, Field
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REMOTION_DIR = os.path.join(PROJECT_DIR, "remotion")
@@ -59,8 +60,7 @@ MANIFEST_SCHEMA = {
 }
 
 
-@dataclass
-class ManifestEntry:
+class ManifestEntry(BaseModel):
     """单个素材条目的数据契约。"""
     type: str          # scroll_video | extracted_video | image | link_video
     path: str          # 相对路径
@@ -70,14 +70,13 @@ class ManifestEntry:
     fileSize: float = 0.0
 
 
-@dataclass
-class Manifest:
+class Manifest(BaseModel):
     """完整 manifest 的数据契约。"""
     version: str = "1"
-    schema_ref: str = "manifest-full-schema.json"
+    schema_ref: str = Field(default="manifest-full-schema.json", alias="$schema")
     createdAt: str = ""
     repoUrl: str = ""
-    entries: List[ManifestEntry] = field(default_factory=list)
+    entries: list[ManifestEntry] = Field(default_factory=list)
 
 
 def validate_manifest(data, strict=False):
@@ -176,13 +175,56 @@ def strip_md(text):
 
 # ── Read content ───────────────────────────────────────────
 
-def read_content(content_dir, repo_name):
-    """Read repo archive and script from content directory."""
+def info_dict_from_json(data):
+    """Map content.json data to the legacy info dict used by build_video_config() etc.
+
+    Keys produced (must match the original markdown path exactly):
+      title, tagline, points, url, stats, summary, outro_extra, domains, language
+    """
+    repo = data.get('repo', {})
+    content = data.get('content', {})
+    script = data.get('script', {})
+
+    info = {
+        'title': content.get('title', repo.get('full_name', '').split('/')[-1]),
+        'tagline': content.get('tagline', ''),
+        'points': content.get('points', []),
+        'url': repo.get('url', ''),
+        'stats': content.get('stats_text', ''),
+        'summary': '',
+        'outro_extra': '',
+        'domains': content.get('domains', ''),
+        'language': repo.get('language', ''),
+    }
+
+    # Derive summary / outro_extra from script segments (mirrors markdown logic)
+    segments = script.get('segments', [])
+    if segments:
+        segment_texts = [s['text'] for s in segments]
+        if len(segment_texts) >= 2:
+            last_two = segment_texts[-2:]
+            info['summary'] = ('。'.join(last_two) + '。')[:300]
+        elif segment_texts:
+            info['summary'] = (segment_texts[0] + '。')[:300]
+        if len(segment_texts) >= 4:
+            info['outro_extra'] = segment_texts[len(segment_texts)//2][:200]
+    elif script.get('full_text'):
+        sentences = re.split(r'[。！？]', script['full_text'])
+        sentences = [s.strip() for s in sentences if s.strip()]
+        last_two = sentences[-2:] if len(sentences) >= 2 else sentences[-1:]
+        info['summary'] = ('。'.join(last_two) + '。')[:300]
+        if len(sentences) >= 4:
+            info['outro_extra'] = sentences[len(sentences)//2][:200]
+
+    return info
+
+
+def read_content_markdown(content_dir, repo_name):
+    """Fallback: parse repo archive + script from markdown files."""
     info = {'title': repo_name, 'tagline': '', 'points': [], 'summary': '', 'outro_extra': '', 'stats': ''}
 
-    # Find repo archive file
     for fname in os.listdir(content_dir):
-        if fname.endswith('.md') and repo_name in fname and '口播' not in fname and '封面' not in fname:
+        if fname.endswith('.md') and repo_name in fname and '口播' not in fname and '封面' not in fname and '发布' not in fname:
             fpath = os.path.join(content_dir, fname)
             with open(fpath, 'r') as f:
                 content = f.read()
@@ -209,14 +251,13 @@ def read_content(content_dir, repo_name):
                 info['language'] = strip_md(m.group(1).strip())
             break
 
-    # Find script file
     for fname in os.listdir(content_dir):
         if fname.endswith('.md') and repo_name in fname and '口播' in fname:
             fpath = os.path.join(content_dir, fname)
             with open(fpath, 'r') as f:
                 content = f.read()
             lines = content.strip().split('\n')
-            text_lines = [l.strip() for l in lines if l.strip() and not l.startswith('#')]
+            text_lines = [l.strip() for l in lines if l.strip() and not l.startswith('#') and not l.startswith('<!--')]
             if text_lines:
                 full_text = '。'.join(l.rstrip('。') for l in text_lines)
                 sentences = re.split(r'[。！？]', full_text)
@@ -228,6 +269,22 @@ def read_content(content_dir, repo_name):
             break
 
     return info
+
+
+def read_content(content_dir, repo_name):
+    """Read repo archive and script from content directory.
+
+    Priority: content.json (if present) → markdown fallback.
+    """
+    info = {'title': repo_name, 'tagline': '', 'points': [], 'summary': '', 'outro_extra': '', 'stats': ''}
+
+    content_json_path = os.path.join(content_dir, 'content.json')
+    if os.path.isfile(content_json_path):
+        with open(content_json_path, 'r') as f:
+            data = json.load(f)
+        return info_dict_from_json(data)
+    else:
+        return read_content_markdown(content_dir, repo_name)
 
 
 def generate_simple_info(repo_url):
@@ -496,7 +553,7 @@ def build_video_config(info, repo_url, bg_type='starfield', style_id=None, struc
                 },
             },
             "solution": {
-                "layoutId": "split-left-text",
+                "layoutId": "hero-center",
                 "motionMap": {},
                 "content": {
                     "title": title,

@@ -1,0 +1,54 @@
+{
+  "version": "1",
+  "defaults": {
+    "image":  { "provider": "minimax", "model": "image-01" },
+    "speech": { "provider": "minimax", "model": "speech-hd" },
+    "music":  { "provider": "minimax", "model": "music-2.6" },
+    "video":  { "provider": "minimax", "model": "MiniMax-Hailuo-2.3-Fast-6s-768p" }
+  },
+  "providers": {
+    "minimax": {
+      "api_key_env": "MINIMAX_API_KEY",
+      "base_url": "https://api.minimaxi.com/v1",
+      "region": "cn",
+      "models": {
+        "image":  ["image-01"],
+        "speech": ["speech-hd", "speech-basic"],
+        "music":  ["music-2.5", "music-2.6"],
+        "video":  ["MiniMax-Hailuo-2.3-Fast-6s-768p", "MiniMax-Hailuo-2.3-6s-768p"]
+      }
+    }
+  },
+  "aliases": {
+    "cover_image": {
+      "capability": "image",
+      "providers": [
+        { "provider": "minimax", "model": "image-01" }
+      ]
+    },
+    "thumbnail": {
+      "capability": "image",
+      "providers": [
+        { "provider": "minimax", "model": "image-01" }
+      ]
+    },
+    "voiceover": {
+      "capability": "speech",
+      "providers": [
+        { "provider": "minimax", "model": "speech-hd" }
+      ]
+    },
+    "bgm": {
+      "capability": "music",
+      "providers": [
+        { "provider": "minimax", "model": "music-2.6" }
+      ]
+    },
+    "video_clip": {
+      "capability": "video",
+      "providers": [
+        { "provider": "minimax", "model": "MiniMax-Hailuo-2.3-Fast-6s-768p" }
+      ]
+    }
+  }
+}

@@ -34,7 +34,7 @@ tools_allowed:
 ### 第二步：用 gh 搜索本周“上升最快”的仓库
 
 由于完全依赖 `gh`，无法直接抓取 Trending 页面，我们采用 **“过去7天创建的、星数最高的新项目”** 作为“上升最快”的近似指标。  
-如果新项目星数普遍较低，则降级为 **“总星数高且最近7天仍在活跃更新”** 的成熟项目。
+如果新项目星数普遍较低，则降级为 **“总星数高且最近7天仍在活跃更新”** 的项目。
 
 #### 2.1 首选策略：搜索过去7天内创建且星数最高的仓库
 
@@ -42,10 +42,10 @@ tools_allowed:
 执行命令：
 
 ```bash
-gh search repos --created ">=YYYY-MM-DD" --sort stars --order desc --limit 10 --json fullName,stargazersCount,description
+gh search repos --created ">=YYYY-MM-DD" --sort stars --order desc --limit 20 --json fullName,stargazersCount,description
 ```
 
-从返回的 JSON 数组中，**按顺序过滤掉 `recommended` 中已有的仓库**，获取30个仓库、对应的描述以及对他们综合分析进行打分，给到用户，由用户决定选择哪个，如果用户没选择，则自行选择。
+从返回的 JSON 数组中，**按顺序过滤掉 `recommended` 中已有的仓库**，获取**20**个仓库、对应的描述以及对他们综合分析进行打分，给到用户，由用户决定选择哪个，如果用户没选择，则自行选择。
 
 #### 2.2 降级策略：若过去7天新项目星数普遍低于 100，则使用活跃高星仓库
 
@@ -158,6 +158,76 @@ gh api repos/{owner}/{repo}/readme
 ### 第七步：保存所有文件
 
 在运行目录下，确保存在 `gh-trending-recommend/content/` 文件夹（不存在则创建），然后生成以下文件：
+
+#### 文件 0：结构化内容 JSON（与 markdown 并行输出）
+
+- **路径**：`gh-trending-recommend/content/YYYY-MM-DD/HHmm-{repo_name}-content.json`
+- **内容**：与下面 4 个 markdown 文件**数据相同，结构不同**。所有文本字段使用中文，遵循 `schemas/content.schema.json` 定义的格式：
+
+```json
+{
+  "repo": {
+    "full_name": "owner/repo",
+    "url": "https://github.com/...",
+    "language": "TypeScript",
+    "stars": 854,
+    "forks": 78,
+    "topics": ["ai", "agent"],
+    "license": "MIT",
+    "created_at": "2026-01-15T00:00:00Z",
+    "updated_at": "2026-05-20T00:00:00Z",
+    "homepage": "https://example.com"
+  },
+  "content": {
+    "title": "repo-name",
+    "tagline": "一句话定位（口语化）",
+    "points": ["核心功能点 1", "核心功能点 2"],
+    "summary": "收尾总结/反思性语句",
+    "stats_text": "854 Stars（过去 5 天新建，增速约 170 star/天）",
+    "target_users": "目标用户描述",
+    "domains": "使用领域标签（顿号分隔）"
+  },
+  "script": {
+    "full_text": "完整口播脚本文本...",
+    "segments": [
+      { "text": "第一个段落...", "duration_est": 7.5 },
+      { "text": "第二个段落...", "duration_est": 9.0 }
+    ],
+    "total_duration_est": 130
+  },
+  "covers": {
+    "3x4": { "prompt_zh": "中文提示词...", "prompt_en": "English prompt..." },
+    "16x9": { "prompt_zh": "中文提示词...", "prompt_en": "English prompt..." }
+  },
+  "publish_copy": {
+    "titles": [
+      { "full": "完整标题（≤30字）", "short": "精简版（≤20字）" }
+    ],
+    "body": "100-200 字统一发布文案，精炼说清项目是什么、解决什么、为什么值得关注。附 GitHub 链接。",
+    "tags": ["#AIAgent", "#开源项目", "#GitHub"]
+  },
+  "source_code_insight": {
+    "dimensions": {
+      "tech_stack": "技术栈与架构设计分析文本...",
+      "core_flow": "核心业务逻辑与数据流分析文本...",
+      "code_quality": "代码质量与工程化分析文本...",
+      "production_readiness": "性能、安全与扩展性分析文本..."
+    },
+    "analyzed_files": 15,
+    "total_lines": 3420
+  },
+  "meta": {
+    "generated_at": "2026-05-20T10:43:00",
+    "source": "gh-trending"
+  }
+}
+```
+
+**重要说明**：
+- `content.json` 与 4 个 markdown 文件并行输出，数据必须一致
+- `script.segments` 按自然段落拆分，`duration_est` 按约 4 字/秒估算
+- `source_code_insight.dimensions` 4 个字段由 LLM 自由展开，不固化子字段
+- `publish_copy.body` 为统一文案（全平台通用），不再区分 B站/小红书/抖音 各自格式
 
 #### 文件 1：仓库详细档案
 
