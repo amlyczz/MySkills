@@ -7,6 +7,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Video,
   useCurrentFrame,
   interpolate,
 } from "remotion";
@@ -54,6 +55,13 @@ export const SceneBase: React.FC<SceneProps> = ({
 
   return (
     <AbsoluteFill>
+      {/* Layer 0: Video background (P2 — overrides programmatic bg) */}
+      {style.backgroundVideoUrl && (
+        <AbsoluteFill>
+          <Video src={style.backgroundVideoUrl} loop style={{ opacity: 0.8, filter: "saturate(1.5)", objectFit: "cover" }} />
+        </AbsoluteFill>
+      )}
+
       {/* Layer 1: Dynamic background */}
       <BackgroundLayer
         bgType={bgType}

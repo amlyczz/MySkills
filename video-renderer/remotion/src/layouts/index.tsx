@@ -12,6 +12,7 @@ import { StatHighlight } from "./StatHighlight";
 import { CardGrid } from "./CardGrid";
 import { QuoteStyle } from "./QuoteStyle";
 import { CodeDisplay } from "./CodeDisplay";
+import { SandwichText } from "./SandwichText";
 
 export type { LayoutType };
 export type { LayoutProps };
@@ -39,6 +40,8 @@ export const LayoutDispatcher: React.FC<LayoutDispatcherProps> = ({
       return <QuoteStyle {...props} />;
     case "code-display":
       return <CodeDisplay {...props} />;
+    case "sandwich-text":
+      return <SandwichText {...props} />;
     case "split-right-text":
     case "full-screen-text":
     default:

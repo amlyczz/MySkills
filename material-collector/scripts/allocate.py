@@ -806,6 +806,25 @@ def trim_video(src_path, dst_path, target_duration):
     return dst_path
 
 
+def speed_remap(src_path, dst_path, speed):
+    """Speed up (>1.0) or slow down (<1.0) a video via ffmpeg setpts.
+
+    speed=2.0 → 2x faster; speed=0.5 → half speed (slow-mo).
+    Audio is tempo-adjusted to match.
+    """
+    src = os.path.abspath(src_path)
+    dst = os.path.abspath(dst_path)
+    pts = 1.0 / speed
+    subprocess.run([
+        'ffmpeg', '-y', '-i', src,
+        '-filter_complex', f'[0:v]setpts={pts}*PTS[v];[0:a]atempo={speed}[a]',
+        '-map', '[v]', '-map', '[a]',
+        '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
+        dst
+    ], check=True, capture_output=True, timeout=300)
+    return dst_path
+
+
 # ── Time allocation ─────────────────────────────────────────
 
 def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False, style=None, structure=None, manual_images=None, manual_videos=None):

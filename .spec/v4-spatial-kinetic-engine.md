@@ -2,7 +2,7 @@
 
 > 基于 Chrome Skills (动感波普风) + Google Flow (空间 UI 态) + Compositing P2 残留
 > 日期：2026-05-21
-> 实施状态：P0 ✅ — 6 新布局/组件 + AV Sync 音频系统已完成
+> 实施状态：P0 ✅ + P1 ✅ — P2 跳过（DeviceFrame/变速/Vision 属于未来增强）
 
 ---
 

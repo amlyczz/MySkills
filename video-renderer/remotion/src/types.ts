@@ -116,6 +116,9 @@ export interface StyleTemplate {
     backdropBlur?: number;
     glassOpacity?: number;
   };
+
+  // P2: 循环视频背景（替代/叠加程序化背景）
+  backgroundVideoUrl?: string;
 }
 
 /** 样式元数据（用于匹配推荐） */

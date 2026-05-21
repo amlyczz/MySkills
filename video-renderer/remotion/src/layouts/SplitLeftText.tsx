@@ -13,6 +13,7 @@ import {
 import { LayoutProps, MotionType, MotionPreset } from "../types";
 import { defaultMotionMap, getMotion } from "../motions";
 import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
+import { AnimatedBarChart } from "../components/AnimatedBarChart";
 import {
   CONTENT_PAD, TEXT_MAX_WIDTH, GAP_POINTS, DOT_SIZE,
   FONT_SIZE_TITLE, FONT_SIZE_TAGLINE, FONT_SIZE_POINTS,
@@ -24,6 +25,7 @@ export const SplitLeftText: React.FC<LayoutProps> = ({
   title,
   subtitle,
   points,
+  chartData,
   mediaUrl,
   style,
   theme,
@@ -140,27 +142,13 @@ export const SplitLeftText: React.FC<LayoutProps> = ({
         )}
       </div>
 
-      {/* 右侧 2/3 素材/留白 */}
-      <div
-        style={{
-          flex: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {mediaUrl && (
-          <img
-            src={mediaUrl}
-            alt=""
-            style={{
-              maxWidth: "100%",
-              maxHeight: "80%",
-              borderRadius: theme.decoration.borderRadius,
-              objectFit: "contain",
-            }}
-          />
-        )}
+      {/* 右侧 2/3 素材/图表/留白 */}
+      <div style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {chartData && chartData.length > 0 ? (
+          <AnimatedBarChart data={chartData} accentColor={theme.colors.accent} />
+        ) : mediaUrl ? (
+          <img src={mediaUrl} alt="" style={{ maxWidth: "100%", maxHeight: "80%", borderRadius: theme.decoration.borderRadius, objectFit: "contain" }} />
+        ) : null}
       </div>
     </AbsoluteFill>
   );

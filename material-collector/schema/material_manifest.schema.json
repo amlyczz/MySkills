@@ -69,6 +69,12 @@
             "minimum": 0,
             "description": "Duration in seconds (video/audio types only)"
           },
+          "speed": {
+            "type": "number",
+            "minimum": 0.1,
+            "default": 1.0,
+            "description": "Playback speed multiplier. 2.0 = 2x fast, 0.5 = half-speed slow-mo"
+          },
           "dimensions": {
             "type": "array",
             "items": { "type": "integer", "minimum": 0 },
