@@ -191,14 +191,50 @@ async function collectImageUrls(page) {
     }
 
     const imgs = Array.from(document.querySelectorAll('img'));
-    return imgs.map(img => ({
-      src: img.src,
-      canonicalSrc: img.getAttribute('data-canonical-src') || '',
-      naturalWidth: img.naturalWidth,
-      naturalHeight: img.naturalHeight,
-      alt: (img.alt || '').trim(),
-      section: nearestHeading(img),
-    })).filter(item => {
+    return imgs.map(img => {
+      // Parent structure
+      const ancestors = [];
+      let p = img.parentElement;
+      while (p && ancestors.length < 6) {
+        ancestors.push(p.tagName);
+        if (p.tagName === 'TABLE') {
+          const headers = [];
+          p.querySelectorAll('thead th, thead td, tr:first-child th, tr:first-child td').forEach(th => {
+            headers.push((th.textContent || '').trim().substring(0, 60));
+          });
+          img._tableHeaders = headers;
+          const row = img.closest('tr');
+          if (row) { img._rowIndex = Array.from(row.parentElement.children).indexOf(row); img._colIndex = Array.from(row.children).indexOf(img.closest('td,th')); }
+        }
+        p = p.parentElement;
+      }
+      // Text context from parent container
+      let textCtx = '';
+      const container = img.closest('p, td, th, li, div');
+      if (container) textCtx = (container.textContent || '').replace(/\s+/g, ' ').trim().substring(0, 200);
+      // Next sibling caption
+      let nextSib = img.nextElementSibling;
+      let caption = '';
+      while (nextSib) { caption = (nextSib.textContent || '').trim().substring(0, 100); if (caption) break; nextSib = nextSib.nextElementSibling; }
+
+      return {
+        src: img.src,
+        canonicalSrc: img.getAttribute('data-canonical-src') || '',
+        naturalWidth: img.naturalWidth,
+        naturalHeight: img.naturalHeight,
+        alt: (img.alt || '').trim(),
+        section: nearestHeading(img),
+        caption,
+        textContext: textCtx,
+        parentTag: img.parentElement?.tagName || '',
+        ancestorTags: ancestors,
+        tableHeaders: img._tableHeaders || [],
+        isInTable: ancestors.includes('TABLE'),
+        isInList: ancestors.includes('UL') || ancestors.includes('OL'),
+        rowIndex: img._rowIndex,
+        colIndex: img._colIndex,
+      };
+    }).filter(item => {
       if (!item.src.startsWith('http')) return false;
       if (item.naturalWidth < 200 || item.naturalHeight < 200) return false;
       for (const domain of blacklist) {
@@ -283,11 +319,89 @@ async function collectVideoUrls(page) {
         items.push({ type: 'gif', src });
       }
     });
+    // ── Enrich with structural context for LLM curation ──
+    const readme = document.querySelector('article.markdown-body');
+    items.forEach(item => {
+      const el = document.querySelector(`img[src="${item.src}"], video[src="${item.src}"], a[href="${item.src}"]`);
+      if (!el) return;
+
+      // Nearest heading (section)
+      let node = el;
+      while (node && node !== readme) {
+        if (/^H[1-4]$/.test(node.tagName)) { item.section = node.textContent.trim(); break; }
+        node = node.previousElementSibling || node.parentElement;
+      }
+
+      // Parent structure: tag name + ancestor chain
+      item.parentTag = el.parentElement?.tagName || '';
+      const ancestors = [];
+      let p = el.parentElement;
+      while (p && p !== readme && ancestors.length < 6) {
+        ancestors.push(p.tagName);
+        if (p.tagName === 'TABLE') {
+          // Get table column headers
+          const headers = [];
+          p.querySelectorAll('thead th, thead td, tr:first-child th, tr:first-child td').forEach(th => {
+            headers.push((th.textContent || '').trim().substring(0, 60));
+          });
+          item.tableHeaders = headers;
+          // Row/col position
+          const row = el.closest('tr');
+          if (row) {
+            item.rowIndex = Array.from(row.parentElement.children).indexOf(row);
+            item.colIndex = Array.from(row.children).indexOf(el.closest('td,th'));
+          }
+        }
+        p = p.parentElement;
+      }
+      item.ancestorTags = ancestors;
+      item.isInList = ancestors.includes('UL') || ancestors.includes('OL');
+      item.isInTable = ancestors.includes('TABLE');
+
+      // Surrounding text context (up to 200 chars around element)
+      const range = document.createRange();
+      let textCtx = '';
+      try {
+        // Get text from the parent container
+        const container = el.closest('p, td, th, li, div');
+        if (container) {
+          textCtx = (container.textContent || '').replace(/\s+/g, ' ').trim().substring(0, 200);
+        }
+      } catch {}
+      item.textContext = textCtx;
+
+      // Link text
+      const parentLink = el.closest('a');
+      if (parentLink) item.linkText = (parentLink.textContent || '').trim().substring(0, 80);
+
+      // Alt text
+      if (el.alt) item.altText = el.alt.trim().substring(0, 100);
+
+      // Dimensions
+      item.naturalWidth = el.naturalWidth || 0;
+      item.naturalHeight = el.naturalHeight || 0;
+    });
     return items;
   });
 
   console.log(`  Found ${candidates.length} video/GIF candidates`);
-  return candidates.map(c => ({ type: c.type, src: c.src }));
+  return candidates.map(c => ({
+    type: c.type, src: c.src,
+    section: c.section || '',
+    description: c.description || '',
+    textContext: c.textContext || '',
+    linkText: c.linkText || '',
+    altText: c.altText || '',
+    parentTag: c.parentTag || '',
+    ancestorTags: c.ancestorTags || [],
+    tableHeaders: c.tableHeaders || [],
+    isInTable: c.isInTable || false,
+    isInList: c.isInList || false,
+    rowIndex: c.rowIndex,
+    colIndex: c.colIndex,
+    width: c.naturalWidth || 0,
+    height: c.naturalHeight || 0,
+  }));
 }
 async function dismissPopups(page) {
   try {

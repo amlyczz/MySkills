@@ -131,25 +131,16 @@ gh api repos/{owner}/{repo}/readme  # base64 解码
 
 ---
 
-## Phase B：生成 content.json
+## Phase B：生成内容（委托 content-generator）
 
-用户选择后，调用 `content-generator` skill 生成 **1 个文件**：
+用户选择后，调用 `content-generator` skill 完成全部内容创作：
 
 ```
-content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-content.json
+输入: REPO_URL + gh api 数据 + README + Top-15 源码分析
+输出: content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-content.json
 ```
 
-**content.json 包含**（7 字段，schema：`content-generator/schema/content.schema.json`）：
-
-| 字段 | 内容 | 生成方式 |
-|------|------|---------|
-| `repo` | 元信息（url/stars/language/license/homepage） | gh api 直接映射 |
-| `content` | 定位/功能点/目标用户/领域/chartData | LLM 基于 README 总结 |
-| `script` | 口播全文 + 分段 + 时长估算 | LLM 创作（100-750 字，约 4 字/秒） |
-| `covers` | 3:4 + 16:9 封面提示词（中英双语） | LLM 生成（无霓虹/赛博朋克） |
-| `publish_copy` | 5 选 1 标题 + 正文 + 标签 | LLM 生成 |
-| `source_code_insight` | 4 维度源码分析（可选） | 有 README + 关键源码则生成 |
-| `meta` | 时间戳 + 来源标记 | 自动填充 |
+content-generator 自动完成：基础数据采集→目录扫描→Top-15 源码评分选取→4 维深度分析→content.json 生成（口播/封面/文案/源码洞察，60-360 秒，质量铁律见 content-generator skill）。
 
 更新去重记录：`content-generator/YYYY-repos.md` 追加一行 `- owner/repo`。
 

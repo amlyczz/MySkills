@@ -84,13 +84,49 @@ python3 allocate.py \
 # → 合并自动 + 手动 → material_manifest.json v2
 ```
 
-### Phase 2：时间线编排
+### Phase 2：素材筛选与下载（Material Curation）
+
+**关键原则：先筛选再下载，不是全量下载再筛选。**
+
+recorder.mjs 已经收集了所有候选 URL（imageUrls/videoUrls/codeSnippets/screenshots），在下载前由 code agent 筛选：
+
+1. 读取 recorder.mjs 输出的 `candidate_urls.json`，统计各类型候选数量
+2. 根据 `content.json` 的 `script.total_duration_est` 和 segment 内容，确定各类型期望数量：
+
+| 素材类型 | 数量上限 | 选取策略 |
+|---------|---------|---------|
+| `scroll_video` | 1 | 主录屏，不筛选 |
+| `extracted_video` | 3-8 个 | 优先选 README 中与口播关键词匹配的 section 视频；无 section 信息时等距采样 |
+| `image` | 3-8 张 | 优先选有 alt_text + 尺寸 > 800px + 非 camo URL |
+| `screenshot` | 2-5 张 | 优先选 highlight_score 最高的 |
+| `code_snippet` | 2-5 个 | 优先选 Quick Start/API 章节 |
+
+3. **总素材数控制在 8-20 个**，图片和视频比例保持 1:1 到 2:1
+4. code agent 将筛选后的 URL 列表传给 recorder.mjs 的下载阶段
+5. 下载完成后写入 `material_manifest_curated.json`（仅含选中素材）
+
+**LLM 判断时的元数据参考**（recorder.mjs 已为每个候选采集）：
+
+| 素材类型 | 可用字段 | 用于判断 |
+|---------|---------|---------|
+| `image` | `alt`, `section`, `caption`, `width`, `height` | alt 含 "architecture/diagram" 的字优先；caption/section 与口播关键词匹配的优先 |
+| `video/GIF` | `section`, `description`, `linkText`, `altText`, `width`, `height` | section 在 Demo/Quick Start 的优先；description 作为 LLM 理解视频内容的上下文 |
+| `screenshot` | `section`, `description`, `highlight_score` | score 最高的优先；覆盖不同 section |
+| `code_snippet` | `section`, `language`, `score` | Quick Start/API section 的优先 |
+
+**LLM 判断原则**：
+- 如果某类型候选 > 20 个（如 Lance 的 89 个视频），大胆砍到 8 个以内
+- 选取标准不是"最多"而是"最能讲好故事"——与口播内容高度相关的优先
+- 覆盖不同 README section 的素材更有叙事价值
+- `description`/`caption`/`alt` 字段是 LLM 判断素材内容的关键依据
+
+### Phase 3：时间线编排
 
 ```bash
 cd timeline-composer
 python3 timeline_composer.py \
   "$CONTENT_JSON" \
-  "$OUTPUT_DIR/material_manifest.json" \
+  "$OUTPUT_DIR/material_manifest_curated.json" \
   --output "$OUTPUT_DIR/timeline.json" \
   --total-duration $TOTAL_DURATION
 # → timeline.json v2 + timeline.srt
