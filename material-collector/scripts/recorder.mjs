@@ -773,94 +773,150 @@ function generateV2Manifest(allResults, imageMeta, codeSnippets, docsFiles, allS
   return manifest;
 }
 
-// Returns { mp4Name, duration, images, extractedVideos, keyLinks } or null on failure
+// ── Phase 1: navigate page, scroll, collect asset URLs ──────
+async function _navigateAndCollect(page, url, videoStartTime, discoverLinks) {
+  console.log(`Loading: ${url}`);
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+  console.log('  Page DOM ready');
+
+  try {
+    await page.waitForSelector('article.markdown-body, .repository-content', { timeout: 30000 });
+    console.log('  README content rendered');
+  } catch { /* non-GitHub pages */ }
+
+  try {
+    await page.waitForFunction(() => {
+      const imgs = document.querySelectorAll('img');
+      return Array.from(imgs).every(img => img.complete);
+    }, { timeout: 15000 });
+  } catch {}
+  await page.waitForTimeout(2000);
+
+  await dismissPopups(page);
+
+  const scrollStartTime = Date.now();
+  const preScrollSec = (scrollStartTime - videoStartTime) / 1000;
+
+  const totalHeight = await page.evaluate(() => document.body.scrollHeight);
+  const scrollDurationMs = computeScrollDuration(totalHeight, TOTAL_DURATION);
+
+  console.log(`  Pre-scroll wait: ${preScrollSec.toFixed(1)}s → will be trimmed`);
+  await smoothScroll(page, scrollDurationMs);
+
+  // Collect all asset URLs while page is still open
+  const [imageUrls, videoUrls, codeSnippets, screenshots] = await Promise.all([
+    collectImageUrls(page),
+    collectVideoUrls(page),
+    collectCodeSnippets(page),
+    captureScreenshots(page, MATERIALS_DIR),
+  ]);
+  const keyLinks = discoverLinks ? await discoverKeyLinks(page) : [];
+
+  return { preScrollSec, imageUrls, videoUrls, codeSnippets, screenshots, keyLinks };
+}
+
+// ── Phase 2: convert recording, download assets, trim video ──
+async function _processRecording(webmName, rawMp4Path, outputName, imageUrls, videoUrls, codeSnippets, trimStart, trimEnd) {
+  console.log(`Converting ${webmName} → ${path.basename(rawMp4Path)}`);
+  execSync(`ffmpeg -y -i "${path.join(OUTPUT_DIR, webmName)}" -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${rawMp4Path}"`, { stdio: 'pipe' });
+  fs.unlinkSync(path.join(OUTPUT_DIR, webmName));
+
+  // Download images
+  fs.mkdirSync(MATERIALS_DIR, { recursive: true });
+  const [downloadedImages, imageMetaList] = await _downloadImages(imageUrls);
+  console.log(`  Downloaded ${downloadedImages.length} images`);
+
+  // Save code snippets
+  const savedSnippets = _saveCodeSnippets(codeSnippets);
+  if (savedSnippets.length > 0) console.log(`  Saved ${savedSnippets.length} code snippets`);
+
+  // Download videos
+  const downloadedVideos = await _downloadVideos(videoUrls);
+  console.log(`  Downloaded ${downloadedVideos.length} videos`);
+
+  // Trim
+  const trimFrom = Math.max(0, (trimStart || 0) - 1.5);
+  const mp4Name = outputName + '.mp4';
+  const mp4Path = path.join(OUTPUT_DIR, mp4Name);
+  _trimVideo(rawMp4Path, mp4Path, trimFrom, trimEnd);
+
+  // Duration
+  const probe = execSync(`ffprobe -v quiet -print_format json -show_format "${mp4Path}"`).toString();
+  const duration = parseFloat(JSON.parse(probe).format.duration);
+
+  return { mp4Name, duration: Math.round(duration * 10) / 10, images: downloadedImages, imageMeta: imageMetaList, extractedVideos: downloadedVideos, codeSnippets: savedSnippets };
+}
+
+async function _downloadImages(imageUrls) {
+  const images = [], meta = [];
+  for (const imgInfo of imageUrls) {
+    const name = await downloadImage(imgInfo.canonicalSrc || imgInfo.src, MATERIALS_DIR);
+    if (!name) continue;
+    images.push(name);
+    const imgPath = path.join(MATERIALS_DIR, name);
+    let sizeKb = 0;
+    try { sizeKb = Math.round(fs.statSync(imgPath).size / 1024); } catch {}
+    meta.push({ filename: name, src: imgInfo.canonicalSrc || imgInfo.src, canonicalSrc: imgInfo.canonicalSrc || '', width: imgInfo.naturalWidth, height: imgInfo.naturalHeight, alt: imgInfo.alt || '', section: imgInfo.section || '', sizeKb });
+  }
+  return [images, meta];
+}
+
+function _saveCodeSnippets(codeSnippets) {
+  const saved = [];
+  for (let i = 0; i < codeSnippets.length; i++) {
+    const cs = codeSnippets[i];
+    const filename = `snippet-${String(i + 1).padStart(2, '0')}.${cs.language}`;
+    fs.writeFileSync(path.join(MATERIALS_DIR, filename), cs.code);
+    saved.push({ ...cs, filename });
+  }
+  return saved;
+}
+
+async function _downloadVideos(videoUrls) {
+  const videos = [];
+  for (let i = 0; i < videoUrls.length; i++) {
+    const result = await downloadAndConvertVideo(videoUrls[i], i, MATERIALS_DIR);
+    if (result) videos.push(result);
+  }
+  return videos;
+}
+
+function _trimVideo(rawMp4Path, mp4Path, trimFrom, trimEnd) {
+  if (trimFrom > 2 && trimEnd) {
+    const dur = (trimEnd - trimFrom).toFixed(1);
+    console.log(`Trimming: -ss ${trimFrom.toFixed(1)}s, duration ${dur}s`);
+    execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -t ${dur} -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${mp4Path}"`, { stdio: 'pipe' });
+    fs.unlinkSync(rawMp4Path);
+  } else if (trimFrom > 2) {
+    console.log(`Trimming pre-scroll wait: -ss ${trimFrom.toFixed(1)}s`);
+    execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${mp4Path}"`, { stdio: 'pipe' });
+    fs.unlinkSync(rawMp4Path);
+  } else {
+    fs.renameSync(rawMp4Path, mp4Path);
+  }
+}
+
+// ── Orchestrator ────────────────────────────────────────────
 async function recordAndExtract(browser, url, outputName, { discoverLinks = false } = {}) {
   const contextOptions = {
     viewport: { width: 1920, height: 1080 },
-    recordVideo: {
-      dir: OUTPUT_DIR,
-      size: { width: 1920, height: 1080 },
-    },
+    recordVideo: { dir: OUTPUT_DIR, size: { width: 1920, height: 1080 } },
+    ...(PROXY_URL ? { proxy: { server: PROXY_URL } } : {}),
   };
-  if (PROXY_URL) {
-    contextOptions.proxy = { server: PROXY_URL };
-  }
   const context = await browser.newContext(contextOptions);
   const page = await context.newPage();
-
-  // Track wall-clock time from context creation (≈ video start)
   const videoStartTime = Date.now();
-  let imageUrls = [];
-  let videoUrls = [];
-  let keyLinks = [];
-  let codeSnippets = [];
-  let screenshots = [];
 
+  let collected;
   try {
-    console.log(`Loading: ${url}`);
-
-    // Use 'domcontentloaded' to avoid hanging on incomplete resource loading
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
-    console.log('  Page DOM ready');
-
-    // Wait for README content to render (GitHub-specific)
-    try {
-      await page.waitForSelector('article.markdown-body, .repository-content', { timeout: 30000 });
-      console.log('  README content rendered');
-    } catch {
-      // Non-GitHub pages — continue
-    }
-
-    // Wait for lazy images to load
-    try {
-      await page.waitForFunction(() => {
-        const imgs = document.querySelectorAll('img');
-        return Array.from(imgs).every(img => img.complete);
-      }, { timeout: 15000 });
-    } catch {}
-    await page.waitForTimeout(2000);
-
-    await dismissPopups(page);
-
-    // === Record scroll start time for trimming ===
-    const scrollStartTime = Date.now();
-    const preScrollSec = (scrollStartTime - videoStartTime) / 1000;
-
-    // Compute scroll duration based on page height
-    const totalHeight = await page.evaluate(() => document.body.scrollHeight);
-    const scrollDurationMs = computeScrollDuration(totalHeight, TOTAL_DURATION);
-
-    console.log(`  Pre-scroll wait: ${preScrollSec.toFixed(1)}s → will be trimmed`);
-
-    // Smooth scroll — runs inside page.evaluate with rAF
-    await smoothScroll(page, scrollDurationMs);
-
-    // Record scroll end time IMMEDIATELY after scrolling
-    const scrollEndTime = Date.now();
-    const scrollEndSec = (scrollEndTime - videoStartTime) / 1000;
-
-    // Brief pause at bottom (1s — captured in recording)
-    await page.waitForTimeout(1000);
-
-    // Collect URLs fast (page.evaluate is quick, < 1s)
-    imageUrls = await collectImageUrls(page);
-    videoUrls = await collectVideoUrls(page);
-    codeSnippets = await collectCodeSnippets(page);
-    screenshots = await captureScreenshots(page, MATERIALS_DIR);
-    if (discoverLinks) {
-      keyLinks = await discoverKeyLinks(page);
-    }
-
-    // Store trim info: cut everything after scrollEnd + 1.5s buffer
-    context._trimStart = preScrollSec;
+    collected = await _navigateAndCollect(page, url, videoStartTime, discoverLinks);
+    context._trimStart = collected.preScrollSec;
     context._trimEnd = (Date.now() - videoStartTime) / 1000;
   } finally {
-    // Close context IMMEDIATELY to stop recording
     const trimStart = context._trimStart || 0;
     const trimEnd = context._trimEnd;
     await context.close();
 
-    // Find the video file (newest webm)
     const files = fs.readdirSync(OUTPUT_DIR)
       .filter(f => f.endsWith('.webm'))
       .map(f => ({ name: f, mtime: fs.statSync(path.join(OUTPUT_DIR, f)).mtime }))
@@ -871,92 +927,15 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
       return { mp4Name: null, images: [], extractedVideos: [], keyLinks: [] };
     }
 
-    const rawVideo = path.join(OUTPUT_DIR, files[0].name);
     const webmName = outputName + '.webm';
-    fs.renameSync(rawVideo, path.join(OUTPUT_DIR, webmName));
+    fs.renameSync(path.join(OUTPUT_DIR, files[0].name), path.join(OUTPUT_DIR, webmName));
+    const rawMp4Path = path.join(OUTPUT_DIR, outputName + '_raw.mp4');
 
-    // Step 1: Convert webm → raw mp4
-    const rawMp4Name = outputName + '_raw.mp4';
-    const webmPath = path.join(OUTPUT_DIR, webmName);
-    const rawMp4Path = path.join(OUTPUT_DIR, rawMp4Name);
+    const result = await _processRecording(webmName, rawMp4Path, outputName,
+      collected.imageUrls, collected.videoUrls, collected.codeSnippets,
+      trimStart, trimEnd);
 
-    console.log(`Converting ${webmName} → ${rawMp4Name}`);
-    execSync(`ffmpeg -y -i "${webmPath}" -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${rawMp4Path}"`, { stdio: 'pipe' });
-    fs.unlinkSync(webmPath);
-
-    // Step 2: Download and save images (after recording stops)
-    fs.mkdirSync(MATERIALS_DIR, { recursive: true });
-    console.log(`  Downloading ${imageUrls.length} images...`);
-    const downloadedImages = [];
-    const imageMetaList = [];
-    for (let i = 0; i < imageUrls.length; i++) {
-      const imgInfo = imageUrls[i];  // now contains { src, canonicalSrc, naturalWidth, naturalHeight, alt, section }
-      const name = await downloadImage(imgInfo.canonicalSrc || imgInfo.src, MATERIALS_DIR);
-      if (name) {
-        downloadedImages.push(name);
-        const imgPath = path.join(MATERIALS_DIR, name);
-        let sizeKb = 0;
-        try { sizeKb = Math.round(fs.statSync(imgPath).size / 1024); } catch {}
-        imageMetaList.push({
-          filename: name,
-          src: imgInfo.canonicalSrc || imgInfo.src,
-          canonicalSrc: imgInfo.canonicalSrc || '',
-          width: imgInfo.naturalWidth,
-          height: imgInfo.naturalHeight,
-          alt: imgInfo.alt || '',
-          section: imgInfo.section || '',
-          sizeKb,
-        });
-      }
-    }
-    console.log(`  Downloaded ${downloadedImages.length} images`);
-
-    // Save code snippets
-    fs.mkdirSync(MATERIALS_DIR, { recursive: true });
-    const savedSnippets = [];
-    for (let i = 0; i < codeSnippets.length; i++) {
-      const cs = codeSnippets[i];
-      const filename = `snippet-${String(i + 1).padStart(2, '0')}.${cs.language}`;
-      const filepath = path.join(MATERIALS_DIR, filename);
-      fs.writeFileSync(filepath, cs.code);
-      savedSnippets.push({ ...cs, filename });
-    }
-    if (savedSnippets.length > 0) {
-      console.log(`  Saved ${savedSnippets.length} code snippets`);
-    }
-
-    // Download and convert videos (after recording stops)
-    console.log(`  Downloading ${videoUrls.length} videos...`);
-    const downloadedVideos = [];
-    for (let i = 0; i < videoUrls.length; i++) {
-      const result = await downloadAndConvertVideo(videoUrls[i], i, MATERIALS_DIR);
-      if (result) downloadedVideos.push(result);
-    }
-    console.log(`  Downloaded ${downloadedVideos.length} videos`);
-
-    // Step 3: Trim pre-scroll wait and post-scroll tail
-    const trimFrom = Math.max(0, trimStart - 1.5);
-    const mp4Name = outputName + '.mp4';
-    const mp4Path = path.join(OUTPUT_DIR, mp4Name);
-
-    if (trimFrom > 2 && trimEnd) {
-      const duration = (trimEnd - trimFrom).toFixed(1);
-      console.log(`Trimming: -ss ${trimFrom.toFixed(1)}s, duration ${duration}s`);
-      execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -t ${duration} -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${mp4Path}"`, { stdio: 'pipe' });
-      fs.unlinkSync(rawMp4Path);
-    } else if (trimFrom > 2) {
-      console.log(`Trimming pre-scroll wait: -ss ${trimFrom.toFixed(1)}s`);
-      execSync(`ffmpeg -y -ss ${trimFrom} -i "${rawMp4Path}" -c:v libx264 -preset fast -pix_fmt yuv420p -r 30 "${mp4Path}"`, { stdio: 'pipe' });
-      fs.unlinkSync(rawMp4Path);
-    } else {
-      fs.renameSync(rawMp4Path, mp4Path);
-    }
-
-    // Get duration via ffprobe
-    const probe = execSync(`ffprobe -v quiet -print_format json -show_format "${mp4Path}"`).toString();
-    const duration = parseFloat(JSON.parse(probe).format.duration);
-
-    return { mp4Name, duration: Math.round(duration * 10) / 10, images: downloadedImages, imageMeta: imageMetaList, extractedVideos: downloadedVideos, keyLinks, codeSnippets: savedSnippets, screenshots };
+    return { ...result, keyLinks: collected.keyLinks, screenshots: collected.screenshots };
   }
 }
 

@@ -99,6 +99,10 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
           >
             <SceneComponent
               content={sceneConfig.content}
+              chartData={sceneConfig.chartData}
+              staggerOrder={sceneConfig.content?.staggerOrder as string[] | undefined}
+              cameraAction={sceneConfig.cameraAction}
+              wrapperType={sceneConfig.wrapperType}
               style={style}
               bgType={config.bgType}
               layoutId={sceneConfig.layoutId}

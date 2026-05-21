@@ -12,30 +12,15 @@ import {
   interpolate,
 } from "remotion";
 import { LayoutProps, MotionType, MotionPreset } from "../types";
-import { motionPresets } from "../motions";
+import { getMotion } from "../motions";
 import { useEntrance } from "../hooks/useEntrance";
 import {
-  CONTENT_PAD,
-  CONTENT_MAX_WIDTH,
-  FONT_SIZE_QUOTE_MARK,
-  FONT_SIZE_QUOTE_BODY,
-  FONT_SIZE_QUOTE_ATTR,
-  FONT_WEIGHT_QUOTE_MARK,
-  QUOTE_BODY_MAX_WIDTH,
-  UNDERLINE_HEIGHT,
-  UNDERLINE_MAX_WIDTH,
-  UNDERLINE_BORDER_RADIUS,
-  GAP_STAT_LABEL,
+  CONTENT_PAD, CONTENT_MAX_WIDTH, FONT_SIZE_QUOTE_MARK,
+  FONT_SIZE_QUOTE_BODY, FONT_SIZE_QUOTE_ATTR, FONT_WEIGHT_QUOTE_MARK,
+  QUOTE_BODY_MAX_WIDTH, UNDERLINE_HEIGHT, UNDERLINE_MAX_WIDTH,
+  UNDERLINE_BORDER_RADIUS, GAP_STAT_LABEL,
 } from "../layout";
 import { TIMING } from "../animations";
-
-function getMotion(
-  map: Record<string, MotionType>,
-  key: string,
-  fallback: MotionType,
-): MotionPreset {
-  return motionPresets[map[key] ?? fallback];
-}
 
 export const QuoteStyle: React.FC<LayoutProps> = ({
   title,

@@ -2,6 +2,7 @@
 
 > 基于逐文件审计：58 源文件、~12,000 行代码
 > 日期：2026-05-21
+> 实施状态：Phase 1-2 ✅ + Phase 3 ✅ + Phase 4 部分（verify_output ✅，子进程统一跳过）+ Phase 5 部分（cleanup done，Root.tsx/HeroCenter 跳过）
 
 ---
 
@@ -46,11 +47,11 @@
 
 **修复**：拆分为 5 个独立文件 `components/progress/`，主文件只保留调度器。
 
-### 2.5 recorder.mjs — `recordAndExtract` 183 行
+### 2.5 recorder.mjs — `recordAndExtract` ✅ 已拆分
 
 **问题**：单函数覆盖导航、滚动、截图、资源收集、文件转换、ffmpeg 裁剪。
 
-**修复**：拆分为 `navigateAndCollect()`、`processRecording()`、`finalizeOutput()`。
+**修复**：拆分为 `_navigateAndCollect()` + `_processRecording()` + 4 个辅助函数（`_downloadImages`/`_saveCodeSnippets`/`_downloadVideos`/`_trimVideo`）。主函数从 184 行缩减到 35 行。
 
 ### 2.6 media_generation/capabilities/ — 5 个文件各 1 个模型
 

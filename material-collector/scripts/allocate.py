@@ -859,306 +859,38 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
     images.extend(manual_images)
     extracted_videos.extend(manual_videos)
 
-    intro_duration = 10
-    outro_duration = 10
-    reserved = intro_duration + outro_duration
-    available = total_time - reserved
-
-    if available <= 0:
-        print(f"WARNING: Total time {total_time}s too short for intro/outro, using {total_time}s directly")
-        available = max(total_time - 2, 0)
-        intro_duration = 1
-        outro_duration = 1
-
-    # Generate intro/outro videos via Remotion
-    # Try VideoComposer first (Phase 3+), fall back to old Intro/Outro
+    # Render intro/outro + main content via Remotion VideoComposer
     repo_name = repo_url.rstrip('/').split('/')[-1] if repo_url else 'unknown'
     if content_dir and os.path.isdir(content_dir):
         info = read_content(content_dir, repo_name)
     else:
         info = generate_simple_info(repo_url) if repo_url else {'title': 'Video', 'tagline': '', 'points': [], 'summary': '', 'stats': '', 'url': ''}
 
-    vc_success = False
-    main_content_path = None
-    try:
-        config = build_video_config(info, repo_url or '', bg_type, style_id=style, structure_id=structure)
-        # Calculate scene durations from structure definition
-        structure_id_used = config['structureId']
-        structure_scene_defs = {
-            'funnel': [
-                ('hook', 5), ('problem', 6), ('solution', 6),
-                ('showcase', max(0, available)), ('features', 8), ('cta', 6),
-            ],
-            'timeline': [
-                ('hook', 4), ('origin', 6), ('milestones', 8),
-                ('showcase', max(0, available)), ('today', 6), ('cta', 6),
-            ],
-            'product-showcase': [
-                ('hook', 4), ('problem', 5), ('demo', max(0, available)),
-                ('features', 8), ('proof', 5), ('cta', 6),
-            ],
-            'performance-launch': [
-                ('hook', 4), ('proof-1', 7), ('proof-2', 7),
-                ('features', 10), ('cta', 6),
-            ],
-        }
-        structure_scenes = structure_scene_defs.get(structure_id_used, structure_scene_defs['funnel'])
-        vc_duration = sum(d for _, d in structure_scenes)
-        vc_frames = int(vc_duration * 30)
+    config = build_video_config(info, repo_url or '', bg_type, style_id=style, structure_id=structure)
 
-        # Update dynamic showcase/demo duration in config
-        dynamic_scene = 'demo' if structure_id_used == 'product-showcase' else 'showcase'
-        if dynamic_scene in config.get('sceneConfigs', {}):
-            config['sceneConfigs'][dynamic_scene]['durationSeconds'] = max(0, available)
+    structure_id_used = config['structureId']
+    structure_scene_defs = {
+        'funnel':           [('hook', 5), ('problem', 6), ('solution', 6), ('showcase', total_time - 36), ('features', 8), ('cta', 6)],
+        'timeline':         [('hook', 4), ('origin', 6), ('milestones', 8), ('showcase', total_time - 30), ('today', 6), ('cta', 6)],
+        'product-showcase': [('hook', 4), ('problem', 5), ('demo', total_time - 29), ('features', 8), ('proof', 5), ('cta', 6)],
+        'performance-launch': [('hook', 4), ('proof-1', 7), ('proof-2', 7), ('features', 10), ('cta', 6)],
+    }
+    structure_scenes = structure_scene_defs.get(structure_id_used, structure_scene_defs['funnel'])
+    vc_duration = sum(d for _, d in structure_scenes if d > 0)
+    vc_frames = int(vc_duration * 30)
 
-        if vc_duration > 20:  # Only use VideoComposer for reasonable durations
-            vc_success = render_video_composer(output_dir, config, vc_frames)
-    except Exception as e:
-        print(f"  [VC] VideoComposer approach failed: {e}")
-        vc_success = False
+    dynamic_scene = 'demo' if structure_id_used == 'product-showcase' else 'showcase'
+    if dynamic_scene in config.get('sceneConfigs', {}):
+        config['sceneConfigs'][dynamic_scene]['durationSeconds'] = max(0, total_time - sum(d for s, d in structure_scenes if s != dynamic_scene))
+
+    print(f"\n  Rendering VideoComposer: {structure_id_used} ({vc_duration}s, {vc_frames}f)")
+    vc_success = render_video_composer(output_dir, config, vc_frames)
 
     if vc_success:
-        composer_path = os.path.join(output_dir, 'video_composer.mp4')
-        intro_result_path, outro_result_path, main_content_path = split_video_composer(output_dir, composer_path)
-
-        if not intro_result_path or not outro_result_path:
-            print("  [VC] Split failed, falling back to old intro/outro")
-            vc_success = False
-
-    if not vc_success:
-        # Fallback: old Intro/Outro path
-        intro_result, outro_result, info = generate_intro_outro(output_dir, content_dir, repo_url, bg_type)
-
-    extracted_count = len(extracted_videos)
-    image_count = len(images)
-    scroll_count = len(scroll_videos)
-    link_count = len(link_videos)
-
-    # ── 1. Extracted videos: keep original duration, trim proportionally if over budget ──
-    extracted_durations = []
-    for v in extracted_videos:
-        vpath = os.path.join(output_dir, v['path']) if not os.path.isabs(v['path']) else v['path']
-        if not os.path.exists(vpath):
-            vpath = os.path.join(os.path.dirname(manifest_path), v['path'])
-        d = get_video_duration(vpath) or v.get('duration', 0)
-        extracted_durations.append(d)
-
-    extracted_total_raw = sum(extracted_durations)
-    print(f"\n  Extracted videos: {extracted_count} files, total {extracted_total_raw:.1f}s (raw)")
-
-    # Extracted videos get up to 40% of available budget
-    extracted_budget = available * 0.40
-    if extracted_total_raw > extracted_budget and extracted_count > 0:
-        ratio = extracted_budget / extracted_total_raw
-        for i, item in enumerate(extracted_videos):
-            src = os.path.join(output_dir, item['path']) if not os.path.isabs(item['path']) else item['path']
-            if not os.path.exists(src):
-                src = os.path.join(os.path.dirname(manifest_path), item['path'])
-            new_dur = round(extracted_durations[i] * ratio, 1)
-            if new_dur < 3: new_dur = 3  # minimum 3s
-            trimmed_name = item['path'].rsplit('.', 1)[0] + '_trimmed.mp4'
-            trimmed_path = os.path.join(output_dir, trimmed_name)
-            print(f"    Trimming {item['path']}: {extracted_durations[i]:.1f}s → {new_dur}s")
-            trim_video(src, trimmed_path, new_dur)
-            item['_trimmed'] = trimmed_name
-            item['_duration'] = new_dur
+        print(f"  ✓ VideoComposer rendered: {os.path.join(output_dir, 'video_composer.mp4')}")
     else:
-        for item in extracted_videos:
-            item['_trimmed'] = item['path']
-            item['_duration'] = max(3, extracted_durations[extracted_videos.index(item)])
-
-    extracted_total = sum(item.get('_duration', 0) for item in extracted_videos)
-
-    # ── 2. Images: target 25% of total, clamped 10-50% ──
-    if image_count > 0:
-        image_time_per = max(4, min(10, total_time * 0.25 / image_count))
-        image_total = image_time_per * image_count
-        if image_total > total_time * 0.50:
-            image_time_per = max(4, (total_time * 0.50) / image_count)
-            image_total = image_time_per * image_count
-        elif image_total < total_time * 0.10:
-            image_time_per = max(4, (total_time * 0.10) / image_count)
-            image_total = image_time_per * image_count
-    else:
-        image_time_per = 0
-        image_total = 0
-
-    # ── 3. Scroll videos: fill remaining budget ──
-    scroll_budget = available - extracted_total - image_total
-
-    scroll_durations = []
-    for v in scroll_videos:
-        vpath = os.path.join(output_dir, v['path']) if not os.path.isabs(v['path']) else v['path']
-        if not os.path.exists(vpath):
-            vpath = os.path.join(os.path.dirname(manifest_path), v['path'])
-        d = get_video_duration(vpath) or v.get('duration', 0)
-        scroll_durations.append(d)
-
-    scroll_total_raw = sum(scroll_durations)
-    print(f"\n  Scroll videos: {scroll_count} files, total {scroll_total_raw:.1f}s (raw, budget: {scroll_budget:.1f}s)")
-
-    if scroll_total_raw > scroll_budget and scroll_count > 0:
-        ratio = scroll_budget / scroll_total_raw
-        for i, item in enumerate(scroll_videos):
-            src = os.path.join(output_dir, item['path']) if not os.path.isabs(item['path']) else item['path']
-            if not os.path.exists(src):
-                src = os.path.join(os.path.dirname(manifest_path), item['path'])
-            new_dur = round(scroll_durations[i] * ratio, 1)
-            if new_dur < 5: new_dur = 5
-            trimmed_name = item['path'].rsplit('.', 1)[0] + '_trimmed.mp4'
-            trimmed_path = os.path.join(output_dir, trimmed_name)
-            print(f"    Trimming {item['path']}: {scroll_durations[i]:.1f}s → {new_dur}s")
-            trim_video(src, trimmed_path, new_dur)
-            item['_trimmed'] = trimmed_name
-            item['_duration'] = new_dur
-    else:
-        for item in scroll_videos:
-            item['_trimmed'] = item['path']
-            item['_duration'] = max(5, scroll_durations[scroll_videos.index(item)] if scroll_count > 0 else 0)
-
-    # ── 4. Link videos: minimal allocation ──
-    link_budget = max(0, available - extracted_total - image_total - sum(item.get('_duration', 0) for item in scroll_videos))
-    link_durations = []
-    for v in link_videos:
-        vpath = os.path.join(output_dir, v['path']) if not os.path.isabs(v['path']) else v['path']
-        if not os.path.exists(vpath):
-            vpath = os.path.join(os.path.dirname(manifest_path), v['path'])
-        d = get_video_duration(vpath) or v.get('duration', 0)
-        link_durations.append(d)
-
-    link_total_raw = sum(link_durations)
-    if link_total_raw > link_budget and link_count > 0:
-        ratio = link_budget / link_total_raw
-        for i, item in enumerate(link_videos):
-            src = os.path.join(output_dir, item['path']) if not os.path.isabs(item['path']) else item['path']
-            if not os.path.exists(src):
-                src = os.path.join(os.path.dirname(manifest_path), item['path'])
-            new_dur = round(link_durations[i] * ratio, 1)
-            if new_dur < 5: new_dur = 5
-            trimmed_name = item['path'].rsplit('.', 1)[0] + '_trimmed.mp4'
-            trimmed_path = os.path.join(output_dir, trimmed_name)
-            print(f"    Trimming {item['path']}: {link_durations[i]:.1f}s → {new_dur}s")
-            trim_video(src, trimmed_path, new_dur)
-            item['_trimmed'] = trimmed_name
-            item['_duration'] = new_dur
-    else:
-        for item in link_videos:
-            item['_trimmed'] = item['path']
-            item['_duration'] = max(5, link_durations[link_videos.index(item)] if link_count > 0 else 0)
-
-    # ── Convert images to video clips with Ken Burns ──
-    image_clips = {}
-    if image_count > 0 and image_time_per > 0:
-        print("\n  Converting images to video clips (Ken Burns)...")
-        for item in images:
-            img_path = item['path']
-            if '/' in img_path:
-                rel_path = img_path
-            else:
-                rel_path = f'materials/{img_path}'
-            abs_img = os.path.join(output_dir, rel_path)
-            if not os.path.exists(abs_img):
-                abs_img = os.path.join(output_dir, img_path)
-            if os.path.exists(abs_img):
-                clip_name = img_path.replace('/', '_').rsplit('.', 1)[0] + '.mp4'
-                clip_path = os.path.join(output_dir, clip_name)
-                image_to_video_clip(abs_img, clip_path, image_time_per)
-                image_clips[img_path] = clip_name
-                print(f"    {clip_name}")
-            else:
-                print(f"    WARNING: image not found: {abs_img}")
-
-    # ── Build timeline by priority: intro → extracted_videos → images → scroll_videos → link_videos → outro ──
-    timeline = []
-    timeline.append({"file": "intro.mp4", "duration": intro_duration, "type": "intro"})
-
-    for item in extracted_videos:
-        trimmed = item.get('_trimmed', item['path'])
-        dur = item.get('_duration', 0)
-        timeline.append({"file": trimmed, "duration": round(dur, 1), "type": "extracted_video"})
-
-    for item in images:
-        clip_name = image_clips.get(item['path'])
-        if clip_name:
-            timeline.append({"file": clip_name, "duration": round(image_time_per, 1), "type": "image"})
-
-    for item in scroll_videos:
-        trimmed = item.get('_trimmed', item['path'])
-        dur = item.get('_duration', 0)
-        timeline.append({"file": trimmed, "duration": round(dur, 1), "type": "scroll_video"})
-
-    for item in link_videos:
-        trimmed = item.get('_trimmed', item['path'])
-        dur = item.get('_duration', 0)
-        timeline.append({"file": trimmed, "duration": round(dur, 1), "type": "link_video"})
-
-    timeline.append({"file": "outro.mp4", "duration": outro_duration, "type": "outro"})
-
-    # Write timeline.json
-    timeline_path = os.path.join(output_dir, 'timeline.json')
-    with open(timeline_path, 'w') as f:
-        json.dump(timeline, f, indent=2)
-
-    # Normalize all video files to consistent params before concat
-    # (yuv420p + 30fps) to avoid ffmpeg concat demuxer issues
-    for entry in timeline:
-        src = os.path.join(output_dir, entry['file'])
-        if not os.path.exists(src) or not entry['file'].endswith('.mp4'):
-            continue
-        probe = subprocess.run([
-            'ffprobe', '-v', 'error', '-select_streams', 'v:0',
-            '-show_entries', 'stream=pix_fmt,r_frame_rate',
-            '-of', 'json', src
-        ], capture_output=True, text=True, timeout=15)
-        needs_normalize = False
-        try:
-            info = json.loads(probe.stdout)['streams'][0]
-            if info.get('pix_fmt') != 'yuv420p':
-                needs_normalize = True
-            if info.get('r_frame_rate', '30/1') != '30/1':
-                needs_normalize = True
-        except (IndexError, KeyError, json.JSONDecodeError):
-            needs_normalize = True
-
-        if needs_normalize:
-            tmp = src + '.norm.mp4'
-            print(f"  Normalizing {entry['file']} → yuv420p/30fps")
-            subprocess.run([
-                'ffmpeg', '-y', '-i', src,
-                '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p', '-r', '30',
-                tmp
-            ], check=True, capture_output=True, timeout=120)
-            os.replace(tmp, src)
-
-    # Generate concat_list.txt
-    concat_path = os.path.join(output_dir, 'concat_list.txt')
-    with open(concat_path, 'w') as f:
-        for entry in timeline:
-            f.write(f"file '{entry['file']}'\n")
-
-    total_allocated = sum(e['duration'] for e in timeline)
-    actual_image_ratio = image_total / total_time if total_time > 0 else 0
-    print(f"\nTimeline: {len(timeline)} clips, total {total_allocated:.1f}s (target: {total_time}s)")
-    print(f"  Intro: {intro_duration}s | Outro: {outro_duration}s")
-    print(f"  Background: {bg_type}")
-    print(f"  Extracted videos: {extracted_count} files → {extracted_total:.1f}s")
-    if extracted_count > 0:
-        for i, v in enumerate(extracted_videos):
-            print(f"    {v['path']}: {extracted_durations[i]:.1f}s → {v.get('_duration', 0):.1f}s")
-    if scroll_count > 0:
-        print(f"  Scroll videos: {scroll_count} files")
-        for i, v in enumerate(scroll_videos):
-            print(f"    {v['path']}: {scroll_durations[i]:.1f}s → {v.get('_duration', 0):.1f}s")
-    if link_count > 0:
-        print(f"  Link videos: {link_count} files")
-    if image_count > 0:
-        print(f"  Images: {image_count} × {image_time_per:.1f}s = {image_count * image_time_per:.1f}s ({actual_image_ratio*100:.0f}%)")
-    else:
-        print(f"  Images: none")
-    print(f"Timeline: {timeline_path}")
-    print(f"Concat:   {concat_path}")
-
-    return timeline_path, concat_path
+        print(f"  ✗ VideoComposer failed, falling back to intro/outro")
+        generate_intro_outro(output_dir, content_dir, repo_url, bg_type)
 
 
 def burn_subtitles(video_path: str, srt_path: str, output_path: str = None) -> str:

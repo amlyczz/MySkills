@@ -13,6 +13,7 @@ from ..capabilities.speech import SpeechRequest, SpeechResult
 from ..capabilities.music import MusicRequest, InstrumentalRequest, MusicResult
 from ..capabilities.video import VideoRequest, ImageToVideoRequest, VideoResult
 from ..capabilities.text import SpecializedTextRequest, SpecializedTextResult
+from ..capabilities.text_prompts import build_specialized_prompt
 from ..utils.retry import retry_with_backoff
 
 
@@ -243,16 +244,9 @@ class MiniMaxProvider(BaseProvider):
             return GenerationResult.fail("BAD_REQUEST", "theme is required", self.name)
 
         model = self._models["specialized_text"]
-
-        # Build system prompt for the format
-        prompts = {
-            "classical_poem": f"你是一位古典诗人。请根据主题创作一首四言诗，{style or '风格优雅简练'}。长度：{length}。只输出诗作，不加解释。",
-            "lyrics": f"你是一位作词人。请根据主题创作歌词，{style or '押韵工整'}。长度：{length}。{f'押韵方案：{rhyme_scheme}。' if rhyme_scheme else ''}只输出歌词，不加解释。",
-            "couplet": f"你是一位对联大师。请根据主题创作一副对联，{style or '对仗工整'}。只输出对联，不加解释。",
-            "other": f"请根据以下主题进行创作：{theme}。{style or ''} 只输出内容，不加解释。",
-        }
-        system_prompt = prompts.get(format, prompts["other"])
-        user_prompt = f"主题：{theme}"
+        system_prompt, user_prompt = build_specialized_prompt(
+            format, theme, style, length, rhyme_scheme,
+        )
 
         try:
             proc = await asyncio.create_subprocess_exec(

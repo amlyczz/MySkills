@@ -149,6 +149,19 @@
               }
             }
           },
+          "camera": {
+            "type": "object",
+            "description": "Virtual camera action for showcase scenes",
+            "properties": {
+              "action": { "type": "string", "enum": ["pan-and-zoom"] },
+              "targetScale": { "type": "number", "minimum": 1.0 },
+              "focusPoint": {
+                "type": "object",
+                "properties": { "x": { "type": "number" }, "y": { "type": "number" } }
+              },
+              "triggerFrame": { "type": "integer", "minimum": 0 }
+            }
+          },
           "code_template": {
             "type": ["object", "null"],
             "description": "Code rendering config (for code_showcase / source_highlight types)",

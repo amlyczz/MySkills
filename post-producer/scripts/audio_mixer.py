@@ -20,8 +20,6 @@ import sys
 import json
 import subprocess
 import argparse
-import tempfile
-import shutil
 
 
 def _run(cmd: list[str], timeout: int = 600) -> subprocess.CompletedProcess:

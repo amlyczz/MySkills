@@ -12,38 +12,18 @@ import {
   interpolate,
 } from "remotion";
 import { LayoutProps, MotionType, MotionPreset } from "../types";
-import { motionPresets } from "../motions";
+import { getMotion } from "../motions";
 import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
 import { hexToRgba } from "../tokens";
 import {
-  CONTENT_PAD,
-  CONTENT_MAX_WIDTH,
-  GAP_TITLE_UNDERLINE,
-  UNDERLINE_HEIGHT,
-  UNDERLINE_MAX_WIDTH,
-  UNDERLINE_BORDER_RADIUS,
-  CARD_GAP,
-  CARD_PADDING,
-  CARD_BORDER_RADIUS,
-  CARD_BG_ALPHA,
-  FONT_SIZE_CARD,
-  FONT_WEIGHT_CARD,
-  CARD_MAX_WIDTH,
-  FONT_SIZE_TITLE,
-  FONT_WEIGHT_TITLE,
-  FONT_SIZE_TAGLINE,
-  FONT_WEIGHT_TAGLINE,
-  GAP_UNDERLINE_TAGLINE,
+  CONTENT_PAD, CONTENT_MAX_WIDTH, GAP_TITLE_UNDERLINE,
+  UNDERLINE_HEIGHT, UNDERLINE_MAX_WIDTH, UNDERLINE_BORDER_RADIUS,
+  CARD_GAP, CARD_PADDING, CARD_BORDER_RADIUS, CARD_BG_ALPHA,
+  FONT_SIZE_CARD, FONT_WEIGHT_CARD, CARD_MAX_WIDTH,
+  FONT_SIZE_TITLE, FONT_WEIGHT_TITLE, FONT_SIZE_TAGLINE,
+  FONT_WEIGHT_TAGLINE, GAP_UNDERLINE_TAGLINE,
 } from "../layout";
 import { TIMING } from "../animations";
-
-function getMotion(
-  map: Record<string, MotionType>,
-  key: string,
-  fallback: MotionType,
-): MotionPreset {
-  return motionPresets[map[key] ?? fallback];
-}
 
 export const CardGrid: React.FC<LayoutProps> = ({
   title,

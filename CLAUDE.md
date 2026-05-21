@@ -6,6 +6,14 @@
 - **TDD 流程**：spec 确认后，按测试驱动开发实施
 - **AI 操作日志**：大功能任务、技术决策、架构变更使用 `@agent-harness/memory-logs.md` 规范记录（.memory/YYYY-MM-DD.md）
 
+## Git 操作铁律
+
+- **高风险命令必须经我许可**：以下命令执行前必须弹出确认，禁止直接运行：
+  `git checkout .`、`git clean`、`git reset --hard`、`git push --force`、
+  `git rebase`、`git stash drop`、`git branch -D`、`rm -rf`（针对被跟踪的目录）
+- **每次大功能/修复/重构完成后**统一做一次 `git commit` + `git push`，不要每改一个文件就提交
+- **禁止**在 commit message 中使用 `$(cat <<'EOF' ... EOF)` 嵌套 heredoc，直接写字符串
+
 ## Python 项目规范
 
 - **包管理器**：统一使用 `uv`（`uv sync`、`uv add`、`uv run`），禁止 `pip install` 直接安装

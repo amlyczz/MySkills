@@ -106,6 +106,16 @@ export interface StyleTemplate {
     shadowPreset?: "neon" | "warm" | "default";
     italicForSubtitle?: boolean;
   };
+
+  // v3: 景深视差（背景联动）
+  depth?: { backgroundBlurPeak: number; backgroundScaleRetreat: number };
+
+  // v3: 材质混合
+  compositing?: {
+    blendMode?: "normal" | "overlay" | "color-dodge" | "luminosity" | "difference";
+    backdropBlur?: number;
+    glassOpacity?: number;
+  };
 }
 
 /** 样式元数据（用于匹配推荐） */
@@ -139,6 +149,11 @@ export interface StyleTokens {
   bulletColor: string;
   titleFont: string;
   titleTransform: "uppercase" | "none";
+  // v3: 材质混合
+  blendMode?: string;
+  backdropBlur?: number;
+  glassOpacity?: number;
+  cardBg?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -153,8 +168,14 @@ export type LayoutType =
   | "card-grid" // 2×2 或 3×1 卡片网格
   | "quote-style" // 引用式：大引号 + 文字
   | "stat-highlight" // 大数字 + 说明文字
-  | "media-full" // 纯素材展示（视频/图片铺满）
-  | "code-display"; // 代码展示（终端风格 + 语法高亮）
+  | "media-full"
+  | "code-display"
+  | "center-focus-video"  // 实录素材合成流
+  | "kinetic-typography"   // 动态排印
+  | "floating-grid"        // 卡片群飞入
+  | "fly-through"          // 3D Z 轴穿梭
+  | "prompt-input"         // AI 对话模拟
+  | "sandwich-text";       // 景深夹心
 
 /** 布局组件统一 props */
 export interface LayoutProps {
@@ -183,6 +204,15 @@ export interface LayoutProps {
 
   showUnderline?: boolean;
   showBullet?: boolean;
+
+  /** Chart data for proof/stat-highlight scenes */
+  chartData?: BarChartItem[];
+  /** Element stagger order: ["title", "bg", "bar1", "bar2"] */
+  staggerOrder?: string[];
+  /** v3 compositing: camera action for center-focus-video layout */
+  cameraAction?: CameraAction;
+  /** v3 compositing: video wrapper type */
+  wrapperType?: "glow" | "device-frame";
 }
 
 // ═══════════════════════════════════════════════════════════════

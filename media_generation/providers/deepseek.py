@@ -13,6 +13,7 @@ from typing import Optional
 
 from .base import BaseProvider, GenerationResult, UnsupportedCapabilityError
 from ..capabilities.text import SpecializedTextRequest, SpecializedTextResult
+from ..capabilities.text_prompts import build_specialized_prompt
 
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
@@ -61,29 +62,15 @@ class DeepSeekProvider(BaseProvider):
         if not self._api_key:
             return GenerationResult.fail("NO_API_KEY", "DEEPSEEK_API_KEY not set", self.name)
 
-        prompts = {
-            "classical_poem": (
-                f"你是一位古典诗人。请根据主题创作一首四言诗。{style or '风格优雅简练'}。"
-                f"长度：{length}。只输出诗作，不加解释。"
-            ),
-            "lyrics": (
-                f"你是一位作词人。请根据主题创作歌词。{style or '押韵工整'}。"
-                f"长度：{length}。{f'押韵方案：{rhyme_scheme}。' if rhyme_scheme else ''}"
-                f"只输出歌词，不加解释。"
-            ),
-            "couplet": (
-                f"你是一位对联大师。请根据主题创作一副对联。{style or '对仗工整'}。"
-                f"只输出对联，不加解释。"
-            ),
-            "other": f"请根据以下主题进行创作：{theme}。{style or ''} 只输出内容，不加解释。",
-        }
+        system_prompt, user_prompt = build_specialized_prompt(
+            format, theme, style, length, rhyme_scheme,
+        )
 
-        system_prompt = prompts.get(format, prompts["other"])
         body = json.dumps({
             "model": self._model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"主题：{theme}"},
+                {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.8,
             "max_tokens": 1024,

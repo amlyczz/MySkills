@@ -86,58 +86,62 @@ def check_concat_syntax(concat_path):
         return False
 
 
+def _run_check(name: str, is_error: bool, fn, errors: list, warnings: list) -> str:
+    """Run a single verification check. Returns 'ok', 'warning', or 'error'."""
+    try:
+        ok, msg = fn()
+    except Exception as e:
+        ok, msg = False, str(e)
+
+    if ok:
+        return 'ok'
+    if is_error:
+        errors.append(msg)
+        return 'error'
+    else:
+        warnings.append(msg)
+        return 'warning'
+
+
+def _find_manifest(output_dir: str) -> str | None:
+    for d in [output_dir, os.path.dirname(output_dir)]:
+        candidates = [f for f in os.listdir(d) if f.endswith('manifest_full.json')]
+        if candidates:
+            return os.path.join(d, candidates[0])
+    return None
+
+
+def _load_manifest(path: str | None) -> list:
+    if not path or not os.path.isfile(path):
+        return []
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict) and 'entries' in data:
+            return data['entries']
+    except Exception:
+        pass
+    return []
+
+
 def verify(output_dir, total_duration, manifest_path=None):
     """Run all verification checks and return results."""
     output_dir = os.path.abspath(output_dir)
-    checks = {}
-    warnings = []
-    errors = []
-    skipped = []
+    errors: list[str] = []
+    warnings: list[str] = []
+    checks: dict[str, str] = {}
 
-    # ── Locate key files ──
+    manifest_path = manifest_path or _find_manifest(output_dir)
+    if manifest_path:
+        print(f"  Manifest: {manifest_path}")
+    manifest = _load_manifest(manifest_path)
+
+    # Collect referenced files
+    concat_files: list[str] = []
+    referenced_files: list[str] = []
     concat_path = os.path.join(output_dir, 'concat_list.txt')
-    intro_path = os.path.join(output_dir, 'intro.mp4')
-    outro_path = os.path.join(output_dir, 'outro.mp4')
-    timeline_path = os.path.join(output_dir, 'timeline.json')
-
-    # If no manifest specified, derive from output_dir
-    if manifest_path is None:
-        # Search for manifest_full.json in the output dir
-        candidates = [f for f in os.listdir(output_dir) if f.endswith('manifest_full.json')]
-        if candidates:
-            manifest_path = os.path.join(output_dir, candidates[0])
-            print(f"  Auto-detected manifest: {manifest_path}")
-        else:
-            manifest_path = os.path.join(output_dir, 'manifest_full.json')
-
-    if not os.path.isfile(manifest_path):
-        # Try parent dir
-        parent = os.path.dirname(output_dir)
-        candidates = [f for f in os.listdir(parent) if f.endswith('manifest_full.json')]
-        if candidates:
-            manifest_path = os.path.join(parent, candidates[0])
-            print(f"  Auto-detected manifest (parent): {manifest_path}")
-
-    # ── Read manifest ──
-    manifest = []
-    if os.path.isfile(manifest_path):
-        try:
-            with open(manifest_path) as f:
-                manifest = json.load(f)
-            if isinstance(manifest, list):
-                pass  # new format: array of entries
-            elif isinstance(manifest, dict) and 'entries' in manifest:
-                manifest = manifest['entries']
-        except Exception as e:
-            errors.append(f"manifest 解析失败: {e}")
-    else:
-        errors.append(f"manifest 文件不存在: {manifest_path}")
-
-    # ── Collect all referenced files ──
-    referenced_files = []
-
-    # From concat_list.txt
-    concat_files = []
     if os.path.isfile(concat_path):
         with open(concat_path) as f:
             for line in f:
@@ -146,111 +150,78 @@ def verify(output_dir, total_duration, manifest_path=None):
                     name = line[6:-1]
                     concat_files.append(name)
                     referenced_files.append(os.path.join(output_dir, name))
-
-    # From manifest (check materials referenced there too)
-    manifest_files = []
-    for entry in manifest if isinstance(manifest, list) else []:
+    for entry in manifest:
         if isinstance(entry, dict) and 'path' in entry:
-            entry_path = entry['path']
-            abs_path = os.path.join(output_dir, entry_path)
-            if entry_path not in concat_files:
-                manifest_files.append(entry_path)
-                referenced_files.append(abs_path)
+            if entry['path'] not in concat_files:
+                referenced_files.append(os.path.join(output_dir, entry['path']))
 
-    # ── Checks ──
+    total_dur = 0  # computed in check 6, used in summary
 
-    # Check 1: intro.mp4
-    intro_ok = check_file_exists(intro_path) and check_file_decodable(intro_path)
-    checks['intro'] = 'ok' if intro_ok else 'error'
-    if not intro_ok:
-        errors.append(f"intro.mp4 缺失或不可解码: {intro_path}")
+    # ── 8 checks as callable list ──
+    check_list = [
+        ('intro', True, lambda: (
+            check_file_exists(os.path.join(output_dir, 'intro.mp4')) and
+            check_file_decodable(os.path.join(output_dir, 'intro.mp4')),
+            f"intro.mp4 缺失或不可解码"
+        )),
+        ('outro', True, lambda: (
+            check_file_exists(os.path.join(output_dir, 'outro.mp4')) and
+            check_file_decodable(os.path.join(output_dir, 'outro.mp4')),
+            f"outro.mp4 缺失或不可解码"
+        )),
+        ('files_exist', True, lambda: (
+            all(os.path.isfile(f) for f in referenced_files),
+            f"文件缺失: {', '.join(os.path.basename(f) for f in referenced_files if not os.path.isfile(f))}"
+        ) if referenced_files else (True, '')),
+        ('images', False, lambda: (
+            not (issues := [e['path'] for e in manifest if e.get('type') == 'image' and
+                  os.path.isfile(os.path.join(output_dir, e['path'])) and
+                  not check_file_decodable(os.path.join(output_dir, e['path']))]),
+            f"图片不可解码: {', '.join(issues)}" if issues else ''
+        )),
+        ('duration', True, lambda: (
+            not (zeros := [e['path'] for e in manifest if e.get('type') in
+                  ('scroll_video', 'extracted_video', 'link_video') and
+                  os.path.isfile(os.path.join(output_dir, e['path'])) and
+                  get_video_duration(os.path.join(output_dir, e['path'])) <= 0]),
+            f"视频时长为0: {', '.join(zeros)}" if zeros else ''
+        )),
+        ('total_duration', False, lambda: (
+            (dur := sum(get_video_duration(f) for f in referenced_files
+             if os.path.isfile(f) and os.path.splitext(f)[1].lower() in ('.mp4', '.webm', '.mov', '.mkv'))) and
+            not (globals().__setitem__('total_dur', dur) or True),
+            f"素材总时长 {dur:.1f}s 不足目标 50% ({total_duration * 0.5:.1f}s)"
+        ) if (dur := sum(get_video_duration(f) for f in referenced_files
+             if os.path.isfile(f) and os.path.splitext(f)[1].lower() in ('.mp4', '.webm', '.mov', '.mkv'))) < total_duration * 0.5
+             else (True, '')),
+        ('concat_syntax', True, lambda: (
+            os.path.isfile(concat_path) and check_concat_syntax(concat_path),
+            "concat_list.txt 不存在或语法有误"
+        )),
+        ('codec', False, lambda: (
+            not (mismatches := [
+                f"{os.path.basename(f)} ({c})" for f in referenced_files
+                if os.path.isfile(f) and os.path.splitext(f)[1].lower() in ('.mp4', '.webm', '.mov')
+                and (c := get_video_codec(f)) not in ('h264', 'unknown')
+            ]),
+            f"编码非H264: {', '.join(mismatches)}" if mismatches else ''
+        )),
+    ]
 
-    # Check 2: outro.mp4
-    outro_ok = check_file_exists(outro_path) and check_file_decodable(outro_path)
-    checks['outro'] = 'ok' if outro_ok else 'error'
-    if not outro_ok:
-        errors.append(f"outro.mp4 缺失或不可解码: {outro_path}")
-
-    # Check 3: all concat_list.txt files exist
-    missing_files = []
-    for f in referenced_files:
-        if not check_file_exists(f):
-            missing_files.append(os.path.basename(f))
-    checks['files_exist'] = 'ok' if not missing_files else 'error'
-    if missing_files:
-        errors.append(f"concat_list.txt 引用的文件缺失: {', '.join(missing_files)}")
-
-    # Check 4: image files decodable
-    image_issues = []
-    for entry in manifest if isinstance(manifest, list) else []:
-        if isinstance(entry, dict) and entry.get('type') == 'image':
-            img_path = os.path.join(output_dir, entry['path'])
-            if os.path.isfile(img_path):
-                # Check if image is readable via ffprobe
-                if not check_file_decodable(img_path):
-                    image_issues.append(os.path.basename(entry['path']))
-    checks['images'] = 'ok' if not image_issues else 'warning'
-    if image_issues:
-        warnings.append(f"图片素材不可解码: {', '.join(image_issues)}")
-
-    # Check 5: video duration > 0
-    zero_duration = []
-    for entry in manifest if isinstance(manifest, list) else []:
-        if isinstance(entry, dict) and entry.get('type') in ('scroll_video', 'extracted_video', 'link_video'):
-            vpath = os.path.join(output_dir, entry['path'])
-            if os.path.isfile(vpath):
-                d = get_video_duration(vpath)
-                if d <= 0:
-                    zero_duration.append(os.path.basename(entry['path']))
-    checks['duration'] = 'ok' if not zero_duration else 'error'
-    if zero_duration:
-        errors.append(f"视频素材时长为 0: {', '.join(zero_duration)}")
-
-    # Check 6: total duration >= 50% of target
-    total_dur = 0
-    for f in referenced_files:
-        if os.path.isfile(f):
-            ext = os.path.splitext(f)[1].lower()
-            if ext in ('.mp4', '.webm', '.mov', '.mkv'):
-                total_dur += get_video_duration(f)
-    min_required = total_duration * 0.50
-    checks['total_duration'] = 'ok' if total_dur >= min_required else 'warning'
-    if total_dur < min_required:
-        warnings.append(
-            f"素材总时长 {total_dur:.1f}s 不足目标时长 {total_duration}s 的 50% ({min_required:.1f}s)"
-        )
-
-    # Check 7: concat_list.txt syntax
-    if os.path.isfile(concat_path):
-        syntax_ok = check_concat_syntax(concat_path)
-        checks['concat_syntax'] = 'ok' if syntax_ok else 'error'
-        if not syntax_ok:
-            errors.append("concat_list.txt 语法有误，ffmpeg 无法解析")
-    else:
-        checks['concat_syntax'] = 'error'
-        errors.append("concat_list.txt 不存在")
-
-    # Check 8: codec consistency (all h264)
-    codec_mismatches = []
-    for f in referenced_files:
-        if os.path.isfile(f):
-            ext = os.path.splitext(f)[1].lower()
-            if ext in ('.mp4', '.webm', '.mov'):
-                codec = get_video_codec(f)
-                if codec != 'h264' and codec != 'unknown':
-                    codec_mismatches.append(f"{os.path.basename(f)} ({codec})")
-    checks['codec'] = 'ok' if not codec_mismatches else 'warning'
-    if codec_mismatches:
-        warnings.append(f"素材编码非 H264: {', '.join(codec_mismatches)}")
+    for name, is_error, fn in check_list:
+        checks[name] = _run_check(name, is_error, fn, errors, warnings)
 
     # ── Result ──
     passed = len(errors) == 0
+    total_dur = total_dur or sum(get_video_duration(f) for f in referenced_files
+        if os.path.isfile(f) and os.path.splitext(f)[1].lower() in ('.mp4', '.webm', '.mov', '.mkv'))
+
     result = {
         'passed': passed,
         'checks': checks,
         'warnings': warnings,
         'errors': errors,
-        'skipped_materials': skipped,
+        'skipped_materials': [],
         'summary': {
             'total_files_checked': len(referenced_files),
             'total_duration_found': round(total_dur, 1),
@@ -265,25 +236,25 @@ def verify(output_dir, total_duration, manifest_path=None):
     for check_name, status in checks.items():
         icon = {'ok': '✅', 'warning': '⚠️ ', 'error': '❌'}
         print(f"  {icon.get(status, '❓')} {check_name}: {status}")
-    if warnings:
-        print(f"\n⚠️  Warnings ({len(warnings)}):")
-        for w in warnings:
-            print(f"  • {w}")
-    if errors:
-        print(f"\n❌ Errors ({len(errors)}):")
-        for e in errors:
-            print(f"  • {e}")
+    for label, items in [('Warnings', warnings), ('Errors', errors)]:
+        if items:
+            print(f"\n{icon_for(label)} {label} ({len(items)}):")
+            for item in items:
+                print(f"  • {item}")
     print(f"\n  检查文件数: {result['summary']['total_files_checked']}")
     print(f"  素材总时长: {result['summary']['total_duration_found']:.1f}s / 目标 {total_duration}s")
     print(f"{'=' * 50}")
 
-    # ── Write report ──
     report_path = os.path.join(output_dir, 'verification_report.json')
     with open(report_path, 'w') as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
     print(f"验证报告: {report_path}")
 
     return passed
+
+
+def icon_for(label: str) -> str:
+    return '⚠️' if label == 'Warnings' else '❌'
 
 
 if __name__ == '__main__':

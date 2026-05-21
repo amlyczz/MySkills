@@ -11,30 +11,14 @@ import {
   interpolate,
 } from "remotion";
 import { LayoutProps, MotionType, MotionPreset } from "../types";
-import { motionPresets, defaultMotionMap } from "../motions";
+import { defaultMotionMap, getMotion } from "../motions";
 import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
 import {
-  CONTENT_PAD,
-  TEXT_MAX_WIDTH,
-  GAP_POINTS,
-  DOT_SIZE,
-  FONT_SIZE_TITLE,
-  FONT_SIZE_TAGLINE,
-  FONT_SIZE_POINTS,
-  FONT_WEIGHT_TITLE,
-  FONT_WEIGHT_TAGLINE,
-  FONT_WEIGHT_POINTS,
+  CONTENT_PAD, TEXT_MAX_WIDTH, GAP_POINTS, DOT_SIZE,
+  FONT_SIZE_TITLE, FONT_SIZE_TAGLINE, FONT_SIZE_POINTS,
+  FONT_WEIGHT_TITLE, FONT_WEIGHT_TAGLINE, FONT_WEIGHT_POINTS,
 } from "../layout";
 import { TIMING } from "../animations";
-
-/** 安全地从 motionMap 获取 MotionPreset */
-function getMotion(
-  map: Record<string, MotionType>,
-  key: string,
-  fallback: MotionType,
-): MotionPreset {
-  return motionPresets[map[key] ?? fallback];
-}
 
 export const SplitLeftText: React.FC<LayoutProps> = ({
   title,

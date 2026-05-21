@@ -12,35 +12,16 @@ import {
   interpolate,
 } from "remotion";
 import { LayoutProps, MotionType, MotionPreset } from "../types";
-import { motionPresets } from "../motions";
+import { getMotion } from "../motions";
 import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
 import {
-  CONTENT_PAD,
-  CONTENT_MAX_WIDTH,
-  UNDERLINE_HEIGHT,
-  UNDERLINE_MAX_WIDTH,
-  UNDERLINE_BORDER_RADIUS,
-  GAP_STAT_LABEL,
-  GAP_TITLE_UNDERLINE,
-  GAP_TAGLINE_POINTS,
-  GAP_POINTS,
-  DOT_SIZE,
-  FONT_SIZE_STAT_BIG,
-  FONT_SIZE_STAT_LABEL,
-  FONT_WEIGHT_STAT_BIG,
-  FONT_WEIGHT_STAT_LABEL,
-  FONT_SIZE_POINTS,
-  FONT_WEIGHT_POINTS,
+  CONTENT_PAD, CONTENT_MAX_WIDTH, UNDERLINE_HEIGHT, UNDERLINE_MAX_WIDTH,
+  UNDERLINE_BORDER_RADIUS, GAP_STAT_LABEL, GAP_TITLE_UNDERLINE,
+  GAP_TAGLINE_POINTS, GAP_POINTS, DOT_SIZE, FONT_SIZE_STAT_BIG,
+  FONT_SIZE_STAT_LABEL, FONT_WEIGHT_STAT_BIG, FONT_WEIGHT_STAT_LABEL,
+  FONT_SIZE_POINTS, FONT_WEIGHT_POINTS,
 } from "../layout";
 import { TIMING } from "../animations";
-
-function getMotion(
-  map: Record<string, MotionType>,
-  key: string,
-  fallback: MotionType,
-): MotionPreset {
-  return motionPresets[map[key] ?? fallback];
-}
 
 export const StatHighlight: React.FC<LayoutProps> = ({
   title,

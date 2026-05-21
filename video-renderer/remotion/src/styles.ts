@@ -36,6 +36,8 @@ export const styleTemplates: StyleTemplate[] = [
       bulletChar: "\u2726",
     },
     defaultBgType: "geometric",
+    depth: { backgroundBlurPeak: 8, backgroundScaleRetreat: 0.97 },
+    compositing: { blendMode: "luminosity", backdropBlur: 12, glassOpacity: 0.06 },
   },
   {
     id: "light-teal",

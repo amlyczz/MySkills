@@ -62,6 +62,7 @@ export function resolveTextTransform(
 
 /** 从 StyleTemplate 解析完整的 Design Tokens */
 export function resolveStyleTokens(style: StyleTemplate): StyleTokens {
+  const comp = style.compositing;
   return {
     bgBaseColor: extractBaseColor(style.colors.background),
     overlayBg: overlayGradient(style),
@@ -72,5 +73,9 @@ export function resolveStyleTokens(style: StyleTemplate): StyleTokens {
     bulletColor: style.colors.accent,
     titleFont: style.typography.fontFamily,
     titleTransform: resolveTextTransform(style),
+    blendMode: comp?.blendMode ?? "normal",
+    backdropBlur: comp?.backdropBlur ?? 0,
+    glassOpacity: comp?.glassOpacity ?? 0.05,
+    cardBg: `rgba(255,255,255,${comp?.glassOpacity ?? 0.05})`,
   };
 }
