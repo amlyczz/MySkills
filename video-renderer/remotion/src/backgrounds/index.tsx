@@ -3,10 +3,11 @@ import { Starfield, BackgroundProps } from "./Starfield";
 import { BokehCircles } from "./BokehCircles";
 import { GeometricPatterns } from "./GeometricPatterns";
 import { PixelTransition } from "./PixelTransition";
+import { FluidGradient } from "./FluidGradient";
 
 export type { BackgroundProps } from "./Starfield";
 
-export type BgType = "starfield" | "bokeh" | "geometric" | "pixel";
+export type BgType = "starfield" | "bokeh" | "geometric" | "pixel" | "fluid-gradient";
 
 interface BackgroundLayerProps extends BackgroundProps {
   bgType: BgType;
@@ -25,6 +26,8 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
       return <GeometricPatterns {...props} />;
     case "pixel":
       return <PixelTransition {...props} />;
+    case "fluid-gradient":
+      return <FluidGradient />;
     default:
       return <Starfield {...props} />;
   }

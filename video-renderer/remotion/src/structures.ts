@@ -200,11 +200,68 @@ export const productShowcaseStructure: StructureTemplate = {
   ],
 };
 
+/**
+ * 性能发布型叙事 — 对标 Cohere 发布视频的 宣告→证明→特性→愿景。
+ *
+ * hook(logo) → proof(数据×2) → features → cta
+ */
+export const performanceLaunchStructure: StructureTemplate = {
+  id: "performance-launch",
+  name: "性能发布型",
+  scenes: [
+    {
+      id: "hook",
+      type: "hook",
+      durationSeconds: 4,
+      contentSlots: [
+        { name: "headline", type: "text", required: true, maxLines: 2 },
+        { name: "subtitle", type: "text", required: false, maxLines: 1 },
+      ],
+    },
+    {
+      id: "proof-1",
+      type: "proof",
+      durationSeconds: 7,
+      contentSlots: [
+        { name: "title", type: "text", required: true, maxLines: 1 },
+      ],
+    },
+    {
+      id: "proof-2",
+      type: "proof",
+      durationSeconds: 7,
+      contentSlots: [
+        { name: "title", type: "text", required: true, maxLines: 1 },
+      ],
+    },
+    {
+      id: "features",
+      type: "feature",
+      durationSeconds: 10,
+      contentSlots: [
+        { name: "title", type: "text", required: true, maxLines: 1 },
+        { name: "points", type: "text", required: true, maxLines: 5 },
+      ],
+    },
+    {
+      id: "cta",
+      type: "cta",
+      durationSeconds: 6,
+      contentSlots: [
+        { name: "title", type: "text", required: true, maxLines: 1 },
+        { name: "url", type: "text", required: false },
+        { name: "summary", type: "text", required: false, maxLines: 2 },
+      ],
+    },
+  ],
+};
+
 /** 所有预置结构模板 */
 export const structureTemplates: StructureTemplate[] = [
   funnelStructure,
   timelineStructure,
   productShowcaseStructure,
+  performanceLaunchStructure,
 ];
 
 /** 按 ID 查找结构模板 */

@@ -195,6 +195,7 @@ def info_dict_from_json(data):
         'outro_extra': '',
         'domains': content.get('domains', ''),
         'language': repo.get('language', ''),
+        'chartData': content.get('chartData', []),
     }
 
     # Derive summary / outro_extra from script segments (mirrors markdown logic)
@@ -527,7 +528,7 @@ def build_video_config(info, repo_url, bg_type='starfield', style_id=None, struc
     summary = info.get('summary', '')
 
     # Structure selection
-    valid_structure_ids = {'funnel', 'timeline', 'product-showcase'}
+    valid_structure_ids = {'funnel', 'timeline', 'product-showcase', 'performance-launch'}
     if structure_id and structure_id not in valid_structure_ids:
         print(f"  WARNING: structure '{structure_id}' not found, using auto-match")
         structure_id = None
@@ -572,6 +573,27 @@ def build_video_config(info, repo_url, bg_type='starfield', style_id=None, struc
                     "title": "Key Features",
                     "points": points[:5] if points else [],
                 },
+            },
+            "proof": {
+                "layoutId": "stat-highlight",
+                "motionMap": {"title": "spring-elastic"},
+                "content": {
+                    "title": "Performance",
+                    "points": [f"• {p}" for p in points[:2]] if points else [],
+                },
+                **({"chartData": info.get('chartData', [])} if info.get('chartData') else {}),
+            },
+            "proof-1": {
+                "layoutId": "stat-highlight",
+                "motionMap": {"title": "spring-elastic"},
+                "content": {"title": "Performance"},
+                **({"chartData": info.get('chartData', [])[:2] if len(info.get('chartData', [])) >= 2 else info.get('chartData', [])} if info.get('chartData') else {}),
+            },
+            "proof-2": {
+                "layoutId": "stat-highlight",
+                "motionMap": {"title": "spring-elastic"},
+                "content": {"title": "Performance"},
+                **({"chartData": info.get('chartData', [])[2:4] if len(info.get('chartData', [])) >= 4 else info.get('chartData', [])} if info.get('chartData') else {}),
             },
             "cta": {
                 "layoutId": "hero-center",
@@ -874,6 +896,10 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
             'product-showcase': [
                 ('hook', 4), ('problem', 5), ('demo', max(0, available)),
                 ('features', 8), ('proof', 5), ('cta', 6),
+            ],
+            'performance-launch': [
+                ('hook', 4), ('proof-1', 7), ('proof-2', 7),
+                ('features', 10), ('cta', 6),
             ],
         }
         structure_scenes = structure_scene_defs.get(structure_id_used, structure_scene_defs['funnel'])

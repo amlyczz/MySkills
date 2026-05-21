@@ -32,6 +32,7 @@ SEG_TYPE_LAYOUT = {
     "code_showcase":      {"layout_id": "code-display",     "motion": {}},
     "source_highlight":   {"layout_id": "code-display",     "motion": {}},
     "stats_showcase":     {"layout_id": "stat-highlight",   "motion": {}},
+    "proof":              {"layout_id": "stat-highlight",   "motion": {"title": "spring-elastic"}},
     "changelog_showcase": {"layout_id": "card-grid",        "motion": {"cards": "spring-slide-up"}},
     "social_proof":       {"layout_id": "quote-style",      "motion": {}},
     "comparison":         {"layout_id": "stat-highlight",   "motion": {}},

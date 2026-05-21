@@ -37,7 +37,20 @@
         "summary": { "type": "string", "description": "Closing reflection or outro hook" },
         "stats_text": { "type": "string", "description": "Human-readable growth stats (e.g. '854 Stars, 2 days old')" },
         "target_users": { "type": "string" },
-        "domains": { "type": "string", "description": "Chinese classification tags, separated by 、" }
+        "domains": { "type": "string", "description": "Chinese classification tags, separated by 、" },
+        "chartData": {
+          "type": "array",
+          "description": "Optional benchmark/comparison data for animated bar charts",
+          "items": {
+            "type": "object",
+            "required": ["label", "value"],
+            "properties": {
+              "label": { "type": "string" },
+              "value": { "type": "number", "minimum": 0, "maximum": 100 },
+              "previousValue": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          }
+        }
       }
     },
     "script": {

@@ -160,6 +160,37 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
     },
     idle: { type: "glow", amplitude: 0.3, frequency: 0.03 },
   },
+  // ── 弹性动效 (v3) — 对标 Cohere 发布视频 ──
+  "spring-elastic": {
+    id: "spring-elastic",
+    name: "弹性弹跳",
+    entrance: {
+      springConfig: { mass: 0.6, damping: 12, stiffness: 100 },
+      delayFrames: 0,
+      durationFrames: 45,
+      enterFrom: { type: "translate", x: 0, y: 60 },
+    },
+  },
+  "smooth-scale-up": {
+    id: "smooth-scale-up",
+    name: "平滑放大",
+    entrance: {
+      springConfig: { mass: 0.5, damping: 15, stiffness: 90 },
+      delayFrames: 0,
+      durationFrames: 40,
+      enterFrom: { type: "scale", from: 0.85 },
+    },
+  },
+  "staggered-grow": {
+    id: "staggered-grow",
+    name: "逐条生长",
+    entrance: {
+      springConfig: { mass: 0.8, damping: 12, stiffness: 100 },
+      delayFrames: 0,
+      durationFrames: 50,
+      enterFrom: { type: "translate", x: 0, y: 30 },
+    },
+  },
   none: {
     id: "none",
     name: "无动效",

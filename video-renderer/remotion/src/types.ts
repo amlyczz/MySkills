@@ -199,6 +199,10 @@ export type MotionType =
   | "reveal-mask"
   | "bounce-in"
   | "blur-focus"
+  // v3 弹性动效
+  | "spring-elastic"
+  | "smooth-scale-up"
+  | "staggered-grow"
   // 退场动效
   | "fade-out"
   | "slide-out-left"
@@ -339,11 +343,19 @@ export interface MatchingInput {
   totalDuration: number;
 }
 
+/** 柱状图数据项 */
+export interface BarChartItem {
+  label: string;
+  value: number;
+  previousValue?: number;
+}
+
 /** 场景配置 */
 export interface SceneConfig {
   layoutId: LayoutType;
   motionMap: Record<string, MotionType>;
   content: Record<string, string | string[]>;
+  chartData?: BarChartItem[];  // proof 场景的柱状图数据
 }
 
 /** 完整视频配置 — 匹配引擎输出 */
