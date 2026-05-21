@@ -22,8 +22,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-REMOTION_DIR = os.path.join(PROJECT_DIR, "remotion")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REMOTION_DIR = os.path.join(REPO_ROOT, "video-renderer", "remotion")
 
 random.seed()
 

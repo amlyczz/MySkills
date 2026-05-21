@@ -13,9 +13,21 @@
 - **依赖声明**：根目录 `pyproject.toml`，`dependency-groups.dev` 放开发依赖
 - **虚拟环境**：`.venv/` 由 `uv sync` 自动创建，不手动管理
 
+## 视频 Pipeline（5 层）
+
+```
+content-generator/    Layer 0: 内容生成 → content.json
+material-collector/   Layer 1: 素材采集 → material_manifest.json
+timeline-composer/    Layer 2: 时间线编排 → timeline.json + .srt
+video-renderer/       Layer 3: Remotion 渲染 → video.mp4
+post-producer/        Layer 4: 音频混音 + 字幕 → final.mp4
+pipeline-orchestrator/ 编排层：串联 5 层一键执行
+media_generation/      横向切面：图片/语音/音乐/视频/文本生成
+```
+
 ## Skill 目录规范
 
 每个 skill 是一个独立文件夹，必须包含：
 - `skill.md`：YAML frontmatter（name / description / triggers / tools_allowed）+ 中文 agent 操作指南
-- 脚本放在 `scripts-v2/` 子目录（如需要）
-- Python 包放在 skill 根目录，用下划线命名（如 `media_generation/`）
+- `schema/`：该层的数据格式定义（JSON Schema draft-07）
+- `scripts/`：可执行脚本

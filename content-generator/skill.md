@@ -26,7 +26,7 @@ tools_allowed:
 
 ### 第一步：读取去重记录，获取已推荐列表
 
-当前年份记为 `YYYY`（如 2026），检查文件 `gh-trending-recommend/content/YYYY-repos.md` 是否存在。
+当前年份记为 `YYYY`（如 2026），检查文件 `content-generator/content/YYYY-repos.md` 是否存在。
 
 - 如果存在，用 `read_file` 读取内容，提取所有已推荐的仓库完整名（`owner/repo`），存入列表 `recommended`。
 - 如果文件不存在，`recommended` 为空列表，后续创建新文件时需初始化年份标题。
@@ -157,11 +157,11 @@ gh api repos/{owner}/{repo}/readme
 
 ### 第七步：保存所有文件
 
-在运行目录下，确保存在 `gh-trending-recommend/content/` 文件夹（不存在则创建），然后生成以下文件：
+在运行目录下，确保存在 `content-generator/content/` 文件夹（不存在则创建），然后生成以下文件：
 
 #### 文件 0：结构化内容 JSON（与 markdown 并行输出）
 
-- **路径**：`gh-trending-recommend/content/YYYY-MM-DD/HHmm-{repo_name}-content.json`
+- **路径**：`content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-content.json`
 - **内容**：与下面 4 个 markdown 文件**数据相同，结构不同**。所有文本字段使用中文，遵循 `schemas/content.schema.json` 定义的格式：
 
 ```json
@@ -231,8 +231,8 @@ gh api repos/{owner}/{repo}/readme
 
 #### 文件 1：仓库详细档案
 
-- **路径**：`gh-trending-recommend/content/YYYY-MM-DD/HHmm-{repo_name}.md`  
-  例如：`gh-trending-recommend/content/2026-05-18/1430-sunshine-tracker.md`
+- **路径**：`content-generator/content/YYYY-MM-DD/HHmm-{repo_name}.md`  
+  例如：`content-generator/content/2026-05-18/1430-sunshine-tracker.md`
 - **内容模板**：
 
 ```markdown
@@ -260,7 +260,7 @@ gh api repos/{owner}/{repo}/readme
 
 #### 文件 2：口播脚本
 
-- **路径**：`gh-trending-recommend/content/YYYY-MM-DD/HHmm-{repo_name}-口播脚本.md`
+- **路径**：`content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-口播脚本.md`
 - **内容** 直接写入完整脚本，开头标注日期和项目名：
 
 ```markdown
@@ -271,7 +271,7 @@ gh api repos/{owner}/{repo}/readme
 
 #### 文件 3：封面图提示词
 
-- **路径**：`gh-trending-recommend/content/YYYY-MM-DD/HHmm-{repo_name}-封面提示词.md`
+- **路径**：`content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-封面提示词.md`
 - **内容** 包含两个比例的提示词，格式如下：
 
 ```markdown
@@ -288,7 +288,7 @@ gh api repos/{owner}/{repo}/readme
 
 #### 文件 4：视频投稿发布文案
 
-- **路径**：`gh-trending-recommend/content/YYYY-MM-DD/HHmm-{repo_name}-发布文案.md`
+- **路径**：`content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-发布文案.md`
 - **内容**：生成适配 **抖音、快手、B站、小红书** 四个视频平台的投稿文案，格式如下：
 
 ```markdown
@@ -339,7 +339,7 @@ gh api repos/{owner}/{repo}/readme
 
 #### 文件 5：去重记录更新
 
-- **路径**：`gh-trending-recommend/content/YYYY-repos.md`
+- **路径**：`content-generator/content/YYYY-repos.md`
 - **操作**：若文件不存在，先创建并写入 `# YYYY 年已推荐仓库`；然后追加一行 `- {full_name}`。
 
 ---
@@ -349,7 +349,7 @@ gh api repos/{owner}/{repo}/readme
 如果用户需要视频，调用 `gh-video-recorder` skill，传入：
 - `REPO_URL`：仓库地址（即第三步获取的 `html_url`）
 - `TOTAL_DURATION`：建议 120~180 秒
-- `CONTENT_DIR`：`gh-trending-recommend/content/YYYY-MM-DD/`（第七步的输出目录，用于生成有内容的 intro/outro）
+- `CONTENT_DIR`：`content-generator/content/YYYY-MM-DD/`（第七步的输出目录，用于生成有内容的 intro/outro）
 - `URLS`：如果仓库有官网/Demo 页面（`homepage` 字段），传入该 URL
 
 这样 intro 会显示项目名称+核心要点，outro 会显示项目地址+总结语。
