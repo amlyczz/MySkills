@@ -13,6 +13,11 @@ import { CardGrid } from "./CardGrid";
 import { QuoteStyle } from "./QuoteStyle";
 import { CodeDisplay } from "./CodeDisplay";
 import { SandwichText } from "./SandwichText";
+import { CenterFocusVideo } from "./CenterFocusVideo";
+import { FloatingGrid } from "./FloatingGrid";
+import { KineticText } from "./KineticText";
+import { ZAxisFlyThrough } from "./ZAxisFlyThrough";
+import { PromptInput } from "./PromptInput";
 
 export type { LayoutType };
 export type { LayoutProps };
@@ -42,6 +47,16 @@ export const LayoutDispatcher: React.FC<LayoutDispatcherProps> = ({
       return <CodeDisplay {...props} />;
     case "sandwich-text":
       return <SandwichText {...props} />;
+    case "center-focus-video":
+      return <CenterFocusVideo {...props} />;
+    case "kinetic-typography":
+      return <KineticText {...props} />;
+    case "floating-grid":
+      return <FloatingGrid {...props} />;
+    case "fly-through":
+      return <ZAxisFlyThrough {...props} />;
+    case "prompt-input":
+      return <PromptInput {...props} />;
     case "split-right-text":
     case "full-screen-text":
     default:

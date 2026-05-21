@@ -5,10 +5,10 @@
  * 动画逻辑已提取到 hooks/useHero{Title,Underline,Tagline,Points}.ts
  */
 import React from "react";
-import { AbsoluteFill, Audio, staticFile } from "remotion";
-import { LayoutProps, MotionType } from "../types";
+import { AbsoluteFill } from "remotion";
+import { LayoutProps } from "../types";
 import { getMotion } from "../motions";
-import { getSfxByMotion } from "../audio/sfxLibrary";
+import { SfxPlayer } from "../components/SfxPlayer";
 import { useHeroTitle } from "../hooks/useHeroTitle";
 import { useHeroUnderline } from "../hooks/useHeroUnderline";
 import { useHeroTagline } from "../hooks/useHeroTagline";
@@ -89,17 +89,12 @@ export const HeroCenter: React.FC<LayoutProps> = ({
         )}
       </div>
 
-      {/* SFX */}
-      {title && getSfxByMotion(motionMap["title"] ?? "arc-entrance") && (
-        <Audio src={staticFile(getSfxByMotion(motionMap["title"] ?? "arc-entrance")!.src)} volume={getSfxByMotion(motionMap["title"] ?? "arc-entrance")!.defaultVolume} />
-      )}
-      {subtitle && getSfxByMotion(motionMap["subtitle"] ?? "scale-fade") && (
-        <Audio src={staticFile(getSfxByMotion(motionMap["subtitle"] ?? "scale-fade")!.src)} volume={getSfxByMotion(motionMap["subtitle"] ?? "scale-fade")!.defaultVolume} />
-      )}
-      {(points ?? []).slice(0, 5).map((_, i) => {
-        const sfx = getSfxByMotion(motionMap["points"] ?? "spring-slide-up");
-        return sfx ? <Audio key={`sfx-${i}`} src={staticFile(sfx.src)} volume={sfx.defaultVolume * 0.6} startFrom={120 + i * 18} /> : null;
-      })}
+      {/* SFX — frame-accurate via wired MotionPreset.sfx */}
+      {title && <SfxPlayer motion={getMotion(motionMap, "title", "arc-entrance")} staggerIndex={0} />}
+      {subtitle && <SfxPlayer motion={getMotion(motionMap, "subtitle", "scale-fade")} staggerIndex={0} />}
+      {(points ?? []).map((_, i) => (
+        <SfxPlayer key={i} motion={getMotion(motionMap, "points", "spring-slide-up")} staggerIndex={i} />
+      ))}
     </AbsoluteFill>
   );
 };

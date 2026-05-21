@@ -22,6 +22,8 @@ export interface LifecycleResult {
   introProgress: number;
   /** Idle float Y offset (px) */
   idleOffset: number;
+  /** Idle glow intensity 0-1 (only non-zero for glow type) */
+  glowIntensity: number;
   /** Outro progress 0-1 */
   outroProgress: number;
 }
@@ -50,16 +52,22 @@ export function useLifecycle(
         durationInFrames: ent.durationFrames,
       });
 
-  // ── Phase 2: Idle (subtle float) ──
+  // ── Phase 2: Idle (subtle float / glow pulse) ──
   const idle = motion.idle;
   const idleFrames = Math.max(0, sceneDurationFrames - ent.durationFrames - (motion.exit?.durationFrames ?? 0));
   let idleOffset = 0;
+  let glowIntensity = 0;
 
   if (idle && idle.type === "float") {
     const idleFrame = Math.max(0, effectiveFrame - ent.durationFrames);
     const amplitude = idle.amplitude ?? 3;
     const frequency = idle.frequency ?? 0.02;
     idleOffset = Math.sin(idleFrame * frequency) * amplitude;
+  } else if (idle && idle.type === "glow") {
+    const idleFrame = Math.max(0, effectiveFrame - ent.durationFrames);
+    const amplitude = idle.amplitude ?? 0.3;
+    const frequency = idle.frequency ?? 0.03;
+    glowIntensity = amplitude * (0.5 + 0.5 * Math.sin(idleFrame * frequency * Math.PI * 2));
   }
 
   // ── Phase 3: Outro ──
@@ -118,10 +126,15 @@ export function useLifecycle(
       const tx = interpolate(outroProgress, [0, 1], [0, -80]);
       opacity = 1 - outroProgress;
       transform = `translateX(${tx}px) translateY(${idleOffset}px)`;
+    } else if (exit?.type === "blur-out") {
+      const blur = interpolate(outroProgress, [0, 1], [0, 12]);
+      opacity = 1 - outroProgress;
+      filter = `blur(${blur}px)`;
+      transform = `translateY(${idleOffset}px)`;
     }
   }
 
-  return { transform, opacity, filter, phase, introProgress, idleOffset, outroProgress };
+  return { transform, opacity, filter, phase, introProgress, idleOffset, glowIntensity, outroProgress };
 }
 
 /** 将 SpringConfig 转换为 Remotion spring config（duration override） */

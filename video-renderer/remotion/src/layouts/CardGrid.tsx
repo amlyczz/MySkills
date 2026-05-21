@@ -15,6 +15,7 @@ import { LayoutProps, MotionType, MotionPreset } from "../types";
 import { getMotion } from "../motions";
 import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
 import { hexToRgba } from "../tokens";
+import { SfxPlayer } from "../components/SfxPlayer";
 import {
   CONTENT_PAD, CONTENT_MAX_WIDTH, GAP_TITLE_UNDERLINE,
   UNDERLINE_HEIGHT, UNDERLINE_MAX_WIDTH, UNDERLINE_BORDER_RADIUS,
@@ -199,6 +200,13 @@ export const CardGrid: React.FC<LayoutProps> = ({
           </div>
         )}
       </div>
+
+      {/* SFX */}
+      {title && <SfxPlayer motion={titleMotion} staggerIndex={0} />}
+      {subtitle && <SfxPlayer motion={subMotion} staggerIndex={0} />}
+      {cards.map((_, i) => (
+        <SfxPlayer key={i} motion={cardMotion} staggerIndex={i} />
+      ))}
     </AbsoluteFill>
   );
 };

@@ -14,6 +14,7 @@ import { LayoutProps, MotionType, MotionPreset } from "../types";
 import { defaultMotionMap, getMotion } from "../motions";
 import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
 import { AnimatedBarChart } from "../components/AnimatedBarChart";
+import { SfxPlayer } from "../components/SfxPlayer";
 import {
   CONTENT_PAD, TEXT_MAX_WIDTH, GAP_POINTS, DOT_SIZE,
   FONT_SIZE_TITLE, FONT_SIZE_TAGLINE, FONT_SIZE_POINTS,
@@ -150,6 +151,13 @@ export const SplitLeftText: React.FC<LayoutProps> = ({
           <img src={mediaUrl} alt="" style={{ maxWidth: "100%", maxHeight: "80%", borderRadius: theme.decoration.borderRadius, objectFit: "contain" }} />
         ) : null}
       </div>
+
+      {/* SFX */}
+      {title && <SfxPlayer motion={titleMotion} staggerIndex={0} />}
+      {subtitle && <SfxPlayer motion={subMotion} staggerIndex={0} />}
+      {(points ?? []).map((_, i) => (
+        <SfxPlayer key={i} motion={pointMotion} staggerIndex={i} />
+      ))}
     </AbsoluteFill>
   );
 };

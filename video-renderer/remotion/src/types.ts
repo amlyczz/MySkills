@@ -265,6 +265,26 @@ export type SceneMood = "power" | "elegant" | "professional" | "calm";
 /** Virtual camera pan-and-zoom action */
 export interface CameraAction { type: "pan-and-zoom"; targetScale: number; focusPoint: { x: number; y: number }; triggerFrame: number; }
 
+// ═══════════════════════════════════════════════════════════════
+//  场景过渡系统
+// ═══════════════════════════════════════════════════════════════
+
+export type TransitionType =
+  | "none"       // hard cut (current behavior)
+  | "crossfade"  // opacity dissolve
+  | "whip-pan"   // directional blur pan
+  | "slide-in"   // slide from direction into view
+  | "slide-out"; // slide out in direction
+
+export type TransitionDirection = "left" | "right" | "up" | "down";
+
+export interface TransitionConfig {
+  type: TransitionType;
+  direction?: TransitionDirection;
+  /** How many overlapping frames the transition spans */
+  durationFrames: number;
+}
+
 /** 动效模板 */
 export interface MotionPreset {
   id: string;
@@ -287,7 +307,7 @@ export interface MotionPreset {
   };
 
   exit?: {
-    type: "fade-out" | "slide-out" | "scale-down";
+    type: "fade-out" | "slide-out" | "scale-down" | "blur-out";
     durationFrames: number;
   };
 
@@ -402,6 +422,10 @@ export interface SceneConfig {
   chartData?: BarChartItem[];
   cameraAction?: CameraAction;
   wrapperType?: "glow" | "device-frame";
+  /** Transition INTO this scene (from previous) */
+  transitionIn?: TransitionConfig;
+  /** Transition OUT of this scene (to next) */
+  transitionOut?: TransitionConfig;
 }
 
 /** 完整视频配置 — 匹配引擎输出 */

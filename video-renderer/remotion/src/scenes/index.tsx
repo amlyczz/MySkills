@@ -49,7 +49,7 @@ const proofDefaults = {
 
 // ── 场景组件 ──
 
-import type { CameraAction, BarChartItem } from "../types";
+import type { CameraAction, BarChartItem, TransitionConfig } from "../types";
 
 export interface SpecificSceneProps {
   content: Record<string, string | string[]>;
@@ -61,15 +61,13 @@ export interface SpecificSceneProps {
   bgType: BgType;
   layoutId?: LayoutType;
   motionMap?: Record<string, MotionType>;
+  transitionIn?: TransitionConfig;
+  transitionOut?: TransitionConfig;
 }
 
 /** 黄金三秒 */
 export const HookScene: React.FC<SpecificSceneProps> = ({
-  content,
-  style,
-  bgType,
-  layoutId,
-  motionMap,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
 }) => (
   <SceneBase
     content={content}
@@ -77,6 +75,8 @@ export const HookScene: React.FC<SpecificSceneProps> = ({
     bgType={bgType}
     layoutId={layoutId ?? hookDefaults.layoutId}
     motionMap={motionMap ?? hookDefaults.motionMap}
+    transitionIn={transitionIn}
+    transitionOut={transitionOut}
     showUnderline={false}
     showBullet={false}
   />
@@ -84,11 +84,7 @@ export const HookScene: React.FC<SpecificSceneProps> = ({
 
 /** 痛点共鸣 */
 export const ProblemScene: React.FC<SpecificSceneProps> = ({
-  content,
-  style,
-  bgType,
-  layoutId,
-  motionMap,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
 }) => (
   <SceneBase
     content={content}
@@ -96,16 +92,14 @@ export const ProblemScene: React.FC<SpecificSceneProps> = ({
     bgType={bgType}
     layoutId={layoutId ?? problemDefaults.layoutId}
     motionMap={motionMap ?? problemDefaults.motionMap}
+    transitionIn={transitionIn}
+    transitionOut={transitionOut}
   />
 );
 
 /** 方案亮相 */
 export const SolutionScene: React.FC<SpecificSceneProps> = ({
-  content,
-  style,
-  bgType,
-  layoutId,
-  motionMap,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
 }) => (
   <SceneBase
     content={content}
@@ -113,16 +107,14 @@ export const SolutionScene: React.FC<SpecificSceneProps> = ({
     bgType={bgType}
     layoutId={layoutId ?? solutionDefaults.layoutId}
     motionMap={motionMap ?? solutionDefaults.motionMap}
+    transitionIn={transitionIn}
+    transitionOut={transitionOut}
   />
 );
 
 /** 功能亮点 */
 export const FeatureScene: React.FC<SpecificSceneProps> = ({
-  content,
-  style,
-  bgType,
-  layoutId,
-  motionMap,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
 }) => (
   <SceneBase
     content={content}
@@ -130,16 +122,14 @@ export const FeatureScene: React.FC<SpecificSceneProps> = ({
     bgType={bgType}
     layoutId={layoutId ?? featureDefaults.layoutId}
     motionMap={motionMap ?? featureDefaults.motionMap}
+    transitionIn={transitionIn}
+    transitionOut={transitionOut}
   />
 );
 
 /** 素材展示 */
 export const ShowcaseScene: React.FC<SpecificSceneProps> = ({
-  content,
-  style,
-  bgType,
-  layoutId,
-  motionMap,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
 }) => (
   <SceneBase
     content={content}
@@ -147,6 +137,8 @@ export const ShowcaseScene: React.FC<SpecificSceneProps> = ({
     bgType={bgType}
     layoutId={layoutId ?? showcaseDefaults.layoutId}
     motionMap={motionMap ?? showcaseDefaults.motionMap}
+    transitionIn={transitionIn}
+    transitionOut={transitionOut}
     showUnderline={false}
     showBullet={false}
   />
@@ -154,11 +146,7 @@ export const ShowcaseScene: React.FC<SpecificSceneProps> = ({
 
 /** 行动呼吁 */
 export const CtaScene: React.FC<SpecificSceneProps> = ({
-  content,
-  style,
-  bgType,
-  layoutId,
-  motionMap,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
 }) => (
   <SceneBase
     content={content}
@@ -166,6 +154,8 @@ export const CtaScene: React.FC<SpecificSceneProps> = ({
     bgType={bgType}
     layoutId={layoutId ?? ctaDefaults.layoutId}
     motionMap={motionMap ?? ctaDefaults.motionMap}
+    transitionIn={transitionIn}
+    transitionOut={transitionOut}
     showUnderline={true}
     showBullet={false}
   />
@@ -173,11 +163,7 @@ export const CtaScene: React.FC<SpecificSceneProps> = ({
 
 /** 数据证明 */
 export const ProofScene: React.FC<SpecificSceneProps> = ({
-  content,
-  style,
-  bgType,
-  layoutId,
-  motionMap,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
 }) => (
   <SceneBase
     content={content}
@@ -185,6 +171,8 @@ export const ProofScene: React.FC<SpecificSceneProps> = ({
     bgType={bgType}
     layoutId={layoutId ?? proofDefaults.layoutId}
     motionMap={motionMap ?? proofDefaults.motionMap}
+    transitionIn={transitionIn}
+    transitionOut={transitionOut}
     showUnderline={true}
     showBullet={true}
   />

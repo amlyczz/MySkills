@@ -612,6 +612,17 @@ def build_video_config(info, repo_url, bg_type='starfield', style_id=None, struc
         },
     }
 
+    # ── Add sensible transition defaults ──
+    scene_ids = list(config["sceneConfigs"].keys())
+    for i, sid in enumerate(scene_ids):
+        scene = config["sceneConfigs"][sid]
+        is_first = i == 0
+        is_last = i == len(scene_ids) - 1
+        if not is_first and "transitionIn" not in scene:
+            scene["transitionIn"] = {"type": "crossfade", "durationFrames": 15}
+        if not is_last and "transitionOut" not in scene:
+            scene["transitionOut"] = {"type": "crossfade", "durationFrames": 15}
+
     return config
 
 
@@ -827,7 +838,7 @@ def speed_remap(src_path, dst_path, speed):
 
 # ── Time allocation ─────────────────────────────────────────
 
-def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False, style=None, structure=None, manual_images=None, manual_videos=None):
+def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False, style=None, structure=None, manual_images=None, manual_videos=None, use_llm=False, llm_api_key=None, llm_provider='deepseek'):
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -885,7 +896,21 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
     else:
         info = generate_simple_info(repo_url) if repo_url else {'title': 'Video', 'tagline': '', 'points': [], 'summary': '', 'stats': '', 'url': ''}
 
-    config = build_video_config(info, repo_url or '', bg_type, style_id=style, structure_id=structure)
+    if use_llm:
+        import importlib.util as _util, os as _os
+        _llm_path = _os.path.abspath(_os.path.join(
+            _os.path.dirname(__file__), '..', '..',
+            'pipeline-orchestrator', 'llm_matcher.py'))
+        _spec = _util.spec_from_file_location("llm_matcher", _llm_path)
+        _llm = _util.module_from_spec(_spec)
+        _spec.loader.exec_module(_llm)
+        config = _llm.build_video_config_with_llm(
+            info, repo_url or '', bg_type,
+            style_id=style, structure_id=structure,
+            api_key=llm_api_key, provider=llm_provider,
+        )
+    else:
+        config = build_video_config(info, repo_url or '', bg_type, style_id=style, structure_id=structure)
 
     structure_id_used = config['structureId']
     structure_scene_defs = {
@@ -980,11 +1005,18 @@ if __name__ == '__main__':
                         help='User-provided image file path (repeatable)')
     parser.add_argument('--manual-video', default=None, action='append',
                         help='User-provided video file path (repeatable)')
+    parser.add_argument('--use-llm', action='store_true',
+                        help='Use LLM-based template matching (requires --llm-api-key or DEEPSEEK_API_KEY env)')
+    parser.add_argument('--llm-api-key', default=None,
+                        help='API key for LLM matching (DeepSeek or OpenAI-compatible)')
+    parser.add_argument('--llm-provider', default='deepseek', choices=['deepseek', 'openai'],
+                        help='LLM provider for matching (default: deepseek)')
 
     args = parser.parse_args()
     allocate(args.manifest, args.total_duration, args.output_dir, args.content_dir, args.repo_url, args.bg_type,
              strict=args.strict, style=args.style, structure=args.structure,
-             manual_images=args.manual_image, manual_videos=args.manual_video)
+             manual_images=args.manual_image, manual_videos=args.manual_video,
+             use_llm=args.use_llm, llm_api_key=args.llm_api_key, llm_provider=args.llm_provider)
 
     # Post-prod: subtitle burning
     if args.srt:

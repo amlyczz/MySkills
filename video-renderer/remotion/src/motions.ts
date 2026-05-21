@@ -5,6 +5,7 @@
  * 每个动效模板可绑定 SFX（预留）。
  */
 import { MotionPreset, MotionType } from "./types";
+import { sfxLibrary } from "./audio/sfxLibrary";
 
 export type { MotionType };
 
@@ -134,7 +135,7 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 1,
       enterFrom: { type: "translate", x: 0, y: 0 },
     },
-    exit: { type: "fade-out", durationFrames: 15 },
+    exit: { type: "blur-out", durationFrames: 15 },
   },
 
   // ── 驻留动效 ──
@@ -236,3 +237,18 @@ export function resolveMoodMotion(mood: SceneMood | undefined, role: "title" | "
   const strategy = moodStrategy[mood];
   return role === "title" ? strategy.titleMotion : strategy.bodyMotion;
 }
+
+/** Wire SFX bindings from sfxLibrary into motionPresets in place */
+function wireSfx(): void {
+  for (const sfx of sfxLibrary) {
+    const preset = motionPresets[sfx.motionType];
+    if (preset) {
+      preset.sfx = {
+        src: sfx.src,
+        delay: sfx.defaultDelay,
+        volume: sfx.defaultVolume,
+      };
+    }
+  }
+}
+wireSfx();
