@@ -1,7 +1,7 @@
 # GitHub Repo → 视频 Pipeline 架构设计
 
 > 最后更新：2026-05-20（v2）
-> 实现状态：Phase 1 ✅ + Phase 2 ✅ + Phase 3 80% + Phase 4 ✅ + Phase 5 ✅
+> 实现状态：Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ + Phase 4 ✅ + Phase 5 ✅ — 全部 5 阶段完成
 
 ## 目标
 
@@ -749,12 +749,13 @@ Props:
 - [x] 输出 `content.json` → 格式见 `schemas/content.schema.json`
 - [x] 保留 markdown 文件作为人类可读副本 → 4 个 .md 文件不受影响
 
-### Phase 3: Layer 1 增强 — 80% 完成
+### Phase 3: Layer 1 增强 — 100% 完成 ✅
 - [x] 新增 `code_snippet` 采集 → `recorder.mjs` `collectCodeSnippets()`（README 代码块解析 + 分类评分）
 - [x] 新增精华截图（CSS selector 定位 + Playwright screenshot）→ `recorder.mjs` `captureScreenshots()`（架构图/对比表/关键 section 自动截图）
 - [x] 新增 `/docs` 探测式采集 → `recorder.mjs` `probeDocs()`（gh api 检查 docs 目录）
 - [x] 完善 material 元数据（source/capture/metadata 字段）→ 图片 alt_text/dimensions/section + code language/lines + screenshot highlight_score
 - [x] recorder.mjs 输出 material_manifest.json v2 → `generateV2Manifest()`（并行输出 v1 manifest_full.json + v2 material_manifest.json）
+- [x] 用户手动素材支持 → `allocate.py --manual-image/--manual-video`（CLI 注入 manual_image/manual_video）
 
 ### Phase 4: Layer 2 独立 — 100% 完成
 - [x] 实现口播-素材匹配算法 → `timeline_composer.py` `_match_materials()` / `_score_material()`

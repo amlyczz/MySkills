@@ -786,7 +786,7 @@ def trim_video(src_path, dst_path, target_duration):
 
 # ── Time allocation ─────────────────────────────────────────
 
-def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False, style=None, structure=None):
+def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False, style=None, structure=None, manual_images=None, manual_videos=None):
     output_dir = os.path.abspath(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -806,11 +806,36 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
 
     print(f"\nLoaded manifest: {len(manifest)} entries (v{data.get('version', 'legacy') if isinstance(data, dict) else 'legacy'})")
 
+    # Detect v2 material_manifest.json format
+    if isinstance(data, dict) and data.get('version') == '2' and 'materials' in data:
+        manifest = data['materials']
+        manifest = [m for m in manifest if m.get('type') in (
+            'scroll_video', 'extracted_video', 'image', 'link_video',
+            'code_snippet', 'screenshot', 'source_code', 'doc_page',
+            'manual_video', 'manual_image',
+        )]
+        print(f"  (v2 material_manifest.json: {len(manifest)} usable materials)")
+
     # ── Group by type (priority order) ──
     extracted_videos = [m for m in manifest if m['type'] == 'extracted_video']
     images = [m for m in manifest if m['type'] == 'image']
     scroll_videos = [m for m in manifest if m['type'] == 'scroll_video']
     link_videos = [m for m in manifest if m['type'] == 'link_video']
+    # v2 types
+    code_snippets = [m for m in manifest if m['type'] == 'code_snippet']
+    screenshots = [m for m in manifest if m['type'] == 'screenshot']
+    manual_videos = [m for m in manifest if m['type'] == 'manual_video']
+    manual_images = [m for m in manifest if m['type'] == 'manual_image']
+
+    # Inject CLI-provided manual materials
+    for img_path in (manual_images or []):
+        manual_images.append({'type': 'manual_image', 'path': img_path})
+    for vid_path in (manual_videos or []):
+        manual_videos.append({'type': 'manual_video', 'path': vid_path})
+
+    # Merge manual materials into main type groups
+    images.extend(manual_images)
+    extracted_videos.extend(manual_videos)
 
     intro_duration = 10
     outro_duration = 10
@@ -1154,9 +1179,15 @@ if __name__ == '__main__':
                         help='Structure template ID (e.g. funnel, timeline, product-showcase). Auto-matched if not specified.')
     parser.add_argument('--srt', default=None,
                         help='Path to SRT subtitle file to burn into final video')
+    parser.add_argument('--manual-image', default=None, action='append',
+                        help='User-provided image file path (repeatable)')
+    parser.add_argument('--manual-video', default=None, action='append',
+                        help='User-provided video file path (repeatable)')
 
     args = parser.parse_args()
-    allocate(args.manifest, args.total_duration, args.output_dir, args.content_dir, args.repo_url, args.bg_type, strict=args.strict, style=args.style, structure=args.structure)
+    allocate(args.manifest, args.total_duration, args.output_dir, args.content_dir, args.repo_url, args.bg_type,
+             strict=args.strict, style=args.style, structure=args.structure,
+             manual_images=args.manual_image, manual_videos=args.manual_video)
 
     # Post-prod: subtitle burning
     if args.srt:
