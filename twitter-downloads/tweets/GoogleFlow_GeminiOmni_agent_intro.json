@@ -1,0 +1,42 @@
+{
+  "id": "2056804643204899276",
+  "source": "x.com",
+  "author": {
+    "username": "FlowbyGoogle",
+    "display_name": "Google Flow",
+    "url": "https://x.com/FlowbyGoogle",
+    "verified": true
+  },
+  "tweet": {
+    "url": "https://x.com/FlowbyGoogle/status/2056804643204899276",
+    "posted_at": "2026-05-20T02:30:00+08:00",
+    "content": "Introducing your agent and the all-new Gemini Omni model in Google Flow. #GoogleIO ✨ Think of your agent as a creative partner. It reasons through complex tasks and helps you brainstorm, create, and edit, all while under your direction. ⚡ Gemini Omni is where Gemini's intelligence meets our generative media models. Think of it as Nano Banana but for video. It is a major leap forward in world understanding, multimodality, and editing. Try all the latest Google Flow updates from I/O today at flow.google.",
+    "hashtags": ["GoogleIO"],
+    "mentions": [],
+    "media": {
+      "type": "video",
+      "duration_seconds": 76,
+      "views": 106699
+    },
+    "stats": {
+      "replies": 33,
+      "retweets": 123,
+      "likes": 682,
+      "bookmarks": 213
+    }
+  },
+  "files": {
+    "video": {
+      "filename": "GoogleFlow_GeminiOmni_agent_intro.mp4",
+      "size_bytes": 50000000,
+      "size_display": "50 MB"
+    },
+    "bgm": {
+      "filename": "GoogleFlow_GeminiOmni_agent_intro_BGM.mp3",
+      "size_bytes": 1300000,
+      "size_display": "1.3 MB"
+    }
+  },
+  "summary": "Google Flow在Google IO 2026推出Agent创意伙伴和全新的Gemini Omni多模态模型",
+  "tags": ["Google Flow", "Gemini Omni", "Agent", "GoogleIO", "AI Video"]
+}

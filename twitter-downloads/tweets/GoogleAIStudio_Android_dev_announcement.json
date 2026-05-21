@@ -1,0 +1,42 @@
+{
+  "id": "2056838230591574098",
+  "source": "x.com",
+  "author": {
+    "username": "Google",
+    "display_name": "Google",
+    "url": "https://x.com/Google",
+    "verified": true
+  },
+  "tweet": {
+    "url": "https://x.com/Google/status/2056838230591574098",
+    "posted_at": "2026-05-20T04:43:00+08:00",
+    "content": "Native @Android development is now supported in @GoogleAIStudio so you can build high-quality Android apps with just a prompt 🤖 #GoogleIO",
+    "hashtags": ["GoogleIO"],
+    "mentions": ["Android", "GoogleAIStudio"],
+    "media": {
+      "type": "video",
+      "duration_seconds": 15,
+      "views": 897628
+    },
+    "stats": {
+      "replies": 153,
+      "retweets": 1000,
+      "likes": 7127,
+      "bookmarks": 2627
+    }
+  },
+  "files": {
+    "video": {
+      "filename": "GoogleAIStudio_Android_dev_announcement.mp4",
+      "size_bytes": 2600000,
+      "size_display": "2.6 MB"
+    },
+    "bgm": {
+      "filename": "GoogleAIStudio_Android_dev_announcement_BGM.mp3",
+      "size_bytes": 61000,
+      "size_display": "61 KB"
+    }
+  },
+  "summary": "Google AI Studio在Google IO 2026宣布支持原生Android开发，一句话提示即可构建应用",
+  "tags": ["Google", "Android", "AI Studio", "GoogleIO", "AI"]
+}

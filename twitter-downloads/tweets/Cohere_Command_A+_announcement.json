@@ -1,0 +1,42 @@
+{
+  "id": "2057120818551734589",
+  "source": "x.com",
+  "author": {
+    "username": "cohere",
+    "display_name": "Cohere",
+    "url": "https://x.com/cohere",
+    "verified": true
+  },
+  "tweet": {
+    "url": "https://x.com/cohere/status/2057120818551734589",
+    "posted_at": "2026-05-20T23:26:00+08:00",
+    "content": "Introducing: Cohere Command A+\n\nWe've created our most powerful LLM yet, optimized it to run on as little hardware as possible, and released it open-source for all.\n\nMeet Command A+\nAvailable now on Hugging Face and vLLM",
+    "hashtags": [],
+    "mentions": [],
+    "media": {
+      "type": "video",
+      "duration_seconds": 68,
+      "views": 317262
+    },
+    "stats": {
+      "replies": 66,
+      "retweets": 337,
+      "likes": 1649,
+      "bookmarks": 1033
+    }
+  },
+  "files": {
+    "video": {
+      "filename": "Cohere_Command_A+_announcement.mp4",
+      "size_bytes": 55800000,
+      "size_display": "56 MB"
+    },
+    "bgm": {
+      "filename": "Cohere_Command_A+_announcement_BGM.mp3",
+      "size_bytes": 1100000,
+      "size_display": "1.1 MB"
+    }
+  },
+  "summary": "Cohere发布Command A+——史上最强LLM，极致硬件优化并完全开源",
+  "tags": ["Cohere", "Command A+", "LLM", "Open Source", "Hugging Face"]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "2044106378655215625",
+  "source": "x.com",
+  "author": {
+    "username": "Google",
+    "display_name": "Google",
+    "url": "https://x.com/Google",
+    "verified": true
+  },
+  "tweet": {
+    "url": "https://x.com/Google/status/2044106378655215625",
+    "posted_at": "2026-04-15T01:31:00+08:00",
+    "content": "Today, we're introducing Skills in @GoogleChrome, a new way to build one-click workflows for your most frequently used AI prompts — like asking for ingredient substitutions to make a recipe vegan, generating side-by-side shopping comparisons across multiple tabs, or scanning long docs to get the info you need quickly. When you write a prompt that you want to use again, you can save it as a Skill directly from your chat history. The next time you need it, select your saved Skill in Gemini in Chrome by typing forward slash ( / ) or clicking the plus sign ( + ) button, and your Skill will run on the page you're viewing, along with any other tabs you select.",
+    "hashtags": [],
+    "mentions": ["GoogleChrome"],
+    "media": {
+      "type": "video",
+      "duration_seconds": 29,
+      "views": 1273306
+    },
+    "stats": {
+      "replies": 226,
+      "retweets": 1339,
+      "likes": 6240,
+      "bookmarks": 3670
+    }
+  },
+  "files": {
+    "video": {
+      "filename": "GoogleChrome_Skills_announcement.mp4",
+      "size_bytes": 3500000,
+      "size_display": "3.5 MB"
+    },
+    "bgm": {
+      "filename": "GoogleChrome_Skills_announcement_BGM.mp3",
+      "size_bytes": 586000,
+      "size_display": "586 KB"
+    }
+  },
+  "summary": "Google Chrome推出Skills功能，用户可将常用AI提示词保存为一键工作流",
+  "tags": ["Google", "Chrome", "AI", "Skills", "Gemini"]
+}
