@@ -4,7 +4,8 @@
     "image":  { "provider": "minimax", "model": "image-01" },
     "speech": { "provider": "minimax", "model": "speech-hd" },
     "music":  { "provider": "minimax", "model": "music-2.6" },
-    "video":  { "provider": "minimax", "model": "MiniMax-Hailuo-2.3-Fast-6s-768p" }
+    "video":  { "provider": "minimax", "model": "MiniMax-Hailuo-2.3-Fast-6s-768p" },
+    "specialized_text": { "provider": "minimax", "model": "MiniMax-M1" }
   },
   "providers": {
     "minimax": {
@@ -15,7 +16,8 @@
         "image":  ["image-01"],
         "speech": ["speech-hd", "speech-basic"],
         "music":  ["music-2.5", "music-2.6"],
-        "video":  ["MiniMax-Hailuo-2.3-Fast-6s-768p", "MiniMax-Hailuo-2.3-6s-768p"]
+        "video":  ["MiniMax-Hailuo-2.3-Fast-6s-768p", "MiniMax-Hailuo-2.3-6s-768p"],
+        "specialized_text": ["MiniMax-M1"]
       }
     }
   },
@@ -48,6 +50,18 @@
       "capability": "video",
       "providers": [
         { "provider": "minimax", "model": "MiniMax-Hailuo-2.3-Fast-6s-768p" }
+      ]
+    },
+    "poem_writer": {
+      "capability": "specialized_text",
+      "providers": [
+        { "provider": "minimax", "model": "MiniMax-M1" }
+      ]
+    },
+    "lyrics_writer": {
+      "capability": "specialized_text",
+      "providers": [
+        { "provider": "minimax", "model": "MiniMax-M1" }
       ]
     }
   }

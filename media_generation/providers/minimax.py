@@ -12,6 +12,7 @@ from ..capabilities.image import ImageRequest, ImageResult, ImageData
 from ..capabilities.speech import SpeechRequest, SpeechResult
 from ..capabilities.music import MusicRequest, InstrumentalRequest, MusicResult
 from ..capabilities.video import VideoRequest, ImageToVideoRequest, VideoResult
+from ..capabilities.text import SpecializedTextRequest, SpecializedTextResult
 from ..utils.retry import retry_with_backoff
 
 
@@ -28,6 +29,7 @@ class MiniMaxProvider(BaseProvider):
             "speech": "speech-hd",
             "music": "music-2.6",
             "video": "MiniMax-Hailuo-2.3-Fast-6s-768p",
+            "specialized_text": "MiniMax-M1",
             **(model_overrides or {}),
         }
 
@@ -37,7 +39,7 @@ class MiniMaxProvider(BaseProvider):
 
     @property
     def supported_capabilities(self) -> list[str]:
-        return ["image", "speech", "music", "video"]
+        return ["image", "speech", "music", "video", "specialized_text"]
 
     # ── Public dispatch ──────────────────────────────────────
 
@@ -51,6 +53,7 @@ class MiniMaxProvider(BaseProvider):
             "speech": self.generate_speech,
             "music": self.generate_music,
             "video": self.generate_video,
+            "specialized_text": self.generate_specialized_text,
         }
         return await handlers[capability](**kwargs)
 
@@ -219,6 +222,65 @@ class MiniMaxProvider(BaseProvider):
             )
         except Exception as e:
             return GenerationResult.fail("VIDEO_FAILED", str(e), self.name,
+                                         duration_ms=(time.monotonic() - t0) * 1000)
+
+    # ── Specialized Text ─────────────────────────────────────
+
+    async def generate_specialized_text(self, request: Optional[SpecializedTextRequest] = None,
+                                        format: str = "other",
+                                        theme: str = "", style: Optional[str] = None,
+                                        length: str = "medium",
+                                        rhyme_scheme: Optional[str] = None,
+                                        **kwargs) -> GenerationResult:
+        t0 = time.monotonic()
+        if request is not None:
+            format = request.format
+            theme = request.theme
+            style = request.style
+            length = request.length
+            rhyme_scheme = request.rhyme_scheme
+        if not theme:
+            return GenerationResult.fail("BAD_REQUEST", "theme is required", self.name)
+
+        model = self._models["specialized_text"]
+
+        # Build system prompt for the format
+        prompts = {
+            "classical_poem": f"你是一位古典诗人。请根据主题创作一首四言诗，{style or '风格优雅简练'}。长度：{length}。只输出诗作，不加解释。",
+            "lyrics": f"你是一位作词人。请根据主题创作歌词，{style or '押韵工整'}。长度：{length}。{f'押韵方案：{rhyme_scheme}。' if rhyme_scheme else ''}只输出歌词，不加解释。",
+            "couplet": f"你是一位对联大师。请根据主题创作一副对联，{style or '对仗工整'}。只输出对联，不加解释。",
+            "other": f"请根据以下主题进行创作：{theme}。{style or ''} 只输出内容，不加解释。",
+        }
+        system_prompt = prompts.get(format, prompts["other"])
+        user_prompt = f"主题：{theme}"
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "mmx", "chat",
+                "--model", model,
+                "--system", system_prompt,
+                "--prompt", user_prompt,
+                "--quiet",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120.0)
+
+            if proc.returncode != 0:
+                err_msg = stderr.decode().strip() if stderr else "unknown error"
+                raise RuntimeError(f"mmx chat exited {proc.returncode}: {err_msg}")
+
+            content = stdout.decode().strip() if stdout else ""
+            return GenerationResult.ok(
+                SpecializedTextResult(content=content, format=format),
+                provider=self.name, model=model,
+                duration_ms=(time.monotonic() - t0) * 1000,
+            )
+        except asyncio.TimeoutError:
+            return GenerationResult.fail("TEXT_TIMEOUT", "specialized text generation timed out", self.name,
+                                         duration_ms=(time.monotonic() - t0) * 1000)
+        except Exception as e:
+            return GenerationResult.fail("TEXT_FAILED", str(e), self.name,
                                          duration_ms=(time.monotonic() - t0) * 1000)
 
     # ── Helpers ──────────────────────────────────────────────
