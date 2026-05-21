@@ -12,6 +12,7 @@ from typing import Optional
 from .providers.base import GenerationResult, UnsupportedCapabilityError, BaseProvider
 from .providers.minimax import MiniMaxProvider
 from .providers.deepseek import DeepSeekProvider
+from .utils.cache import MediaCache
 
 _CONFIG_PATH = os.path.join(os.path.dirname(__file__), "media_config.json")
 
@@ -27,25 +28,36 @@ class MediaGenerator:
 
     Text tasks (scripts, titles, copy, code analysis) are handled by code agent
     directly — NOT through MediaGenerator. This class only handles media generation.
+
+    Caching: identical requests (same alias + params) reuse cached results.
+    Set `use_cache=False` on init or pass `use_cache=False` to generate() to bypass.
     """
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: Optional[str] = None, use_cache: bool = True):
         self._config = self._load_config(config_path or _CONFIG_PATH)
         self._providers: dict[str, BaseProvider] = {}
+        self._cache = MediaCache() if use_cache else None
         self._init_providers()
 
     # ── Public API ───────────────────────────────────────────
 
-    async def generate(self, alias: str, **kwargs) -> GenerationResult:
+    async def generate(self, alias: str, use_cache: bool = True, **kwargs) -> GenerationResult:
         """Generate media by alias name.
 
         Args:
             alias: User-facing name, e.g. "cover_image", "voiceover", "bgm", "video_clip".
+            use_cache: Set False to bypass cache for this request.
             **kwargs: Forwarded to the provider's capability handler.
 
         Returns:
             GenerationResult with data on success or error info on failure.
         """
+        # 0. Cache check
+        if self._cache is not None and use_cache:
+            cached = self._cache.get(alias, **kwargs)
+            if cached is not None:
+                return cached
+
         # 1. Resolve alias
         alias_config = self._config.get("aliases", {}).get(alias)
         if alias_config is None:
@@ -81,6 +93,8 @@ class MediaGenerator:
             try:
                 result = await provider.generate(capability, **kwargs)
                 if result.success:
+                    if self._cache is not None and use_cache:
+                        self._cache.put(alias, result, **kwargs)
                     return result
                 last_error = result
             except UnsupportedCapabilityError as e:

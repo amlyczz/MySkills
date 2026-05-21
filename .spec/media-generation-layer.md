@@ -2,7 +2,7 @@
 
 > 将图片、语音、音乐、视频、文本的生成能力抽象为统一接口，支持多 Provider 可替换、可组合。
 >
-> 实现状态：P0 ✅ + P1 ✅（MiniMax SpecializedText + DeepSeek Provider + 降级链），OpenAI Provider + 缓存 未开始
+> 实现状态：P0 ✅ + P1 ✅（SpecializedText + DeepSeek + 降级链 + 本地缓存），OpenAI Provider 不需要实现
 
 ---
 
