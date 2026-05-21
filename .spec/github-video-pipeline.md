@@ -1,7 +1,7 @@
 # GitHub Repo → 视频 Pipeline 架构设计
 
 > 最后更新：2026-05-20（v2）
-> 实现状态：Phase 1 ✅ + Phase 2 ✅ + Phase 4 ✅ + Phase 5 60%，Phase 3 未开始
+> 实现状态：Phase 1 ✅ + Phase 2 ✅ + Phase 4 ✅ + Phase 5 ✅，Phase 3 未开始
 
 ## 目标
 
@@ -763,9 +763,9 @@ Props:
 - [x] 输出 timeline.json v2 → 完整 schema 验证通过
 - [x] SRT 字幕输出 → `_write_srt()` 自动生成 `.srt` 文件
 
-### Phase 5: Layer 3/4 增强 — 60% 完成
+### Phase 5: Layer 3/4 增强 — 100% 完成 ✅
 - [x] 新增 CodeDisplay 模板 → `layouts/CodeDisplay.tsx`（终端风格 + 语法高亮 + type/fade/scroll 动画）
 - [x] 新增 ChapterProgressBar 组件（5 种样式）→ `components/ChapterProgressBar.tsx`
 - [x] VideoComposer 支持动态 seg 序列（不再硬编码 funnel）
 - [x] 字幕烧录管道 → `allocate.py --srt` + `burn_subtitles()`
-- [ ] 音频混音管道
+- [x] 音频混音管道 → `audio_mixer.py`（voiceover + BGM sidechain ducking + SFX placement + final mux）
