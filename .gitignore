@@ -7,9 +7,9 @@ github-repo/
 # dependencies
 node_modules/
 
-# video recorder outputs
+# video outputs
 output/
-gh-video-recorder/output/
+out/
 *.webm
 *.mp4
 workspace/
