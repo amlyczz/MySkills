@@ -458,6 +458,107 @@ async function collectCodeSnippets(page) {
   });
 }
 
+// ── Helper: capture high-value README element screenshots ─────────
+async function captureScreenshots(page, materialsDir) {
+  // Selectors for high-value elements to screenshot
+  const targets = await page.evaluate(() => {
+    const readme = document.querySelector('article.markdown-body');
+    if (!readme) return [];
+
+    const results = [];
+    let prevHeading = '';
+    const walker = document.createTreeWalker(readme, NodeFilter.SHOW_ELEMENT);
+    let node;
+
+    while ((node = walker.nextNode())) {
+      const tag = node.tagName;
+      if (/^H[1-4]$/.test(tag)) {
+        prevHeading = (node.textContent || '').trim();
+        // Screenshot key section headers with their surrounding content
+        if (/architecture|design|overview|workflow|getting.?started|install/i.test(prevHeading)) {
+          results.push({
+            selector: `#readme h2, #readme h3`,
+            heading: prevHeading,
+            score: /architecture|design/i.test(prevHeading) ? 0.9 : 0.6,
+            description: `Section: ${prevHeading}`,
+          });
+        }
+      }
+
+      // Screenshot architecture/flow diagrams
+      if (tag === 'IMG') {
+        const alt = (node.alt || '').toLowerCase();
+        if (/architecture|diagram|flow|overview|structure|pipeline|workflow/i.test(alt)) {
+          results.push({
+            selector: `img[alt="${node.alt}"]`,
+            heading: prevHeading || alt,
+            score: 0.9,
+            description: `Diagram: ${node.alt}`,
+          });
+        }
+      }
+
+      // Screenshot comparison tables
+      if (tag === 'TABLE') {
+        const rows = node.querySelectorAll('tr');
+        if (rows.length >= 3) {
+          const firstRow = rows[0]?.textContent?.toLowerCase() || '';
+          const colCount = rows[0]?.querySelectorAll('td,th')?.length || 0;
+          if (colCount >= 2) {
+            results.push({
+              selector: null,  // Use element reference
+              heading: prevHeading || 'Comparison',
+              score: 0.7,
+              description: `Table: ${firstRow.substring(0, 40)}`,
+            });
+          }
+        }
+      }
+    }
+
+    // Deduplicate
+    const seen = new Set();
+    return results.filter(r => {
+      const key = r.selector || r.description;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => b.score - a.score).slice(0, 5);
+  });
+
+  if (targets.length === 0) return [];
+
+  console.log(`  Taking ${targets.length} targeted screenshots...`);
+  const screenshots = [];
+  for (let i = 0; i < targets.length; i++) {
+    const t = targets[i];
+    try {
+      const filename = `screenshot-${String(i + 1).padStart(2, '0')}.png`;
+      const filepath = path.join(materialsDir, filename);
+
+      if (t.selector) {
+        const el = page.locator(t.selector).first();
+        if (await el.count() > 0) {
+          await el.screenshot({ path: filepath });
+          let sizeKb = 0;
+          try { sizeKb = Math.round(fs.statSync(filepath).size / 1024); } catch {}
+          screenshots.push({
+            filename,
+            section: t.heading,
+            highlight_score: t.score,
+            description: t.description,
+            sizeKb,
+          });
+        }
+      }
+    } catch (e) {
+      // Individual screenshot failure doesn't block others
+    }
+  }
+
+  return screenshots;
+}
+
 // ── Helper: probe /docs directory via gh API ──────────────────────
 async function probeDocs(repoUrl) {
   try {
@@ -487,7 +588,7 @@ async function probeDocs(repoUrl) {
 }
 
 // ── Helper: generate material_manifest.json v2 ────────────────────
-function generateV2Manifest(allResults, imageMeta, codeSnippets, docsFiles) {
+function generateV2Manifest(allResults, imageMeta, codeSnippets, docsFiles, allScreenshots = []) {
   const parsed = new URL(REPO_URL);
   const parts = parsed.pathname.replace(/^\//, '').split('/');
   const fullName = parts.slice(0, 2).join('/');
@@ -502,7 +603,7 @@ function generateV2Manifest(allResults, imageMeta, codeSnippets, docsFiles) {
     materials: [],
   };
 
-  let idx = { scroll: 0, img: 0, evideo: 0, link: 0, code: 0, doc: 0 };
+  let idx = { scroll: 0, img: 0, evideo: 0, link: 0, code: 0, doc: 0, ss: 0 };
 
   for (const r of allResults) {
     // Scroll video entry
@@ -599,6 +700,31 @@ function generateV2Manifest(allResults, imageMeta, codeSnippets, docsFiles) {
     });
   }
 
+  // Screenshots
+  for (const ss of (allScreenshots || [])) {
+    idx.ss++;
+    manifest.materials.push({
+      id: `mat_ss_${String(idx.ss).padStart(3, '0')}`,
+      type: "screenshot",
+      path: `materials/${ss.filename}`,
+      file_size_kb: ss.sizeKb || 0,
+      source: {
+        type: "github_page",
+        url: REPO_URL,
+        section: ss.section || "",
+      },
+      capture: {
+        method: "playwright_screenshot",
+        timestamp: new Date().toISOString(),
+        retries: 0,
+      },
+      metadata: {
+        highlight_score: ss.highlight_score || 0,
+        description: ss.description || "",
+      },
+    });
+  }
+
   // Code snippets
   for (const cs of codeSnippets) {
     idx.code++;
@@ -668,6 +794,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
   let videoUrls = [];
   let keyLinks = [];
   let codeSnippets = [];
+  let screenshots = [];
 
   try {
     console.log(`Loading: ${url}`);
@@ -719,6 +846,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
     imageUrls = await collectImageUrls(page);
     videoUrls = await collectVideoUrls(page);
     codeSnippets = await collectCodeSnippets(page);
+    screenshots = await captureScreenshots(page, MATERIALS_DIR);
     if (discoverLinks) {
       keyLinks = await discoverKeyLinks(page);
     }
@@ -828,7 +956,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
     const probe = execSync(`ffprobe -v quiet -print_format json -show_format "${mp4Path}"`).toString();
     const duration = parseFloat(JSON.parse(probe).format.duration);
 
-    return { mp4Name, duration: Math.round(duration * 10) / 10, images: downloadedImages, imageMeta: imageMetaList, extractedVideos: downloadedVideos, keyLinks, codeSnippets: savedSnippets };
+    return { mp4Name, duration: Math.round(duration * 10) / 10, images: downloadedImages, imageMeta: imageMetaList, extractedVideos: downloadedVideos, keyLinks, codeSnippets: savedSnippets, screenshots };
   }
 }
 
@@ -860,6 +988,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
   const allImageMeta = [];
   const allCodeSnippets = [];
   const allLinkVideos = [];
+  const allScreenshots = [];
 
   for (const url of urls) {
     try {
@@ -935,9 +1064,12 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
         }
       }
 
-      // Collect code snippets (only from primary URL)
+      // Collect code snippets + screenshots (only from primary URL)
       if (result.codeSnippets) {
         allCodeSnippets.push(...result.codeSnippets);
+      }
+      if (result.screenshots) {
+        allScreenshots.push(...result.screenshots);
       }
     } catch (e) {
       console.error(`  ERROR recording ${url}: ${e.message}`);
@@ -953,7 +1085,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
   if (docsFiles.length > 0) {
     console.log(`  /docs directory found: ${docsFiles.length} .md files`);
   }
-  const v2Manifest = generateV2Manifest(allResults, allImageMeta, allCodeSnippets, docsFiles);
+  const v2Manifest = generateV2Manifest(allResults, allImageMeta, allCodeSnippets, docsFiles, allScreenshots);
   const v2Path = path.join(OUTPUT_DIR, 'material_manifest.json');
   fs.writeFileSync(v2Path, JSON.stringify(v2Manifest, null, 2));
 
@@ -967,6 +1099,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
   console.log(`  Link videos: ${manifest.entries.filter(m => m.type === 'link_video').length}`);
   console.log(`  Images: ${manifest.entries.filter(m => m.type === 'image').length}`);
   console.log(`  Code snippets: ${allCodeSnippets.length}`);
+  console.log(`  Screenshots: ${allScreenshots.length}`);
   console.log(`  /docs files: ${docsFiles.length}`);
   console.log(`  Total v2 materials: ${v2Manifest.materials.length}`);
 })();
