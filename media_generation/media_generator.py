@@ -11,6 +11,7 @@ from typing import Optional
 
 from .providers.base import GenerationResult, UnsupportedCapabilityError, BaseProvider
 from .providers.minimax import MiniMaxProvider
+from .providers.deepseek import DeepSeekProvider
 
 _CONFIG_PATH = os.path.join(os.path.dirname(__file__), "media_config.json")
 
@@ -113,4 +114,7 @@ class MediaGenerator:
                         if models:
                             model_overrides[cap] = models[0]
                 self._providers[name] = MiniMaxProvider(model_overrides=model_overrides or None)
-            # Future providers (openai, deepseek) added here
+            elif name == "deepseek":
+                model = cfg.get("models", {}).get("specialized_text", ["deepseek-chat"])[0]
+                self._providers[name] = DeepSeekProvider(model=model)
+            # Future providers (openai, etc.) added here

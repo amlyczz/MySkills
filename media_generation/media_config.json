@@ -19,6 +19,13 @@
         "video":  ["MiniMax-Hailuo-2.3-Fast-6s-768p", "MiniMax-Hailuo-2.3-6s-768p"],
         "specialized_text": ["MiniMax-M1"]
       }
+    },
+    "deepseek": {
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "base_url": "https://api.deepseek.com/v1",
+      "models": {
+        "specialized_text": ["deepseek-chat"]
+      }
     }
   },
   "aliases": {
@@ -55,12 +62,14 @@
     "poem_writer": {
       "capability": "specialized_text",
       "providers": [
+        { "provider": "deepseek", "model": "deepseek-chat" },
         { "provider": "minimax", "model": "MiniMax-M1" }
       ]
     },
     "lyrics_writer": {
       "capability": "specialized_text",
       "providers": [
+        { "provider": "deepseek", "model": "deepseek-chat" },
         { "provider": "minimax", "model": "MiniMax-M1" }
       ]
     }
