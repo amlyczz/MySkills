@@ -179,12 +179,25 @@ async function smoothScroll(page, scrollDurationMs) {
 async function collectImageUrls(page) {
   const candidates = await page.evaluate((blacklistStr) => {
     const blacklist = blacklistStr.split(',');
+
+    // Find the nearest heading before an element
+    function nearestHeading(el) {
+      let prev = el;
+      while (prev) {
+        if (/^H[1-4]$/.test(prev.tagName)) return prev.textContent.trim();
+        prev = prev.previousElementSibling || prev.parentElement?.previousElementSibling;
+      }
+      return '';
+    }
+
     const imgs = Array.from(document.querySelectorAll('img'));
     return imgs.map(img => ({
       src: img.src,
       canonicalSrc: img.getAttribute('data-canonical-src') || '',
       naturalWidth: img.naturalWidth,
       naturalHeight: img.naturalHeight,
+      alt: (img.alt || '').trim(),
+      section: nearestHeading(img),
     })).filter(item => {
       if (!item.src.startsWith('http')) return false;
       if (item.naturalWidth < 200 || item.naturalHeight < 200) return false;
@@ -196,7 +209,7 @@ async function collectImageUrls(page) {
     });
   }, URL_BLACKLIST.join(','));
   console.log(`  Found ${candidates.length} candidate images after filtering`);
-  return candidates.map(c => c.canonicalSrc || c.src);
+  return candidates;
 }
 
 // ── Helper: download a single file via Node.js fetch ──────────────
@@ -390,6 +403,250 @@ async function downloadAndConvertVideo(item, idx, materialsDir) {
   }
 }
 
+// ── Helper: extract README code blocks via page.evaluate ─────────
+async function collectCodeSnippets(page) {
+  return page.evaluate(() => {
+    const readme = document.querySelector('article.markdown-body');
+    if (!readme) return [];
+
+    const blocks = [];
+    let prevHeading = '';
+
+    // Walk all elements in order to track which heading each code block belongs to
+    const walker = document.createTreeWalker(readme, NodeFilter.SHOW_ELEMENT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const tag = node.tagName;
+      if (/^H[1-4]$/.test(tag)) {
+        prevHeading = (node.textContent || '').trim();
+      }
+      if (tag === 'PRE') {
+        const code = node.querySelector('code');
+        if (!code) continue;
+        const text = code.textContent || '';
+        const lang = (code.className.match(/language-(\w+)/)?.[1] || '').toLowerCase();
+
+        // Score: higher = more useful for video
+        let score = 1;
+        const headingLow = prevHeading.toLowerCase();
+        if (/quick.?start|install|getting.?started|setup|usage/i.test(headingLow)) score = 5;
+        else if (/api|example|config/i.test(headingLow)) score = 4;
+        else if (/contribut|license/i.test(headingLow)) score = 0;
+
+        // Skip long output/log blocks
+        if (text.length > 5000 && !lang) score = 0;
+        if (text.split('\n').length > 200 && !lang) score = 0;
+
+        // Skip license text blocks
+        if (headingLow.includes('license') && text.length > 500) score = 0;
+
+        if (score > 0) {
+          blocks.push({
+            language: lang || 'text',
+            code: text.substring(0, 3000),  // trim very long blocks
+            section: prevHeading || '(top)',
+            score,
+            lines: text.split('\n').length,
+          });
+        }
+      }
+    }
+
+    // Sort by score desc, take top 10
+    blocks.sort((a, b) => b.score - a.score);
+    return blocks.slice(0, 10);
+  });
+}
+
+// ── Helper: probe /docs directory via gh API ──────────────────────
+async function probeDocs(repoUrl) {
+  try {
+    const parsed = new URL(repoUrl);
+    const parts = parsed.pathname.replace(/^\//, '').split('/');
+    if (parts.length < 2) return [];
+    const owner = parts[0];
+    const repo = parts[1];
+
+    const result = execSync(
+      `gh api repos/${owner}/${repo}/contents/docs --jq '.[].name' 2>/dev/null || echo ""`,
+      { stdio: 'pipe', timeout: 30000 }
+    ).toString().trim();
+
+    if (!result) {
+      // Try /docs/guides or root-level docs/ alternative patterns
+      return [];
+    }
+
+    return result.split('\n').filter(f => f.endsWith('.md')).map(f => ({
+      file: f,
+      path: `docs/${f}`,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Helper: generate material_manifest.json v2 ────────────────────
+function generateV2Manifest(allResults, imageMeta, codeSnippets, docsFiles) {
+  const parsed = new URL(REPO_URL);
+  const parts = parsed.pathname.replace(/^\//, '').split('/');
+  const fullName = parts.slice(0, 2).join('/');
+
+  const manifest = {
+    version: "2",
+    repo: {
+      full_name: fullName,
+      url: REPO_URL,
+    },
+    created_at: new Date().toISOString(),
+    materials: [],
+  };
+
+  let idx = { scroll: 0, img: 0, evideo: 0, link: 0, code: 0, doc: 0 };
+
+  for (const r of allResults) {
+    // Scroll video entry
+    if (r.scrollMp4) {
+      idx.scroll++;
+      manifest.materials.push({
+        id: `mat_scroll_${String(idx.scroll).padStart(3, '0')}`,
+        type: "scroll_video",
+        path: r.scrollMp4,
+        duration: r.scrollDuration || 0,
+        dimensions: [1920, 1080],
+        file_size_kb: r.scrollSizeKb || 0,
+        source: {
+          type: "github_page",
+          url: r.url,
+        },
+        capture: {
+          method: "playwright_download",
+          timestamp: new Date().toISOString(),
+          retries: 0,
+        },
+        metadata: {},
+      });
+    }
+
+    // Extracted videos
+    for (const ev of (r.extractedVideos || [])) {
+      idx.evideo++;
+      manifest.materials.push({
+        id: `mat_evideo_${String(idx.evideo).padStart(3, '0')}`,
+        type: "extracted_video",
+        path: ev.path,
+        duration: ev.duration,
+        source: {
+          type: "readme_embedded",
+          url: r.url,
+        },
+        capture: {
+          method: "playwright_download",
+          timestamp: new Date().toISOString(),
+          retries: 0,
+        },
+        metadata: { conversion: ev.convertedFrom || null },
+      });
+    }
+
+    // Link videos
+    for (const lv of (r.linkVideos || [])) {
+      idx.link++;
+      manifest.materials.push({
+        id: `mat_link_${String(idx.link).padStart(3, '0')}`,
+        type: "link_video",
+        path: lv.path,
+        duration: lv.duration,
+        source: {
+          type: "external_link",
+          url: lv.sourceUrl,
+        },
+        capture: {
+          method: "playwright_download",
+          timestamp: new Date().toISOString(),
+          retries: 0,
+        },
+        metadata: { label: lv.label || "" },
+      });
+    }
+  }
+
+  // Images (deduplicated)
+  for (const img of imageMeta) {
+    idx.img++;
+    manifest.materials.push({
+      id: `mat_img_${String(idx.img).padStart(3, '0')}`,
+      type: "image",
+      path: `materials/${img.filename}`,
+      dimensions: [img.width || 0, img.height || 0],
+      file_size_kb: img.sizeKb || 0,
+      source: {
+        type: "readme_embedded",
+        url: REPO_URL,
+        original_url: img.src,
+        section: img.section || "",
+      },
+      capture: {
+        method: "playwright_download",
+        timestamp: new Date().toISOString(),
+        retries: 0,
+      },
+      metadata: {
+        alt_text: img.alt || "",
+        is_camo_url: !!(img.canonicalSrc),
+        filter_reason: null,
+      },
+    });
+  }
+
+  // Code snippets
+  for (const cs of codeSnippets) {
+    idx.code++;
+    manifest.materials.push({
+      id: `mat_code_${String(idx.code).padStart(3, '0')}`,
+      type: "code_snippet",
+      path: `materials/${cs.filename}`,
+      source: {
+        type: "readme_text",
+        url: REPO_URL,
+        section: cs.section,
+      },
+      capture: {
+        method: "gh_api",
+        timestamp: new Date().toISOString(),
+        retries: 0,
+      },
+      metadata: {
+        language: cs.language,
+        lines: cs.lines,
+      },
+    });
+  }
+
+  // /docs pages
+  for (const doc of docsFiles) {
+    idx.doc++;
+    manifest.materials.push({
+      id: `mat_doc_${String(idx.doc).padStart(3, '0')}`,
+      type: "doc_page",
+      path: doc.path,
+      source: {
+        type: "gh_api",
+        url: `https://github.com/${fullName}/tree/main/${doc.path}`,
+        section: doc.file,
+      },
+      capture: {
+        method: "gh_api",
+        timestamp: new Date().toISOString(),
+        retries: 0,
+      },
+      metadata: {},
+    });
+  }
+
+  return manifest;
+}
+
 // Returns { mp4Name, duration, images, extractedVideos, keyLinks } or null on failure
 async function recordAndExtract(browser, url, outputName, { discoverLinks = false } = {}) {
   const contextOptions = {
@@ -410,6 +667,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
   let imageUrls = [];
   let videoUrls = [];
   let keyLinks = [];
+  let codeSnippets = [];
 
   try {
     console.log(`Loading: ${url}`);
@@ -460,6 +718,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
     // Collect URLs fast (page.evaluate is quick, < 1s)
     imageUrls = await collectImageUrls(page);
     videoUrls = await collectVideoUrls(page);
+    codeSnippets = await collectCodeSnippets(page);
     if (discoverLinks) {
       keyLinks = await discoverKeyLinks(page);
     }
@@ -501,11 +760,42 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
     fs.mkdirSync(MATERIALS_DIR, { recursive: true });
     console.log(`  Downloading ${imageUrls.length} images...`);
     const downloadedImages = [];
+    const imageMetaList = [];
     for (let i = 0; i < imageUrls.length; i++) {
-      const name = await downloadImage(imageUrls[i], MATERIALS_DIR);
-      if (name) downloadedImages.push(name);
+      const imgInfo = imageUrls[i];  // now contains { src, canonicalSrc, naturalWidth, naturalHeight, alt, section }
+      const name = await downloadImage(imgInfo.canonicalSrc || imgInfo.src, MATERIALS_DIR);
+      if (name) {
+        downloadedImages.push(name);
+        const imgPath = path.join(MATERIALS_DIR, name);
+        let sizeKb = 0;
+        try { sizeKb = Math.round(fs.statSync(imgPath).size / 1024); } catch {}
+        imageMetaList.push({
+          filename: name,
+          src: imgInfo.canonicalSrc || imgInfo.src,
+          canonicalSrc: imgInfo.canonicalSrc || '',
+          width: imgInfo.naturalWidth,
+          height: imgInfo.naturalHeight,
+          alt: imgInfo.alt || '',
+          section: imgInfo.section || '',
+          sizeKb,
+        });
+      }
     }
     console.log(`  Downloaded ${downloadedImages.length} images`);
+
+    // Save code snippets
+    fs.mkdirSync(MATERIALS_DIR, { recursive: true });
+    const savedSnippets = [];
+    for (let i = 0; i < codeSnippets.length; i++) {
+      const cs = codeSnippets[i];
+      const filename = `snippet-${String(i + 1).padStart(2, '0')}.${cs.language}`;
+      const filepath = path.join(MATERIALS_DIR, filename);
+      fs.writeFileSync(filepath, cs.code);
+      savedSnippets.push({ ...cs, filename });
+    }
+    if (savedSnippets.length > 0) {
+      console.log(`  Saved ${savedSnippets.length} code snippets`);
+    }
 
     // Download and convert videos (after recording stops)
     console.log(`  Downloading ${videoUrls.length} videos...`);
@@ -538,7 +828,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
     const probe = execSync(`ffprobe -v quiet -print_format json -show_format "${mp4Path}"`).toString();
     const duration = parseFloat(JSON.parse(probe).format.duration);
 
-    return { mp4Name, duration: Math.round(duration * 10) / 10, images: downloadedImages, extractedVideos: downloadedVideos, keyLinks };
+    return { mp4Name, duration: Math.round(duration * 10) / 10, images: downloadedImages, imageMeta: imageMetaList, extractedVideos: downloadedVideos, keyLinks, codeSnippets: savedSnippets };
   }
 }
 
@@ -565,19 +855,37 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
   };
   const seenImages = new Set();
 
+  // V2: track all results and image metadata across URLs
+  const allResults = [];
+  const allImageMeta = [];
+  const allCodeSnippets = [];
+  const allLinkVideos = [];
+
   for (const url of urls) {
     try {
       const name = repoNameFromUrl(url);
-      // Only discover key links for the primary REPO_URL
       const isFirstUrl = url === urls[0];
       const result = await recordAndExtract(browser, url, name, { discoverLinks: isFirstUrl });
+
+      // Track for v2 manifest
+      let scrollSizeKb = 0;
+      if (result.mp4Name) {
+        try { scrollSizeKb = Math.round(fs.statSync(path.join(OUTPUT_DIR, result.mp4Name)).size / 1024); } catch {}
+      }
+      allResults.push({
+        url,
+        scrollMp4: result.mp4Name,
+        scrollDuration: result.duration,
+        scrollSizeKb,
+        extractedVideos: result.extractedVideos || [],
+        linkVideos: [],
+      });
 
       if (result.mp4Name) {
         manifest.entries.push({ type: 'scroll_video', path: result.mp4Name, duration: result.duration });
         console.log(`  Scroll video: ${result.mp4Name} (${result.duration}s)`);
       }
 
-      // Add extracted videos
       if (result.extractedVideos) {
         for (const ev of result.extractedVideos) {
           manifest.entries.push({ type: 'extracted_video', path: ev.path, duration: ev.duration });
@@ -585,7 +893,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
         }
       }
 
-      // Process key links: record each discovered link page
+      // Process key links
       if (result.keyLinks && result.keyLinks.length > 0) {
         console.log(`  Recording ${result.keyLinks.length} discovered key links...`);
         for (const link of result.keyLinks) {
@@ -594,6 +902,7 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
             const linkResult = await recordAndExtract(browser, link.url, 'link_' + linkName, { discoverLinks: false });
             if (linkResult && linkResult.mp4Name) {
               manifest.entries.push({ type: 'link_video', path: linkResult.mp4Name, duration: linkResult.duration });
+              allLinkVideos.push({ path: linkResult.mp4Name, duration: linkResult.duration, sourceUrl: link.url, label: link.label });
               console.log(`  Link video: ${linkResult.mp4Name} (${linkResult.duration}s) — ${link.label}`);
             }
           } catch (e) {
@@ -602,7 +911,11 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
         }
       }
 
-      // Deduplicate images across URLs
+      // Store link videos on the result
+      const lastResult = allResults[allResults.length - 1];
+      if (lastResult) lastResult.linkVideos = allLinkVideos;
+
+      // Deduplicate images
       if (result.images) {
         for (const img of result.images) {
           if (!seenImages.has(img)) {
@@ -611,23 +924,49 @@ async function recordAndExtract(browser, url, outputName, { discoverLinks = fals
           }
         }
       }
+
+      // Collect image metadata for v2 (deduplicated)
+      if (result.imageMeta) {
+        for (const meta of result.imageMeta) {
+          if (!seenImages.has(meta.filename)) {
+            seenImages.add(meta.filename);
+            allImageMeta.push(meta);
+          }
+        }
+      }
+
+      // Collect code snippets (only from primary URL)
+      if (result.codeSnippets) {
+        allCodeSnippets.push(...result.codeSnippets);
+      }
     } catch (e) {
       console.error(`  ERROR recording ${url}: ${e.message}`);
-      // Continue to next URL
     }
   }
 
-  // Write manifest_full.json
+  // Write manifest_full.json (v1, backward compat)
   const manifestPath = path.join(OUTPUT_DIR, 'manifest_full.json');
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
+  // Write material_manifest.json (v2)
+  const docsFiles = await probeDocs(REPO_URL);
+  if (docsFiles.length > 0) {
+    console.log(`  /docs directory found: ${docsFiles.length} .md files`);
+  }
+  const v2Manifest = generateV2Manifest(allResults, allImageMeta, allCodeSnippets, docsFiles);
+  const v2Path = path.join(OUTPUT_DIR, 'material_manifest.json');
+  fs.writeFileSync(v2Path, JSON.stringify(v2Manifest, null, 2));
 
   await browser.close();
 
   console.log('\n── Recording Complete ──');
-  console.log(`Manifest: ${manifestPath}`);
+  console.log(`Manifest v1: ${manifestPath}`);
+  console.log(`Manifest v2: ${v2Path}`);
   console.log(`  Scroll videos: ${manifest.entries.filter(m => m.type === 'scroll_video').length}`);
   console.log(`  Extracted videos: ${manifest.entries.filter(m => m.type === 'extracted_video').length}`);
   console.log(`  Link videos: ${manifest.entries.filter(m => m.type === 'link_video').length}`);
   console.log(`  Images: ${manifest.entries.filter(m => m.type === 'image').length}`);
-  console.log(`  Total entries: ${manifest.entries.length}`);
+  console.log(`  Code snippets: ${allCodeSnippets.length}`);
+  console.log(`  /docs files: ${docsFiles.length}`);
+  console.log(`  Total v2 materials: ${v2Manifest.materials.length}`);
 })();
