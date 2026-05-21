@@ -51,11 +51,12 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
   let currentFrame = 0;
 
   for (const sceneDef of structure.scenes) {
-    const durationFrames =
-      sceneDef.durationSeconds > 0
-        ? sceneDef.durationSeconds * 30
-        : 10 * 30;
     const sceneConfig = config.sceneConfigs[sceneDef.id];
+    const configDur = sceneConfig?.durationSeconds;
+    const durationFrames =
+      (configDur && configDur > 0 ? configDur :
+       sceneDef.durationSeconds > 0 ? sceneDef.durationSeconds :
+       10) * 30;
     const label = sceneConfig?.content?.title as string
       || sceneConfig?.content?.headline as string
       || sceneDef.id;

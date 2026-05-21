@@ -892,7 +892,7 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
         'funnel':           [('hook', 5), ('problem', 6), ('solution', 6), ('showcase', total_time - 36), ('features', 8), ('cta', 6)],
         'timeline':         [('hook', 4), ('origin', 6), ('milestones', 8), ('showcase', total_time - 30), ('today', 6), ('cta', 6)],
         'product-showcase': [('hook', 4), ('problem', 5), ('demo', total_time - 29), ('features', 8), ('proof', 5), ('cta', 6)],
-        'performance-launch': [('hook', 4), ('proof-1', 7), ('proof-2', 7), ('features', 10), ('cta', 6)],
+        'performance-launch': [('hook', 4), ('proof-1', 7), ('proof-2', 7), ('showcase', total_time - 36), ('features', 10), ('cta', 6)],
     }
     structure_scenes = structure_scene_defs.get(structure_id_used, structure_scene_defs['funnel'])
     vc_duration = sum(d for _, d in structure_scenes if d > 0)
@@ -901,6 +901,26 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
     dynamic_scene = 'demo' if structure_id_used == 'product-showcase' else 'showcase'
     if dynamic_scene in config.get('sceneConfigs', {}):
         config['sceneConfigs'][dynamic_scene]['durationSeconds'] = max(0, total_time - sum(d for s, d in structure_scenes if s != dynamic_scene))
+
+    # ── Populate scenes with material media URLs ──
+    if isinstance(data, dict) and 'materials' in data:
+        materials = data['materials']
+        scroll_videos = [m for m in materials if m['type'] == 'scroll_video']
+        extracted_videos = [m for m in materials if m['type'] == 'extracted_video']
+        images = [m for m in materials if m['type'] == 'image']
+
+        # Showcase scene: use scroll video if available
+        if dynamic_scene in config.get('sceneConfigs', {}) and scroll_videos:
+            config['sceneConfigs'][dynamic_scene]['content']['visual'] = scroll_videos[0]['path']
+
+        # Assign videos to features/proof scenes for visual variety
+        all_videos = extracted_videos[:6]  # use up to 6 videos
+        for i, vid in enumerate(all_videos):
+            scene_key = f'features' if i < 3 else dynamic_scene
+            if scene_key in config.get('sceneConfigs', {}):
+                if 'visual' not in config['sceneConfigs'][scene_key].get('content', {}):
+                    config['sceneConfigs'][scene_key]['content'] = config['sceneConfigs'][scene_key].get('content', {}) or {}
+                    config['sceneConfigs'][scene_key]['content']['visual'] = vid['path']
 
     print(f"\n  Rendering VideoComposer: {structure_id_used} ({vc_duration}s, {vc_frames}f)")
     vc_success = render_video_composer(output_dir, config, vc_frames)

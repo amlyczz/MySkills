@@ -49,8 +49,14 @@ const proofDefaults = {
 
 // ── 场景组件 ──
 
+import type { CameraAction, BarChartItem } from "../types";
+
 export interface SpecificSceneProps {
   content: Record<string, string | string[]>;
+  chartData?: BarChartItem[];
+  staggerOrder?: string[];
+  cameraAction?: CameraAction;
+  wrapperType?: "glow" | "device-frame";
   style: StyleTemplate;
   bgType: BgType;
   layoutId?: LayoutType;

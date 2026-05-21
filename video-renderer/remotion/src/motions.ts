@@ -203,16 +203,36 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
   },
 };
 
+/** 从 motionMap 中安全获取 MotionPreset */
+export function getMotion(map: Record<string, MotionType>, key: string, fallback: MotionType): MotionPreset {
+  return motionPresets[map[key] ?? fallback];
+}
+
 /** 为特定角色提供默认动效映射 */
 export const defaultMotionMap: Record<string, MotionType> = {
-  title: "arc-entrance",
-  subtitle: "scale-fade",
-  tagline: "scale-fade",
-  points: "spring-slide-up",
-  url: "spring-slide-up",
-  stats: "scale-fade",
-  summary: "spring-slide-up",
-  underline: "none",
-  headline: "arc-entrance",
-  body: "spring-slide-up",
+  title: "arc-entrance", subtitle: "scale-fade", tagline: "scale-fade",
+  points: "spring-slide-up", url: "spring-slide-up", stats: "scale-fade",
+  summary: "spring-slide-up", underline: "none", headline: "arc-entrance", body: "spring-slide-up",
 };
+
+// ── v3: 情绪 → 动效策略映射 ──
+import type { SceneMood, BezierCurve } from "./types";
+
+interface MoodStrategy {
+  titleMotion: MotionType; bodyMotion: MotionType;
+  bezierCurve?: BezierCurve; useOvershoot: boolean;
+  springConfig?: { mass: number; damping: number; stiffness: number };
+}
+
+export const moodStrategy: Record<SceneMood, MoodStrategy> = {
+  power: { titleMotion: "spring-elastic", bodyMotion: "staggered-grow", springConfig: { mass: 0.6, damping: 12, stiffness: 100 }, useOvershoot: true },
+  elegant: { titleMotion: "smooth-scale-up", bodyMotion: "scale-fade", bezierCurve: "ease-out-expo", useOvershoot: false },
+  professional: { titleMotion: "arc-entrance", bodyMotion: "spring-slide-up", bezierCurve: "ease-out-quart", useOvershoot: false },
+  calm: { titleMotion: "scale-fade", bodyMotion: "subtle-float", bezierCurve: "ease-out-expo", useOvershoot: false },
+};
+
+export function resolveMoodMotion(mood: SceneMood | undefined, role: "title" | "body"): MotionType {
+  if (!mood) return defaultMotionMap[role === "title" ? "title" : "points"];
+  const strategy = moodStrategy[mood];
+  return role === "title" ? strategy.titleMotion : strategy.bodyMotion;
+}

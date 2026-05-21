@@ -258,6 +258,13 @@ export type EnterPosition =
   | { type: "arc"; fromX: number; fromY: number }
   | { type: "mask"; direction: "left" | "right" };
 
+/** Bezier easing curves */
+export type BezierCurve = "ease-out-expo" | "ease-out-quart" | "ease-in-out-cubic";
+/** Emotional mood → motion strategy */
+export type SceneMood = "power" | "elegant" | "professional" | "calm";
+/** Virtual camera pan-and-zoom action */
+export interface CameraAction { type: "pan-and-zoom"; targetScale: number; focusPoint: { x: number; y: number }; triggerFrame: number; }
+
 /** 动效模板 */
 export interface MotionPreset {
   id: string;
@@ -265,9 +272,12 @@ export interface MotionPreset {
 
   entrance: {
     springConfig: SpringConfig;
+    easingCurve?: BezierCurve;
     delayFrames: number;
     durationFrames: number;
     enterFrom: EnterPosition;
+    staggerIndex?: number;
+    staggerFrames?: number;
   };
 
   idle?: {
@@ -388,7 +398,10 @@ export interface SceneConfig {
   layoutId: LayoutType;
   motionMap: Record<string, MotionType>;
   content: Record<string, string | string[]>;
-  chartData?: BarChartItem[];  // proof 场景的柱状图数据
+  durationSeconds?: number;
+  chartData?: BarChartItem[];
+  cameraAction?: CameraAction;
+  wrapperType?: "glow" | "device-frame";
 }
 
 /** 完整视频配置 — 匹配引擎输出 */

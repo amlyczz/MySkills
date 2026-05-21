@@ -4,6 +4,7 @@ import { Intro, IntroProps } from "./Intro";
 import { Outro, OutroProps } from "./Outro";
 import { KenBurnsClip, KenBurnsClipProps } from "./KenBurnsClip";
 import { VideoComposer, VideoComposerProps } from "./VideoComposer";
+import { getStructure } from "./structures";
 import { VideoConfig } from "./types";
 
 const defaultIntroProps: IntroProps = {
@@ -155,11 +156,10 @@ export const RemotionRoot: React.FC = () => {
         }}
       />
 
-      {/* 新组件：场景序列渲染器 */}
       <Composition
         id="VideoComposer"
         component={VideoComposerComp}
-        durationInFrames={930} // 31s: hook(5)+problem(6)+solution(6)+showcase(10)+features(8)+cta(6)
+        durationInFrames={9000}
         fps={30}
         width={1920}
         height={1080}

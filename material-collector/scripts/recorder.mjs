@@ -754,13 +754,21 @@ function generateV2Manifest(allResults, imageMeta, codeSnippets, docsFiles, allS
         source: {
           type: "readme_embedded",
           url: r.url,
+          section: ev.section || '',
         },
         capture: {
           method: "playwright_download",
           timestamp: new Date().toISOString(),
           retries: 0,
         },
-        metadata: { conversion: ev.convertedFrom || null },
+        metadata: {
+          conversion: ev.convertedFrom || null,
+          description: ev.description || '',
+          link_text: ev.linkText || '',
+          alt_text: ev.altText || '',
+          is_in_table: ev.isInTable || false,
+          table_headers: ev.tableHeaders || [],
+        },
       });
     }
 
@@ -990,7 +998,17 @@ async function _downloadVideos(videoUrls) {
   const videos = [];
   for (let i = 0; i < videoUrls.length; i++) {
     const result = await downloadAndConvertVideo(videoUrls[i], i, MATERIALS_DIR);
-    if (result) videos.push(result);
+    if (result) {
+      // Preserve collection metadata for LLM curation + timeline matching
+      result.section = videoUrls[i].section || '';
+      result.description = videoUrls[i].description || videoUrls[i].textContext || '';
+      result.linkText = videoUrls[i].linkText || '';
+      result.altText = videoUrls[i].altText || '';
+      result.isInTable = videoUrls[i].isInTable || false;
+      result.isInList = videoUrls[i].isInList || false;
+      result.tableHeaders = videoUrls[i].tableHeaders || [];
+      videos.push(result);
+    }
   }
   return videos;
 }

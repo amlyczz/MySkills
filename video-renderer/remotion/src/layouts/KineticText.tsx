@@ -7,7 +7,7 @@
  * Props: baseText + actionSequence
  */
 import React from "react";
-import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
+import { AbsoluteFill, useCurrentFrame, interpolate, interpolateColors } from "remotion";
 import { LayoutProps } from "../types";
 import { FONT_SIZE_TITLE, FONT_WEIGHT_TITLE } from "../layout";
 
@@ -54,7 +54,7 @@ export const KineticText: React.FC<LayoutProps> = ({
     ? `${actionProgress * 100}%`
     : "0%";
   const textColor = activeAction?.type === "highlight"
-    ? interpolate(frame, [actionStart + actionStart * 0.3, actionStart + actionStart * 0.6], ["#fff", "#000"], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })
+    ? interpolateColors(frame, [actionStart + actionStart * 0.3, actionStart + actionStart * 0.6], ["#fff", "#000"])
     : "#fff";
 
   return (
@@ -79,7 +79,7 @@ export const KineticText: React.FC<LayoutProps> = ({
             }}
           />
           {/* Text */}
-          <span style={{ position: "relative", zIndex: 1, color: activeAction?.type === "highlight" ? textColor : style.bodyColor }}>
+          <span style={{ position: "relative", zIndex: 1, color: activeAction?.type === "highlight" ? String(textColor) : style.bodyColor }}>
             {displayedText}
           </span>
           {/* Blinking cursor */}
