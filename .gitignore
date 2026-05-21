@@ -12,6 +12,7 @@ output/
 out/
 *.webm
 *.mp4
+!twitter-downloads/**/*.mp4
 workspace/
 
 # IDE
