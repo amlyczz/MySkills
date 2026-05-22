@@ -18,6 +18,7 @@ import { FloatingGrid } from "./FloatingGrid";
 import { KineticText } from "./KineticText";
 import { ZAxisFlyThrough } from "./ZAxisFlyThrough";
 import { PromptInput } from "./PromptInput";
+import { FullScreenText } from "./FullScreenText";
 
 export type { LayoutType };
 export type { LayoutProps };
@@ -58,8 +59,15 @@ export const LayoutDispatcher: React.FC<LayoutDispatcherProps> = ({
     case "prompt-input":
       return <PromptInput {...props} />;
     case "split-right-text":
+      return <SplitLeftText direction="right" {...props} />;
     case "full-screen-text":
+      return <FullScreenText {...props} />;
     default:
-      return <HeroCenter {...props} />;
+      return assertNever(layoutId);
   }
 };
+
+/** TypeScript exhaustive check helper */
+function assertNever(x: never): never {
+  throw new Error(`Unknown layoutId: ${x}`);
+}

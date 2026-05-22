@@ -207,9 +207,19 @@ const zAudioConfig = z.object({
   voiceoverEnabled: z.boolean(),
 });
 
+// ── Generated-by metadata (pipeline provenance) ──
+
+const zGeneratedBy = z.object({
+  phase: z.string(),
+  layer: z.string(),
+  timestamp: z.string(),
+  version: z.string(),
+});
+
 // ── Root schema ──
 
 export const videoConfigSchema = z.object({
+  generated_by: zGeneratedBy.optional(),
   structureId: z.enum(["funnel", "timeline", "product-showcase", "performance-launch"]),
   styleId: z.string(),
   bgType: zBgType,

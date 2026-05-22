@@ -125,11 +125,19 @@
                 "enum": [
                   "hero-center",
                   "split-left-text",
-                  "media-full",
+                  "split-right-text",
+                  "full-screen-text",
                   "card-grid",
-                  "code-display",
+                  "quote-style",
                   "stat-highlight",
-                  "quote-style"
+                  "media-full",
+                  "code-display",
+                  "center-focus-video",
+                  "kinetic-typography",
+                  "floating-grid",
+                  "fly-through",
+                  "prompt-input",
+                  "sandwich-text"
                 ]
               },
               "motion_map": {
@@ -202,11 +210,11 @@
           },
           "transition_in": {
             "type": "string",
-            "enum": ["fade", "dissolve", "slide-left", "slide-right", "none"]
+            "enum": ["none", "crossfade", "whip-pan", "slide-in", "slide-out"]
           },
           "transition_out": {
             "type": "string",
-            "enum": ["fade", "dissolve", "slide-left", "slide-right", "none"]
+            "enum": ["none", "crossfade", "whip-pan", "slide-in", "slide-out"]
           }
         }
       }

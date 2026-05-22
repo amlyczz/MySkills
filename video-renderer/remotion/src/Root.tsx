@@ -1,34 +1,9 @@
 import React from "react";
 import { Composition } from "remotion";
-import { Intro, IntroProps } from "./Intro";
-import { Outro, OutroProps } from "./Outro";
 import { KenBurnsClip, KenBurnsClipProps } from "./KenBurnsClip";
 import { VideoComposer, VideoComposerProps } from "./VideoComposer";
 import { getStructure } from "./structures";
 import { VideoConfig } from "./types";
-
-const defaultIntroProps: IntroProps = {
-  title: "Example Project",
-  tagline: "A powerful tool for modern development",
-  points: [
-    "Lightning-fast performance",
-    "Easy to integrate",
-    "Active community support",
-    "Cross-platform compatible",
-    "Open source and free",
-  ],
-  themeIndex: 0,
-  bgType: "starfield",
-};
-
-const defaultOutroProps: OutroProps = {
-  url: "https://github.com/example/project",
-  stats: "10k Stars \u00b7 2k Forks",
-  summary:
-    "A must-have tool that simplifies complex workflows and boosts developer productivity.",
-  themeIndex: 0,
-  bgType: "starfield",
-};
 
 const defaultKenBurnsProps: KenBurnsClipProps = {
   imageUrl: "example.jpg",
@@ -111,35 +86,12 @@ const defaultVideoConfig: VideoConfig = {
   },
 };
 
-// Remotion's Composition type is strict about generic props in newer TS versions.
-// Double-cast via unknown to satisfy the type checker.
-const IntroComp = Intro as unknown as React.FC<Record<string, unknown>>;
-const OutroComp = Outro as unknown as React.FC<Record<string, unknown>>;
 const KenBurnsComp = KenBurnsClip as unknown as React.FC<Record<string, unknown>>;
 const VideoComposerComp = VideoComposer as unknown as React.FC<Record<string, unknown>>;
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      {/* 旧组件：向后兼容 */}
-      <Composition
-        id="Intro"
-        component={IntroComp}
-        durationInFrames={300}
-        fps={30}
-        width={1920}
-        height={1080}
-        defaultProps={defaultIntroProps}
-      />
-      <Composition
-        id="Outro"
-        component={OutroComp}
-        durationInFrames={300}
-        fps={30}
-        width={1920}
-        height={1080}
-        defaultProps={defaultOutroProps}
-      />
       <Composition
         id="KenBurnsClip"
         component={KenBurnsComp}
@@ -172,14 +124,23 @@ export const RemotionRoot: React.FC = () => {
           if (!structure) return { durationInFrames: 9000 };
           // timeline-adaptive: 直接从 sceneConfigs 计算
           if (config.structureId === "timeline-adaptive") {
+            const sceneIds = Object.keys(config.sceneConfigs ?? {});
             let totalFrames = 0;
-            for (const sc of Object.values(config.sceneConfigs ?? {})) {
+            for (let i = 0; i < sceneIds.length; i++) {
+              const sc = config.sceneConfigs[sceneIds[i]];
               totalFrames += (sc.durationSeconds && sc.durationSeconds > 0 ? sc.durationSeconds : 10) * 30;
+              // Subtract transition overlap
+              if (i < sceneIds.length - 1) {
+                const nextSc = config.sceneConfigs[sceneIds[i + 1]];
+                const ti = nextSc?.transitionIn;
+                if (ti && ti.type !== "none") totalFrames -= ti.durationFrames;
+              }
             }
             return { durationInFrames: Math.max(totalFrames, 30) };
           }
           let totalFrames = 0;
-          for (const scene of structure.scenes) {
+          for (let i = 0; i < structure.scenes.length; i++) {
+            const scene = structure.scenes[i];
             const sceneCfg = config.sceneConfigs?.[scene.id];
             const dur =
               sceneCfg?.durationSeconds && sceneCfg.durationSeconds > 0
@@ -188,6 +149,12 @@ export const RemotionRoot: React.FC = () => {
                   ? scene.durationSeconds
                   : 10;
             totalFrames += dur * 30;
+            // Subtract transition overlap for TransitionSeries
+            if (i < structure.scenes.length - 1) {
+              const nextCfg = config.sceneConfigs?.[structure.scenes[i + 1].id];
+              const ti = nextCfg?.transitionIn;
+              if (ti && ti.type !== "none") totalFrames -= ti.durationFrames;
+            }
           }
           return { durationInFrames: Math.max(totalFrames, 30) };
         }}

@@ -95,7 +95,6 @@ export const AnimatedBarChart: React.FC<Props> = ({
                     width: `${Math.min(prevWidth, 100)}%`,
                     background: "rgba(255,255,255,0.15)",
                     borderRadius: 24,
-                    transition: "width 0.1s linear",
                   }}
                 />
               )}

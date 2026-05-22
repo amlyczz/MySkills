@@ -92,7 +92,6 @@ function MinimalDots({
                 : i === currentIndex
                 ? "rgba(255,255,255,0.9)"
                 : "rgba(255,255,255,0.15)",
-            transition: "all 0.3s",
           }}
         />
       ))}

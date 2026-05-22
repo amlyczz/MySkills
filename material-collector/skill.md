@@ -19,6 +19,8 @@ tools_allowed:
 
 你是一个专业的自动化素材采集助手。输入一个 URL，输出结构化的 material_manifest.json v2。
 
+**原则**：素材类型定义不写在此，去读 schema 和模型文件。
+
 ---
 
 ## 目录结构
@@ -27,10 +29,12 @@ tools_allowed:
 material-collector/
 ├── skill.md              ← 本文件
 ├── schema/
+│   ├── models.py              ← MaterialManifest Pydantic 模型（素材类型定义）
 │   └── material_manifest.schema.json
 ├── scripts/
 │   ├── recorder.mjs      ← Playwright 录制 + 素材提取
-│   └── allocate.py       ← 时间分配 + Remotion intro/outro + concat
+│   ├── allocate.py       ← 时间分配 + 素材验证（不渲染 intro/outro）
+│   └── manifest_validator.py ← load/validate_manifest()
 └── proxy.json            ← 代理配置（多平台，不提交 git）
 ```
 
@@ -62,13 +66,13 @@ node recorder.mjs
 
 **输出**：
 - `manifest_full.json` — v1 格式（向后兼容）
-- `material_manifest.json` — v2 格式（15 种素材类型 + source/capture/metadata）
+- `material_manifest.json` — v2 格式
 - `materials/` — 素材文件（图片/视频/代码块/截图）
 - `.mp4` — 录制视频
 
 ---
 
-## 二、运行 allocate.py（时间分配 + intro/outro + concat）
+## 二、运行 allocate.py
 
 ```bash
 cd material-collector/scripts
@@ -80,7 +84,7 @@ python3 allocate.py \
   --repo-url "https://github.com/{owner}/{repo}" \
   --content-dir "content-generator/content/YYYY-MM-DD/" \
   --bg-type starfield \
-  --manual-image /path/to/extra.png \   # 用户手动素材
+  --manual-image /path/to/extra.png \
   --manual-video /path/to/extra.mp4
 ```
 
@@ -94,17 +98,12 @@ python3 allocate.py \
 
 ---
 
-## 素材类型全景
+## 素材类型 → 读数据模型
 
-15 种素材类型，按优先级排列：
+所有素材类型定义在 `schema/models.py` 的 `MaterialManifest` Pydantic 模型中。要查看可选素材类型及其结构，读该文件的字段定义和 `material_manifest.schema.json`。
 
-| 优先级 | 类型 | 说明 |
-|--------|------|------|
-| 最高 | `extracted_video` | 页面内嵌视频/GIF（自动转 MP4） |
-| 高 | `screenshot` | CSS selector 定位截图（架构图/对比表） |
-| 高 | `code_snippet` | README 代码块（带语言/章节/评分） |
-| 中 | `image` | 页面图片（三级过滤 + Ken Burns 动效） |
-| 中 | `doc_page` | /docs 目录文档 |
-| 低 | `scroll_video` | 页面平滑滚动录屏 |
-| 低 | `link_video` | 自动发现的外链页面录屏 |
-| 手动 | `manual_image` / `manual_video` | 用户提供 |
+素材文件存储在 `materials/` 目录中，manifest 中的 `source` 字段记录来源 URL 和章节，`capture` 字段记录采集参数，`metadata` 字段记录额外属性。
+
+## 验证 → 读 `manifest_validator.py`
+
+`manifest_validator.py` 提供 `load_manifest()` 和 `validate_manifest()` 函数，使用 Pydantic 模型做类型校验。

@@ -1,233 +1,393 @@
 ---
 name: pipeline-orchestrator
 description: >
-  一键编排：发现项目 → 生成内容 → 采集素材 → 编排时间线 → Remotion 渲染 → 后期合成。
-  串联 content-generator、material-collector、timeline-composer、video-renderer、post-producer 五个 skill。
+  全流程视频管线编排器。AI agent 负责智能决策（内容生成、模板/风格/布局选择），
+  机械执行直接调用各层脚本。串联 5 层：内容生成 → 素材采集 → 时间线编排 →
+  Remotion 渲染 → 后期合成 → final.mp4。内容源无关。
 triggers:
+  - 跑全流程
+  - 生成最终视频
+  - 合成视频
+  - 从内容到视频
+  - 执行视频管线
   - 做一个项目视频
   - 一键生成演示视频
-  - 从内容到视频一条龙
-  - 全流程出视频
 tools_allowed:
   - run_terminal_cmd
   - write_file
   - read_file
 ---
 
-# 视频 Pipeline 编排器 Skill
+# Pipeline Orchestrator — 全流程视频管线
 
-你是一个自动化内容制作编排器。串联 5 层 skill 完成全流程视频制作。
+你是视频管线的编排引擎。**AI agent 负责智能决策，机械执行直接调各层脚本。**
 
----
+## 原则
 
-## 5 层 Pipeline
-
-```
-Layer 0: content-generator    → content.json
-Layer 1: material-collector   → material_manifest.json
-Layer 2: timeline-composer    → timeline.json + .srt
-Layer 3: video-renderer       → video.mp4 (Remotion)
-Layer 4: post-producer        → final.mp4 (audio + subtitles)
-```
-
-横向切面：`media-generation`（图片/语音/音乐/视频生成）
+- **无降级**：每一阶段都必须成功，失败即报错退出。不要 fallback，不要静默跳过，修复根本原因。
+- **顶尖效果**：所有渲染使用最高质量设置（Remotion CRF 18, 1080p@30fps）。
+- **分层调用**：各层脚本在各自目录下独立执行，不依赖统一编排脚本。
+- **选择逻辑去读各层源码**：布局/主题/动效等不在本文件硬编码，指引见下文。
+- **全走代理**：所有需要网络的命令（素材采集/音频生成/Remotion 渲染）都必须先 source proxy.sh。
+- **断点续跑**：每阶段成功后更新 checkpoint 文件，重跑时跳过已完成阶段。
+- **先校验后继续**：每阶段输出后立即做 schema 校验，失败即报错。
 
 ---
 
-## Phase A：内容生成
-
-> 调用 `content-generator` skill → 输出 content.json + markdown 文件
-
-## Phase B：素材采集 + 智能匹配
-
-> 调用 `material-collector` skill → recorder.mjs 录制 + allocate.py 分配
-
-### B.1 素材采集
-
-按 material-collector skill 执行录制和素材提取，得到 `manifest_full.json`。
-
-### B.2 内容 → 模板智能匹配 (Code Agent 直接执行)
-
-**你（Code Agent）本身就是 LLM**，不需要外部 API key。读取 content.json 后，你直接分析内容语义、品牌调性、受众，然后选择最优的模板组合，生成 `video_config.json`。
-
-#### 步骤 1：读取输入
+## 目录结构
 
 ```
-读取 content.json → 获取: title, tagline, points, language, topics, stats
-读取 manifest_full.json → 获取素材清单 (视频数/图片数/录屏数)
+pipeline-orchestrator/
+├── skill.md              ← 本文件（agent 操作指南）
+└── scripts/
+    └── proxy.sh          ← 统一网络代理配置
 ```
 
-#### 步骤 2：选择结构模板
+---
 
-根据素材丰富度和内容类型:
+## 全流程一览
 
-| 结构 ID | 名称 | 场景序列 | 最适合 |
-|---------|------|---------|--------|
-| `funnel` | 漏斗型 | hook→problem→solution→showcase→features→cta | 通用项目、开源仓库 |
-| `product-showcase` | 产品展示 | hook→problem→demo→features→proof→cta | Demo 丰富(≥3视频)、可视化产品 |
-| `timeline` | 时间线 | hook→origin→milestones→showcase→today→cta | 版本演进、Changelog |
-| `performance-launch` | 性能发布 | hook→proof×2→showcase→features→cta | 数据驱动、Benchmark |
+```
+                            pipeline-orchestrator (AI agent)
+                                    │
+       ┌────────────────────────────┼────────────────────────────┐
+       │                            │                            │
+  ┌────▼─────┐               ┌──────▼──────┐              ┌──────▼──────┐
+  │ AI 决策  │               │  机械执行    │              │  机械执行    │
+  │ 阶段     │               │  阶段        │              │  阶段        │
+  └──────────┘               └──────────────┘              └──────────────┘
+   Phase 0                     Phase 1                       Phase 2.5
+   内容生成                     素材采集                       音频生成
+   (agent 分析)                 (脚本运行)                     (脚本运行)
+       │                           │                           │
+       ▼                           ▼                           ▼
+  content.json            material_manifest            voiceover.mp3
+                                            \               /
+                                        ┌───▼─────────────▼───┐
+                                        │   Phase 2           │
+                                        │   时间线编排 (脚本)   │
+                                        │  timeline_composer  │
+                                        └─────────────────────┘
+                                                  │
+                                        timeline.json + video_config.json
+                                                  │
+                                        ┌─────────▼─────────┐
+                                        │   Phase 3          │
+                                        │   Remotion (脚本)   │
+                                        └───────────────────┘
+                                                  │
+                                                 video.mp4
+                                                  │
+                                        ┌─────────▼─────────┐
+                                        │   Phase 4          │
+                                        │   后期合成 (脚本)    │
+                                        └───────────────────┘
+                                                  │
+                                                 final.mp4
+```
 
-**选择规则**: 素材有 ≥3 个视频/GIF → product-showcase。默认 → funnel。
+---
 
-#### 步骤 3：选择样式模板 + 背景
+## Phase 0：内容生成（AI 决策）
 
-根据编程语言和 topics 匹配风格族，再选具体样式:
+调用 `content-generator` skill，输入 repo URL：
 
-| StyleFamily | 样式 ID | 情绪 | 最适合 | 默认背景 |
-|------------|---------|------|--------|---------|
-| **tech** | `dark-purple`, `tech-grid`, `neon-blue` | dark/tech/code | 开发工具、框架、底层技术 | starfield |
-| **business** | `corporate-gray`, `ink-dark`, `paper-light` | professional/clean | 商业产品、B2B、企业级 | geometric |
-| **creative** | `sakura-pink`, `ocean-cyan` | creative/design | 创意工具、设计系统、前端 | fluid-gradient |
-| **minimal** | `matte-metal` | minimal/stark | CLI 工具、极简项目、底层库 | bokeh |
-| **playful** | `warm-orange`, `warm-yellow`, `retro-warm` | warm/energetic | 社区项目、教育工具、游戏 | fluid-gradient |
+1. 基础数据采集（gh api）
+2. 源码扫描 + Top-15 文件评分选取
+3. 4 维源码分析
+4. 生成 content.json（口播脚本 / 文案 / 封面提示词 / 源码洞察）
 
-**选择规则**: Python→tech-grid, Rust→matte-metal, Go→dark-purple, JS/TS→sakura-pink, Ruby→warm-orange, Swift→neon-blue, 其他→dark-purple。Topics 含 AI/ML → tech family。
+**输出**：`content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-content.json`
 
-#### 步骤 4：为每个场景选择布局
+---
 
-| 场景类型 | 主布局 | 备选布局 | 何时用备选 |
-|---------|--------|---------|-----------|
-| hook | `hero-center` | `kinetic-typography` | 需要动态排印效果时 |
-| problem | `hero-center` | `split-left-text`, `quote-style` | 有痛点配图时用 split |
-| solution | `split-left-text` | `hero-center`, `card-grid` | 纯文字用 hero-center |
-| feature | `card-grid` | `hero-center`, `floating-grid` | ≤3 要点用 hero-center |
-| showcase/demo | `media-full` | `center-focus-video`, `fly-through` | 有包装需求用 center-focus |
-| proof | `stat-highlight` | `card-grid`, `quote-style` | 多条数据用 card-grid |
-| cta | `hero-center` | `prompt-input` | AI/命令行项目用 prompt-input |
+## 全局参数（Phase 0 后计算）
 
-可用布局完整列表: `hero-center`, `split-left-text`, `split-right-text`, `full-screen-text`, `card-grid`, `quote-style`, `stat-highlight`, `media-full`, `code-display`, `center-focus-video`, `kinetic-typography`, `floating-grid`, `fly-through`, `prompt-input`, `sandwich-text`
+读取 content.json 后，计算以下参数供后续所有阶段共享：
 
-#### 步骤 5：为每个元素选择动效
+### OUTPUT_DIR
 
-| 元素角色 | 主动效 | 备选 |
-|---------|--------|------|
-| title/headline | `arc-entrance` | `bounce-in`, `spring-elastic` |
-| subtitle/tagline | `scale-fade` | `smooth-scale-up` |
-| points (列表项) | `spring-slide-up` | `staggered-grow` |
-| stats (数据) | `scale-fade` | `spring-slide-up` |
-| url | `spring-slide-up` | — |
+```bash
+OUTPUT_DIR="content-generator/content/YYYY-MM-DD/HHmm-{repo_name}"
+CONTENT_JSON="${OUTPUT_DIR}-content.json"
+```
 
-#### 步骤 6：生成 video_config.json
+各阶段产出的统一目录：
 
-将以上选择组装为如下 JSON，写入 `output/video_config.json`:
+| 文件 | 产出阶段 |
+|------|---------|
+| `$OUTPUT_DIR/video_config.json` | AI 决策 → Phase 2 精细化覆盖 |
+| `$OUTPUT_DIR/material_manifest.json` | Phase 1 |
+| `$OUTPUT_DIR/materials/` | Phase 1 |
+| `$OUTPUT_DIR/timeline.json` + `.srt` | Phase 2 |
+| `$OUTPUT_DIR/voiceover.mp3` + `bgm.mp3` | Phase 2.5 |
+| `$OUTPUT_DIR/video.mp4` | Phase 3 |
+| `$OUTPUT_DIR/final.mp4` | Phase 4 |
+
+### TOTAL_DURATION
+
+从 `content.json.script.total_duration_est` 动态计算，不硬编码：
+
+```
+total_seconds = max(60, min(300, ceil(total_duration_est * 1.2 + 30)))
+```
+
+最少 60s，最多 300s，口播时长 × 1.2 倍 + 30s 余量。
+
+### Checkpoint
+
+```json
+{"phase0": true, "phase1": false, "phase2": false, "phase2_5": false, "phase3": false, "phase4": false}
+```
+
+文件路径：`$OUTPUT_DIR/.pipeline_checkpoints.json`。每阶段更新，重跑可跳过已完成阶段。
+
+### 代理
+
+```bash
+source pipeline-orchestrator/scripts/proxy.sh
+```
+
+自动读取 `material-collector/proxy.json`，识别平台（mac/WSL）并导出 `http_proxy`/`https_proxy`。
+
+---
+
+## 智能决策：模板/风格/布局选择
+
+Agent 读 content.json + Remotion 源码 → 自行决策 → 写 video_config.json。
+
+### 选择维度——去读源码，不记在这里
+
+| 维度 | 数据源文件 | 读什么 |
+|------|-----------|--------|
+| 结构模板 | `video-renderer/remotion/src/structures.ts` | `structureTemplates[]` 场景序列 |
+| StyleFamily + 样式 | `video-renderer/remotion/src/styles.ts` + `themes.ts` | `styleTemplates[]` ID + 配色 |
+| 布局 | `video-renderer/remotion/src/layouts/index.tsx` | `LayoutDispatcher` switch 全部 case |
+| 动效 | `video-renderer/remotion/src/motions.ts` | `motionPresets[]` |
+| 过渡 | `video-renderer/remotion/src/VideoComposer.tsx` | `buildTransitionPresentation()` |
+| 默认 seg.type→layout 映射 | `timeline-composer/scripts/timeline_composer.py` | `SEG_TYPE_LAYOUT` |
+| 背景类型 | `video-renderer/remotion/src/backgrounds/index.tsx` | `BgType` |
+| SFX 映射 | `video-renderer/remotion/src/audio/sfxLibrary.ts` | `sfxLibrary[]` |
+
+### 选择要点
+
+- **结构**：先读 `material_manifest.json` 检查素材可用性。≥3 个 video/GIF → 展示型；纯数据 → timeline；通用 → funnel。
+- **样式**：按语言推断。Rust→冷色极简，Python→tech，JS/TS→创意，Go→深色。
+- **布局**：按场景类型选。代码→code-display，屏幕录制→media-full，数据→stat-highlight，对比→split。
+- **动效**：元素角色决定。title→bounce-in/spring-elastic，列表→spring-slide-up/staggered-grow，数据→scale-fade。
+
+### 产出：video_config.json
+
+按 Zod schema（`video-renderer/remotion/src/schemas/VideoConfig.schema.ts`）格式输出：
 
 ```json
 {
-  "structureId": "funnel",
-  "styleId": "tech-grid",
-  "bgType": "starfield",
+  "structureId": "timeline-adaptive",
+  "styleId": "<选定样式ID>",
+  "bgType": "<选定背景>",
   "sceneConfigs": {
-    "hook": {
-      "layoutId": "hero-center",
-      "motionMap": { "headline": "bounce-in" },
-      "content": { "headline": "<从 content.json 取 title>" },
-      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
-    },
-    "problem": {
-      "layoutId": "hero-center",
-      "motionMap": { "title": "arc-entrance", "points": "spring-slide-up" },
-      "content": { "title": "Why This Matters", "points": ["<痛点1>", "<痛点2>"] },
+    "<scene_id>": {
+      "layoutId": "<布局ID>",
+      "motionMap": { "<元素>": "<动效>" },
+      "content": { "<字段>": "<值>" },
+      "durationSeconds": <秒>,
       "transitionIn": { "type": "crossfade", "durationFrames": 15 },
       "transitionOut": { "type": "crossfade", "durationFrames": 15 }
-    },
-    "solution": {
-      "layoutId": "split-left-text",
-      "motionMap": { "title": "arc-entrance", "subtitle": "scale-fade" },
-      "content": { "title": "<方案标题>", "subtitle": "<方案描述>" },
-      "transitionIn": { "type": "crossfade", "durationFrames": 15 },
-      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
-    },
-    "showcase": {
-      "layoutId": "media-full",
-      "motionMap": {},
-      "content": {},
-      "transitionIn": { "type": "crossfade", "durationFrames": 15 },
-      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
-    },
-    "features": {
-      "layoutId": "card-grid",
-      "motionMap": { "title": "arc-entrance", "points": "spring-slide-up" },
-      "content": { "title": "Key Features", "points": ["<功能1>", "<功能2>", "<功能3>"] },
-      "transitionIn": { "type": "crossfade", "durationFrames": 15 },
-      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
-    },
-    "cta": {
-      "layoutId": "hero-center",
-      "motionMap": { "title": "arc-entrance", "stats": "scale-fade" },
-      "content": { "title": "<url>", "stats": "<stars/forks>" },
-      "transitionIn": { "type": "crossfade", "durationFrames": 15 }
     }
   },
   "audio": {
     "sfxEnabled": true,
-    "voiceover": [],
     "voiceoverEnabled": false
   }
 }
 ```
 
-#### 步骤 7：渲染
+写入 `$OUTPUT_DIR/video_config.json`。
 
-将 `video_config.json` 传给 Remotion:
+---
 
-```bash
-cd video-renderer/remotion
-npx remotion render VideoComposer out/video.mp4 --props='{"config": <video_config.json 内容>}'
-```
+## 机械执行阶段
 
-### B.3 降级路径
-
-如果 Code Agent 不想手动匹配（快速模式），可以走 Python 规则匹配:
+### 全局脚本前导
 
 ```bash
-# 确定性规则匹配 (不需要 API key，始终可用)
-python3 material-collector/scripts/allocate.py manifest_full.json 180 --output-dir ./output
+OUTPUT_DIR="content-generator/content/YYYY-MM-DD/HHmm-{repo_name}"
+CONTENT_JSON="${OUTPUT_DIR}-content.json"
+TOTAL_DURATION=<计算值>
 
-# 或走外部 LLM API 匹配 (需要 DeepSeek/OpenAI key)
-python3 material-collector/scripts/allocate.py manifest_full.json 180 --output-dir ./output \
-  --use-llm --llm-provider deepseek --llm-api-key $DEEPSEEK_API_KEY
+# checkpoint 检查函数
+checkpoint_done() {
+  grep -q "\"$1\": true" "$OUTPUT_DIR/.pipeline_checkpoints.json" 2>/dev/null
+}
+update_checkpoint() {
+  python3 -c "import json; c=json.load(open('$OUTPUT_DIR/.pipeline_checkpoints.json')); c['$1']=True; json.dump(c, open('$OUTPUT_DIR/.pipeline_checkpoints.json','w'), indent=2)"
+}
 ```
 
-### 模板匹配架构
+---
 
+### Phase 1：素材采集
+
+```bash
+if checkpoint_done "phase1"; then
+  echo "Phase 1 already completed, skipping"
+else
+  source pipeline-orchestrator/scripts/proxy.sh
+  cd material-collector/scripts
+
+  REPO_URL="$REPO_URL" TOTAL_DURATION="$TOTAL_DURATION" node recorder.mjs
+
+  python3 allocate.py \
+    "$OUTPUT_DIR/material_manifest.json" \
+    $TOTAL_DURATION --output-dir "$OUTPUT_DIR" \
+    --content-dir "$(dirname $CONTENT_JSON)" \
+    --bg-type starfield --repo-url "$REPO_URL"
+
+  python3 -m material_collector.scripts.manifest_validator "$OUTPUT_DIR/material_manifest.json" || exit 1
+  cd "$OLDPWD"
+  update_checkpoint "phase1"
+fi
 ```
-内容输入 (content.json + manifest)
-    ↓
-Code Agent 分析 (你自己)
-    ├── 理解内容语义、品牌调性、受众
-    ├── 选择结构模板 (4 种)
-    ├── 选择样式模板 (12 种，5 个风格族)
-    ├── 为每个场景选择布局 (15 种)
-    ├── 为每个元素选择动效 (18 种)
-    ├── 添加过渡效果 (crossfade 15帧)
-    └── 生成完整 video_config.json
-    ↓
-(可选) Pydantic 校验 (schema_validator.py)
-    ↓
-Remotion 渲染
 
-## Phase C：时间线编排
+**输出**：`material_manifest.json` + `materials/` 目录
 
-> 调用 `timeline-composer` skill → content.json + material_manifest.json → timeline.json + .srt
+---
 
-## Phase D：视频渲染
+### Phase 2：时间线编排
 
-> 调用 `video-renderer` skill → Remotion 渲染 video.mp4
+```bash
+if checkpoint_done "phase2"; then
+  echo "Phase 2 already completed, skipping"
+else
+  cd timeline-composer/scripts
 
-## Phase E：后期合成
+  python3 timeline_composer.py \
+    "$CONTENT_JSON" "$OUTPUT_DIR/material_manifest.json" \
+    --output "$OUTPUT_DIR/timeline.json" --total-duration $TOTAL_DURATION \
+    --output-video-config "$OUTPUT_DIR/video_config.json" \
+    --style-id dark-purple --bg-type starfield
 
-> 调用 `post-producer` skill → 验证 + 混音 + 字幕烧录 → final.mp4
+  # 校验
+  python3 -c "import json; d=json.load(open('$OUTPUT_DIR/timeline.json')); assert 'segments' in d and 'chapters' in d; print(f'timeline OK: {len(d[\"segments\"])} segments, {len(d[\"chapters\"])} chapters')" || exit 1
+  python3 -c "import json; d=json.load(open('$OUTPUT_DIR/video_config.json')); assert 'structureId' in d and 'sceneConfigs' in d and 'styleId' in d and 'bgType' in d; print(f'video_config OK: {len(d[\"sceneConfigs\"])} scenes, style={d[\"styleId\"]}')" || exit 1
+
+  cd "$OLDPWD"
+  update_checkpoint "phase2"
+fi
+```
+
+**输出**：`timeline.json` + `timeline.srt` + `video_config.json`（精细化覆盖）
+
+---
+
+### Phase 2.5：音频生成
+
+```bash
+if checkpoint_done "phase2_5"; then
+  echo "Phase 2.5 already completed, skipping"
+else
+  source pipeline-orchestrator/scripts/proxy.sh
+
+  python3 -m media_generation voiceover --from-content "$CONTENT_JSON" --output "$OUTPUT_DIR/voiceover.mp3"
+  python3 -m media_generation bgm --duration $TOTAL_DURATION --output "$OUTPUT_DIR/bgm.mp3"
+
+  update_checkpoint "phase2_5"
+fi
+```
+
+**输出**：`voiceover.mp3` + `bgm.mp3`
+
+---
+
+### Phase 3：Remotion 渲染
+
+```bash
+if checkpoint_done "phase3"; then
+  echo "Phase 3 already completed, skipping"
+else
+  source pipeline-orchestrator/scripts/proxy.sh
+  cd video-renderer/remotion
+
+  npx remotion render VideoComposer "$OUTPUT_DIR/video.mp4" \
+    --props="$OUTPUT_DIR/video_config.json" --codec h264 --crf 18
+
+  cd "$OLDPWD"
+  update_checkpoint "phase3"
+fi
+```
+
+**输出**：`video.mp4`
+
+---
+
+### Phase 4：后期合成 + 字幕
+
+```bash
+if checkpoint_done "phase4"; then
+  echo "Phase 4 already completed, skipping"
+else
+  cd post-producer/scripts
+
+  python3 verify_output.py "$OUTPUT_DIR" $TOTAL_DURATION
+  python3 audio_mixer.py \
+    "$OUTPUT_DIR/video.mp4" "$OUTPUT_DIR/voiceover.mp3" "$OUTPUT_DIR/bgm.mp3" \
+    "$OUTPUT_DIR/timeline.json" --output "$OUTPUT_DIR/final.mp4" \
+    --srt "$OUTPUT_DIR/timeline.srt"
+
+  cd "$OLDPWD"
+  update_checkpoint "phase4"
+fi
+```
+
+**输出**：**`$OUTPUT_DIR/final.mp4`** ✅
 
 ---
 
 ## 汇总报告
 
-完成后输出：
-1. 内容文件（content.json / 脚本 / 封面 / 文案）
-2. 素材统计（scroll / extracted / image / link / code / screenshot / docs）
-3. 时间线摘要（segments / chapters / subtitles）
-4. 渲染结果（主题 + 降级级别 L0-L3）
-5. 最终视频（路径 + 时长 + 大小）
-6. 验证结果（passed / warnings / errors）
+```bash
+# 素材统计
+python3 -c "
+import json
+m = json.load(open('$OUTPUT_DIR/material_manifest.json'))
+types = {}
+for item in m.get('items', []):
+    t = item.get('type', 'unknown')
+    types[t] = types.get(t, 0) + 1
+print('Materials: ' + ', '.join(f'{k}={v}' for k, v in sorted(types.items())))
+"
 
+# 时间线摘要
+python3 -c "
+import json
+t = json.load(open('$OUTPUT_DIR/timeline.json'))
+print(f'Timeline: {len(t.get(\"segments\",[]))} segments, {len(t.get(\"chapters\",[]))} chapters')
+"
+
+# 视频元数据
+ffprobe -v quiet -print_format json -show_format -show_streams "$OUTPUT_DIR/final.mp4" | \
+python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+fmt = d.get('format', {})
+print(f'Duration: {float(fmt.get(\"duration\",0)):.1f}s')
+print(f'Size: {int(fmt.get(\"size\",0))/1024/1024:.1f}MB')
+for s in d.get('streams', []):
+    if s.get('codec_type') == 'video':
+        print(f'Video: {s.get(\"codec_name\")} {s.get(\"width\")}x{s.get(\"height\")} @ {s.get(\"r_frame_rate\",\"?\")}fps')
+    elif s.get('codec_type') == 'audio':
+        print(f'Audio: {s.get(\"codec_name\")} {s.get(\"sample_rate\")}Hz')
+"
+```
+
+---
+
+## 内容源接口
+
+上游只需生成 **1 个文件**：
+
+```
+content-generator/content/YYYY-MM-DD/HHmm-{project}-content.json
+```
+
+素材可来源任意组合：自动录制、用户手动、外部提供。

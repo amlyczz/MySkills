@@ -26,7 +26,7 @@ tools_allowed:
 
 ### A1. 读去重记录
 
-检查 `content-generator/YYYY-repos.md`。已推荐的仓库不再出现。
+检查 `content-generator/content/YYYY-repos.md`（使用 `schema/dedup.py` 的 `DedupDB.load()`）。已推荐的仓库不再出现。
 
 ### A2. 多策略搜索（必须凑满 20 个高质量候选）
 

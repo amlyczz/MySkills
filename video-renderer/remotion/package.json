@@ -3,15 +3,16 @@
   "private": true,
   "scripts": {
     "studio": "remotion studio",
-    "render:intro": "remotion render Intro out/intro.mp4",
-    "render:outro": "remotion render Outro out/outro.mp4",
-    "render:all": "remotion render Intro out/intro.mp4 && remotion render Outro out/outro.mp4"
+    "render": "remotion render VideoComposer out/video.mp4"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.0",
     "@remotion/cli": "^4.0.0",
     "@remotion/google-fonts": "^4.0.464",
+    "@remotion/media": "4.0.464",
     "@remotion/renderer": "^4.0.0",
+    "@remotion/sfx": "4.0.464",
+    "@remotion/transitions": "4.0.464",
     "react": "^18",
     "react-dom": "^18",
     "remotion": "^4.0.464",

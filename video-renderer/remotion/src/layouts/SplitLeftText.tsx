@@ -7,6 +7,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Img,
   useCurrentFrame,
   interpolate,
 } from "remotion";
@@ -22,7 +23,7 @@ import {
 } from "../layout";
 import { TIMING } from "../animations";
 
-export const SplitLeftText: React.FC<LayoutProps> = ({
+export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right" }> = ({
   title,
   subtitle,
   points,
@@ -32,6 +33,7 @@ export const SplitLeftText: React.FC<LayoutProps> = ({
   theme,
   motionMap,
   showBullet = true,
+  direction = "left",
 }) => {
   const frame = useCurrentFrame();
 
@@ -52,15 +54,15 @@ export const SplitLeftText: React.FC<LayoutProps> = ({
   });
 
   return (
-    <AbsoluteFill style={{ display: "flex", padding: CONTENT_PAD }}>
-      {/* 左侧 1/3 文案 */}
+    <AbsoluteFill style={{ display: "flex", flexDirection: direction === "right" ? "row-reverse" : "row", padding: CONTENT_PAD }}>
+      {/* 文案区域 (1/3) */}
       <div
         style={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          paddingRight: 40,
+          ...(direction === "right" ? { paddingLeft: 40 } : { paddingRight: 40 }),
         }}
       >
         {title && (
@@ -148,7 +150,7 @@ export const SplitLeftText: React.FC<LayoutProps> = ({
         {chartData && chartData.length > 0 ? (
           <AnimatedBarChart data={chartData} accentColor={theme.colors.accent} />
         ) : mediaUrl ? (
-          <img src={mediaUrl} alt="" style={{ maxWidth: "100%", maxHeight: "80%", borderRadius: theme.decoration.borderRadius, objectFit: "contain" }} />
+          <Img src={mediaUrl} alt="" style={{ maxWidth: "100%", maxHeight: "80%", borderRadius: theme.decoration.borderRadius, objectFit: "contain" }} />
         ) : null}
       </div>
 

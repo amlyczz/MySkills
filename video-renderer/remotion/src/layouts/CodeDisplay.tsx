@@ -220,7 +220,6 @@ export const CodeDisplay: React.FC<LayoutProps> = ({
                     : "transparent",
                   borderRadius: isHighlighted ? 4 : 0,
                   marginBottom: isHighlighted ? 2 : 0,
-                  transition: "background 0.3s",
                 }}
               >
                 {/* Line Number */}

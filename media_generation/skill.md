@@ -21,6 +21,8 @@ tools_allowed:
 
 你是视频 Pipeline 的媒体生成模块。调用方不关心底层是 MiniMax / OpenAI / 其他模型，只通过别名调用。
 
+**原则**：可用别名列表不写在此，去读 `media_config.json`。
+
 ---
 
 ## 核心原则
@@ -39,7 +41,7 @@ tools_allowed:
 media_generation/
 ├── skill.md                  ← 本文件（agent 操作指南）
 ├── __init__.py               → export MediaGenerator, GenerationResult
-├── media_config.json         → provider 配置 + aliases + 降级规则
+├── media_config.json         → provider 配置 + aliases + 降级规则（这是别名数据源）
 ├── media_generator.py        → 别名解析 → 提供者路由 → 降级链
 ├── providers/
 │   ├── base.py               → GenerationResult, BaseProvider ABC, UnsupportedCapabilityError
@@ -70,35 +72,25 @@ media = MediaGenerator()
 
 ```python
 # 生成封面图（3:4 竖版）
-result = await media.generate("cover_image", prompt="Bold sans-serif poster...", aspect_ratio="3:4")
-if result.success:
-    cover_path = result.data.images[0].local_path
+result = await media.generate("cover_image", prompt="...", aspect_ratio="3:4")
 
 # 生成口播配音
-result = await media.generate("voiceover", text="完整口播文本...", voice_id="male-tech-01")
+result = await media.generate("voiceover", text="...", voice_id="male-tech-01")
 
 # 生成 BGM
 result = await media.generate("bgm", prompt="ambient electronic, subtle beat", instrumental=True)
 
 # 生成视频片段
-result = await media.generate("video_clip", prompt="a serene mountain landscape", duration=6)
+result = await media.generate("video_clip", prompt="...", duration=6)
 ```
 
-### 3. 可用别名
+### 3. 可用别名 → 读 `media_config.json`
 
-| 别名 | 能力 | 默认 Provider | 典型参数 |
-|------|------|--------------|---------|
-| `cover_image` | image | minimax (image-01) | `prompt`, `aspect_ratio` ("3:4" / "16:9") |
-| `thumbnail` | image | minimax (image-01) | `prompt`, `aspect_ratio` |
-| `voiceover` | speech | minimax (speech-hd) | `text`, `voice_id`, `speed` |
-| `bgm` | music | minimax (music-2.6) | `prompt`, `instrumental=True`, `duration` |
-| `video_clip` | video | minimax (Hailuo-Fast) | `prompt`, `duration`, `image_path` (可选) |
+所有别名定义在 `media_config.json` 的 `aliases` 字段下。每个别名映射到 capability + provider 列表。去读该文件获取最新别名列表及配置。
 
 ---
 
 ## 在视频 Pipeline 中的位置
-
-MediaGeneration 是横向切面，被各层调用：
 
 ```
 Layer 0 (内容生成)  ──调用──→  cover_image   (生成封面)
@@ -126,7 +118,7 @@ Layer 4 (后期合成)  ──调用──→  voiceover     (TTS 配音)
 ```
 
 - 第一个 Provider 成功 → 返回结果
-- 所有 Provider 失败 → 返回 `GenerationResult(success=False)`，上游降级（如视频段改纯图片展示）
+- 所有 Provider 失败 → 返回 `GenerationResult(success=False)`，上游降级
 - 遇到 `UnsupportedCapabilityError` → 跳过该 Provider，尝试下一个
 
 ---
@@ -162,16 +154,10 @@ from media_generation.providers.base import BaseProvider, GenerationResult
 
 class MyProvider(BaseProvider):
     @property
-    def name(self) -> str:
-        return "my-provider"
-
+    def name(self) -> str: return "my-provider"
     @property
-    def supported_capabilities(self) -> list[str]:
-        return ["image", "speech"]
-
-    async def generate(self, capability: str, **kwargs) -> GenerationResult:
-        # dispatch to generate_image / generate_speech ...
-        ...
+    def supported_capabilities(self) -> list[str]: return ["image", "speech"]
+    async def generate(self, capability: str, **kwargs) -> GenerationResult: ...
 ```
 
 ---

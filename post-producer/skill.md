@@ -2,7 +2,7 @@
 name: post-producer
 description: >
   后期合成。音频混音（voiceover + BGM sidechain ducking + SFX 放置）、
-  字幕烧录（SRT → ffmpeg subtitles）、素材完整性验证（8 项预检）。
+  字幕烧录（SRT → ffmpeg subtitles）、素材完整性验证。
 triggers:
   - 合成最终视频
   - 混音音频
@@ -18,6 +18,8 @@ tools_allowed:
 
 你是一个视频后期制作助手。负责音频混音、字幕烧录、素材验证。
 
+**原则**：验证检查项不写在此，去读源码。
+
 ---
 
 ## 目录结构
@@ -25,9 +27,11 @@ tools_allowed:
 ```
 post-producer/
 ├── skill.md              ← 本文件
+├── schema/
+│   └── models.py         ← TimelineModel、MixAudioRequest 等 Pydantic 模型
 └── scripts/
     ├── audio_mixer.py    ← 音频混音 + final composition
-    └── verify_output.py  ← 素材完整性 8 项预检
+    └── verify_output.py  ← 素材完整性检查
 ```
 
 ---
@@ -39,18 +43,7 @@ cd post-producer/scripts
 python3 verify_output.py "<output_dir>" 180
 ```
 
-**8 项检查**：
-
-| # | 检查项 | 级别 |
-|---|--------|------|
-| 1 | intro.mp4 存在且可解码 | ERROR |
-| 2 | outro.mp4 存在且可解码 | ERROR |
-| 3 | concat_list.txt 引用文件均存在 | ERROR |
-| 4 | 图片素材可解码 | WARNING |
-| 5 | 视频素材时长 > 0 | ERROR |
-| 6 | 素材总时长 >= 目标 50% | WARNING |
-| 7 | concat_list.txt 语法正确 | ERROR |
-| 8 | 素材编码均为 h264 | WARNING |
+完整的检查项列表在 `verify_output.py` 的运行时输出中。每项有级别（ERROR / WARNING）和具体检查逻辑。去读该脚本了解每项检查的触发条件。
 
 ---
 

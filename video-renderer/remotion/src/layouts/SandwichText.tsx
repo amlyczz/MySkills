@@ -9,7 +9,8 @@
  * 对标 Google Flow 0:31 的空间纵深感。
  */
 import React from "react";
-import { AbsoluteFill, Img, Video, useCurrentFrame, interpolate } from "remotion";
+import { AbsoluteFill, Img, useCurrentFrame, interpolate } from "remotion";
+import { Video } from "@remotion/media";
 import { LayoutProps } from "../types";
 import { FONT_SIZE_TITLE, FONT_WEIGHT_TITLE } from "../layout";
 

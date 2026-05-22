@@ -7,7 +7,8 @@
  * Usage: include alongside any layout element that uses a motion preset.
  */
 import React from "react";
-import { Audio, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { Audio } from "@remotion/media";
 import { MotionPreset } from "../types";
 
 interface SfxPlayerProps {

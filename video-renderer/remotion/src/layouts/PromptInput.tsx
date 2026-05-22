@@ -7,7 +7,8 @@
  * Props: rawPrompt + entities 映射表（从 content 解析）
  */
 import React from "react";
-import { AbsoluteFill, useCurrentFrame, spring, useVideoConfig, interpolate, Img, Video } from "remotion";
+import { AbsoluteFill, useCurrentFrame, spring, useVideoConfig, interpolate, Img } from "remotion";
+import { Video } from "@remotion/media";
 import { LayoutProps } from "../types";
 import { FONT_SIZE_TITLE, FONT_WEIGHT_TITLE } from "../layout";
 

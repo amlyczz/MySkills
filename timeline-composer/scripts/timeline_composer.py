@@ -17,27 +17,39 @@ import re
 import sys
 import argparse
 import os
+from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
 # ── seg.type → template mapping (from spec) ─────────────────
 
+# All 15 layout IDs matching Zod schema
+ALL_LAYOUTS = frozenset({
+    "hero-center", "split-left-text", "split-right-text", "full-screen-text",
+    "card-grid", "quote-style", "stat-highlight", "media-full", "code-display",
+    "center-focus-video", "kinetic-typography", "floating-grid", "fly-through",
+    "prompt-input", "sandwich-text",
+})
+
+# All 5 transition types matching Zod schema
+ALL_TRANSITIONS = frozenset({"none", "crossfade", "whip-pan", "slide-in", "slide-out"})
+
 SEG_TYPE_LAYOUT = {
-    "hook":               {"layout_id": "hero-center",      "motion": {"headline": "bounce-in"}},
-    "problem":            {"layout_id": "hero-center",      "motion": {}},
-    "solution":           {"layout_id": "split-left-text",  "motion": {}},
-    "features":           {"layout_id": "card-grid",        "motion": {"cards": "spring-slide-up"}},
-    "showcase":           {"layout_id": "media-full",       "motion": {}},
-    "code_showcase":      {"layout_id": "code-display",     "motion": {}},
-    "source_highlight":   {"layout_id": "code-display",     "motion": {}},
-    "stats_showcase":     {"layout_id": "stat-highlight",   "motion": {}},
-    "proof":              {"layout_id": "stat-highlight",   "motion": {"title": "spring-elastic"}},
-    "changelog_showcase": {"layout_id": "card-grid",        "motion": {"cards": "spring-slide-up"}},
-    "social_proof":       {"layout_id": "quote-style",      "motion": {}},
-    "comparison":         {"layout_id": "stat-highlight",   "motion": {}},
-    "cta":                {"layout_id": "hero-center",      "motion": {"title": "spring-slide-up"}},
-    "manual":             {"layout_id": "media-full",       "motion": {}},
+    "hook":               {"layout_id": "hero-center",          "motion": {"headline": "bounce-in"}},
+    "problem":            {"layout_id": "hero-center",          "motion": {}},
+    "solution":           {"layout_id": "split-left-text",      "motion": {}},
+    "features":           {"layout_id": "card-grid",            "motion": {"cards": "spring-slide-up"}},
+    "showcase":           {"layout_id": "media-full",           "motion": {}},
+    "code_showcase":      {"layout_id": "code-display",         "motion": {}},
+    "source_highlight":   {"layout_id": "code-display",         "motion": {}},
+    "stats_showcase":     {"layout_id": "stat-highlight",       "motion": {}},
+    "proof":              {"layout_id": "stat-highlight",       "motion": {"title": "spring-elastic"}},
+    "changelog_showcase": {"layout_id": "card-grid",            "motion": {"cards": "spring-slide-up"}},
+    "social_proof":       {"layout_id": "quote-style",          "motion": {}},
+    "comparison":         {"layout_id": "stat-highlight",       "motion": {}},
+    "cta":                {"layout_id": "hero-center",          "motion": {"title": "spring-slide-up"}},
+    "manual":             {"layout_id": "media-full",           "motion": {}},
 }
 
 # ── Segment type sequence pattern (funnel structure) ────────
@@ -138,8 +150,8 @@ class TimelineSegment(BaseModel):
     layout: LayoutConfig = Field(default_factory=LayoutConfig)
     style: StyleConfig = Field(default_factory=StyleConfig)
     audio: AudioConfig = Field(default_factory=AudioConfig)
-    transition_in: str = "fade"
-    transition_out: str = "fade"
+    transition_in: str = "crossfade"
+    transition_out: str = "crossfade"
 
 
 class TimelineComposer:
@@ -563,14 +575,21 @@ class TimelineComposer:
 def to_video_config(timeline: dict,
                     style_id: str = "dark-purple",
                     bg_type: str = "starfield",
-                    structure_id: str = "timeline-adaptive") -> dict:
+                    structure_id: str = "timeline-adaptive",
+                    existing_config: Optional[dict] = None) -> dict:
     """Convert timeline.json output to VideoConfig format for Remotion VideoComposer.
 
     Maps each timeline segment to a SceneConfig with layoutId, motionMap,
-    content, and durationSeconds.
+    content, voiceover splits, material refs, code template, and duration.
+
+    If existing_config is provided (e.g., from Agent's initial decision),
+    top-level fields like styleId/bgType/audio.bgm are preserved.
+    sceneConfigs and audio.voiceover are always overwritten with
+    timeline-derived data (more precise).
     """
     segments = timeline.get("segments", [])
     scene_configs = {}
+    voiceover_list = []
 
     for seg in segments:
         seg_id = seg.get("id", f"seg_{len(scene_configs) + 1:03d}")
@@ -578,9 +597,10 @@ def to_video_config(timeline: dict,
         layout_entry = SEG_TYPE_LAYOUT.get(seg_type, SEG_TYPE_LAYOUT["showcase"])
 
         content = {}
-        vo_text = seg.get("voiceover", {}).get("text", "")
+        vo = seg.get("voiceover", {})
+        vo_text = vo.get("text", "")
+        vo_dur = vo.get("duration_est", 0)
         if vo_text:
-            # First 60 chars as headline, rest as body
             content["headline"] = vo_text[:60]
             if len(vo_text) > 60:
                 content["body"] = vo_text
@@ -589,24 +609,99 @@ def to_video_config(timeline: dict,
         if mat_ref:
             content["visual"] = mat_ref
 
-        scene_configs[seg_id] = {
+        # ── Transition mapping (timeline → VideoConfig) ──
+        tin = _map_transition(seg.get("transition_in", "crossfade"))
+        tout = _map_transition(seg.get("transition_out", "crossfade"))
+
+        scene = {
             "layoutId": layout_entry["layout_id"],
             "motionMap": layout_entry.get("motion", {}),
             "content": content,
             "durationSeconds": max(seg.get("duration", 5), 2),
         }
 
-    return {
+        # Carry code_template if present
+        ct = seg.get("code_template")
+        if ct:
+            scene["content"]["code"] = ct.get("language", "")
+            scene["content"]["codeAnimation"] = ct.get("animation", "fade")
+
+        # Carry transition configs
+        seg_audio = seg.get("audio", {})
+        seg_audio_sfx = seg_audio.get("sfx", [])
+        if tin and tin != "none":
+            scene["transitionIn"] = {"type": tin, "durationFrames": 15}
+        if tout and tout != "none":
+            scene["transitionOut"] = {"type": tout, "durationFrames": 15}
+
+        scene_configs[seg_id] = scene
+
+        # ── Build voiceover list from splits ──
+        for split in vo.get("splits", []):
+            voiceover_list.append({
+                "sceneId": seg_id,
+                "elementRole": "voiceover",
+                "src": "",
+                "text": split.get("text", ""),
+                "durationSeconds": vo_dur / max(len(vo.get("splits", [])), 1),
+                "startOffsetSeconds": split.get("time_offset", 0),
+            })
+
+    # ── Build audio config: merge existing bgm with timeline voiceover ──
+    existing_audio = (existing_config or {}).get("audio", {})
+    audio_config = {
+        "sfxEnabled": bool(any(
+            seg.get("audio", {}).get("sfx", [])
+            for seg in segments
+        )),
+        "voiceover": voiceover_list,
+        "voiceoverEnabled": bool(voiceover_list),
+    }
+    # Preserve BGM track from Agent's initial decision if not regenerating
+    if existing_audio.get("bgm"):
+        audio_config["bgm"] = existing_audio["bgm"]
+
+    result = {
+        "generated_by": {
+            "phase": "phase2",
+            "layer": "timeline-composer",
+            "timestamp": datetime.now().isoformat(),
+            "version": "2.0",
+        },
         "structureId": structure_id,
         "styleId": style_id,
         "bgType": bg_type,
         "sceneConfigs": scene_configs,
-        "audio": {
-            "sfxEnabled": False,
-            "voiceover": [],
-            "voiceoverEnabled": False,
-        },
+        "audio": audio_config,
     }
+
+    # Preserve top-level fields from Agent's initial config
+    if existing_config:
+        result["structureId"] = existing_config.get("structureId", structure_id)
+        result["styleId"] = existing_config.get("styleId", style_id)
+        result["bgType"] = existing_config.get("bgType", bg_type)
+
+    return result
+
+
+def _map_transition(timeline_transition: str) -> str:
+    """Map timeline transition enum to VideoConfig transition enum.
+
+    Timeline (old): fade, dissolve, slide-left, slide-right, none
+    VideoConfig:    crossfade, whip-pan, slide-in, slide-out, none
+    """
+    mapping = {
+        "fade": "crossfade",
+        "dissolve": "crossfade",
+        "slide-left": "slide-in",
+        "slide-right": "slide-out",
+        "none": "none",
+        "crossfade": "crossfade",
+        "whip-pan": "whip-pan",
+        "slide-in": "slide-in",
+        "slide-out": "slide-out",
+    }
+    return mapping.get(timeline_transition, "crossfade")
 
 
 # ── CLI ─────────────────────────────────────────────────────
@@ -663,7 +758,16 @@ def main():
 
     # Optional: write VideoConfig for Remotion VideoComposer
     if args.output_video_config:
-        vc = to_video_config(timeline, style_id=args.style_id, bg_type=args.bg_type)
+        # Read existing config (from Agent) to merge, if present
+        existing_vc = None
+        if os.path.exists(args.output_video_config):
+            try:
+                with open(args.output_video_config) as f:
+                    existing_vc = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                pass
+        vc = to_video_config(timeline, style_id=args.style_id, bg_type=args.bg_type,
+                             existing_config=existing_vc)
         with open(args.output_video_config, "w") as f:
             json.dump(vc, f, indent=2, ensure_ascii=False)
         print(f"VideoConfig: {args.output_video_config}")

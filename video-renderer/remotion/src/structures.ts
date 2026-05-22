@@ -237,7 +237,7 @@ export const performanceLaunchStructure: StructureTemplate = {
     {
       id: "showcase",
       type: "showcase",
-      durationSeconds: 145,  // dynamic, overridden by sceneConfig in allocate.py
+      durationSeconds: 0,  // dynamic, overridden by sceneConfig
       requiredAssets: ["video", "image"],
       contentSlots: [],
     },

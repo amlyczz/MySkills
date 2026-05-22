@@ -4,7 +4,8 @@
  * 用于 showcase 场景：视频/图片铺满画面。
  */
 import React from "react";
-import { AbsoluteFill, Img, Video, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Img, useCurrentFrame } from "remotion";
+import { Video } from "@remotion/media";
 import { LayoutProps } from "../types";
 
 export const MediaFull: React.FC<LayoutProps> = ({

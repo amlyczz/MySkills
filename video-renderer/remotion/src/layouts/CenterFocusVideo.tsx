@@ -8,7 +8,8 @@
  * Props 复用 LayoutProps + cameraAction / wrapperType
  */
 import React from "react";
-import { AbsoluteFill, Video, Img, useCurrentFrame, interpolate } from "remotion";
+import { AbsoluteFill, Img, useCurrentFrame, interpolate } from "remotion";
+import { Video } from "@remotion/media";
 import { LayoutProps, CameraAction } from "../types";
 import { GlowContainer } from "../wrappers/GlowContainer";
 import { VirtualCamera } from "../components/VirtualCamera";

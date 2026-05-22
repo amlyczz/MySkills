@@ -147,4 +147,4 @@ content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-content.json
 - README 无内容：跳过源码洞察
 - 目录结构过深（>100 文件）：只取 Top-10 而非 Top-15
 
-完成后更新 `content-generator/YYYY-repos.md` 去重记录。
+完成后使用 `schema/dedup.py` 的 `DedupDB().load().add(full_name).save()` 更新 `content-generator/content/YYYY-repos.md` 去重记录。

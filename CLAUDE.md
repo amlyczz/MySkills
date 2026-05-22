@@ -3,6 +3,13 @@
 ## 触发规则
 
 - **Plan Mode / Spec 驱动**：任何新功能、重构、或你认为需要设计方案的变更 → 先写 spec，详见 `.spec/` 目录下的已有 spec 文件，命名格式 `.spec/<简短描述>.md`，包含问题陈述、设计方案、验收标准
+文件命名格式：
+```
+日期-具体spec说明.md
+例如：
+- 2026-05-15-多类型剧本AI创作系统架构设计.md
+- 2026-05-16-用户反馈模块设计.md
+```
 - **TDD 流程**：spec 确认后，按测试驱动开发实施
 - **AI 操作日志**：大功能任务、技术决策、架构变更使用 `@agent-harness/memory-logs.md` 规范记录（.memory/YYYY-MM-DD.md）
 
@@ -29,7 +36,7 @@ material-collector/   Layer 1: 素材采集 → material_manifest.json
 timeline-composer/    Layer 2: 时间线编排 → timeline.json + .srt
 video-renderer/       Layer 3: Remotion 渲染 → video.mp4
 post-producer/        Layer 4: 音频混音 + 字幕 → final.mp4
-pipeline-orchestrator/ 编排层：串联 5 层一键执行
+pipeline-orchestrator/ 编排层：AI 智能决策 + 脚本机械执行，串联 5 层
 media_generation/      横向切面：图片/语音/音乐/视频/文本生成
 ```
 
@@ -39,3 +46,11 @@ media_generation/      横向切面：图片/语音/音乐/视频/文本生成
 - `skill.md`：YAML frontmatter（name / description / triggers / tools_allowed）+ 中文 agent 操作指南
 - `schema/`：该层的数据格式定义（JSON Schema draft-07）
 - `scripts/`：可执行脚本
+
+## Remotion Skill
+
+Remotion 最佳实践 skill 已安装到 `.claude/skills/remotion-best-practices/`。涉及 Remotion 视频渲染时自动加载，包含 38 条 rules（动画/字幕/字体/音频/3D/过渡等）。
+
+## Video Renderer 项目 Skill
+
+`video-renderer/skill.md` 是**本项目的渲染层 skill**，描述 remotion 模块的架构和 pipeline 集成方式。布局/场景/主题等动态维度不在 md 中硬编码，而是指引 agent 去读各源码文件作为数据源。

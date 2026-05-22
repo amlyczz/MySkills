@@ -2,11 +2,19 @@
  * useLifecycle — 元素完整生命周期 Hook (Intro → Idle → Outro)。
  *
  * 三阶段状态机：
- *   Intro  (0 → durationFrames)     : 入场动效
+ *   Intro  (0 → durationFrames)       : 入场动效
  *   Idle   (durationFrames → dur-outroFrames) : 悬停呼吸
- *   Outro  (dur-outroFrames → dur)  : 退场动效
+ *   Outro  (dur-outroFrames → dur)    : 退场动效
  *
- * 与 useEntrance 互补：useEntrance 只处理 Intro，useLifecycle 覆盖全部三阶段。
+ * ## 何时使用
+ *
+ * - **useLifecycle**：需要 idle（悬停呼吸/辉光脉冲）或 outro（退场）阶段时使用。
+ *   适用于需要在整个场景时长内保持动画控制的长驻元素。
+ *
+ * - **useEntrance**：仅需要入场动效时使用，更轻量、API 更简洁。
+ *   适用于列表项、短时元素等无需 idle/outro 控制的场景。
+ *
+ * 两者互补，按需选择。
  */
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import { MotionPreset, SpringConfig } from "../types";
