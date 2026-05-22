@@ -68,14 +68,27 @@ from media_generator import MediaGenerator
 media = MediaGenerator()
 ```
 
-### 2. 按别名生成
+### 1.1 CLI 方式（推荐用于 Pipeline）
+
+```bash
+# 口播配音（--voice-id 默认 Chinese (Mandarin)_Male_Announcer，--pitch 3 使声音更饱满）
+python3 -m media_generator voiceover --text "..." --voice-id "Chinese (Mandarin)_Male_Announcer" --pitch 3 --output voiceover.mp3
+
+# 从 content.json 提取文案
+python3 -m media_generator voiceover --from-content content.json --voice-id "Chinese (Mandarin)_Male_Announcer" --pitch 3 -o voiceover.mp3
+
+# 背景音乐
+python3 -m media_generator bgm --prompt "ambient electronic" --duration 180 -o bgm.mp3
+```
+
+### 2. 编程方式
 
 ```python
 # 生成封面图（3:4 竖版）
 result = await media.generate("cover_image", prompt="...", aspect_ratio="3:4")
 
-# 生成口播配音
-result = await media.generate("voiceover", text="...", voice_id="male-tech-01")
+# 生成口播配音（推荐 Chinese (Mandarin)_Male_Announcer + pitch=3）
+result = await media.generate("voiceover", text="...", voice_id="Chinese (Mandarin)_Male_Announcer", pitch=3)
 
 # 生成 BGM
 result = await media.generate("bgm", prompt="ambient electronic, subtle beat", instrumental=True)
@@ -91,6 +104,18 @@ result = await media.generate("video_clip", prompt="...", duration=6)
 ---
 
 ## 在视频 Pipeline 中的位置
+
+### 输出目录
+
+音频产物输出到 `output/{source_category}/{YYYY-MM-DD}/{repo_name}/`：
+
+```
+output/{source_category}/{YYYY-MM-DD}/{repo_name}/
+  ├── voiceover.mp3          ← 口播配音（本层产出）
+  └── bgm.mp3                ← 背景音乐（本层产出）
+```
+
+临时调试文件输出到 `output/_scratch/` 目录。
 
 ```
 Layer 0 (内容生成)  ──调用──→  cover_image   (生成封面)

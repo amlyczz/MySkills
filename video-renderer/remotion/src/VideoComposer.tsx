@@ -8,7 +8,7 @@
  * 是 Phase 2+ 的统一渲染入口。
  */
 import React from "react";
-import { AbsoluteFill, staticFile, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Sequence, staticFile, useCurrentFrame } from "remotion";
 import { Audio } from "@remotion/media";
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
@@ -112,7 +112,7 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
     sceneData.push({
       id: sceneDef.id,
       type: sceneDef.type,
-      durationFrames: safeDurSecs * 30,
+      durationFrames: Math.round(safeDurSecs * 30),
       label: typeof label === "string" ? label : sceneDef.id,
       config: sceneConfig,
     });
@@ -196,16 +196,9 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
             presentation={trans.presentation as any}
           />,
         );
-      } else {
-        // No transition = hard cut; insert a zero-duration transition
-        seriesChildren.push(
-          <TransitionSeries.Transition
-            key={`t-${sd.id}`}
-            timing={linearTiming({ durationInFrames: 0 })}
-            presentation={{ component: TransparentPresentation, props: {} } as any}
-          />,
-        );
       }
+      // No transition = hard cut; TransitionSeries handles this naturally
+      // without needing a Transition element.
     }
   }
 
@@ -219,7 +212,7 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
       <ChapterProgressBar
         chapters={chapters}
         totalDuration={totalDuration}
-        style="labeled-bar"
+        style="water-flow"
       />
 
       {/* BGM — 全片铺底 with volume curve */}
@@ -227,16 +220,12 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
         <BgmWithCurve src={config.audio.bgm.src} curve={bgmCurve} />
       )}
 
-      {/* Voiceover — per-scene audio segments */}
-      {config.audio.voiceoverEnabled && config.audio.voiceover.map((v, vi) => {
-        const sceneFm = sceneFrameMap.find(f => f.id === v.sceneId);
-        if (!sceneFm || !v.src) return null;
-        const startFrame = Math.round(sceneFm.startFrame + v.startOffsetSeconds * 30);
-        const durFrames = Math.round(v.durationSeconds * 30);
-        return (
-          <Audio key={`vo-${vi}`} src={staticFile(v.src)} from={startFrame} durationInFrames={durFrames} />
-        );
-      })}
+      {/* Voiceover — single continuous Audio element, matching audio_mixer.py final mix.
+          Per-scene segments with trimBefore are NOT used because audio_mixer replaces
+          the entire audio track with the continuous file. */}
+      {config.audio.voiceoverEnabled && config.audio.voiceover[0]?.src && (
+        <Audio src={staticFile(config.audio.voiceover[0].src)} volume={1} />
+      )}
     </AbsoluteFill>
   );
 };
@@ -266,11 +255,6 @@ const BgmWithCurve: React.FC<{ src: string; curve: { time: number; volume: numbe
 
   return <Audio src={staticFile(src)} volume={volume} />;
 };
-
-/** Invisible presentation — renders children without any transition effect */
-const TransparentPresentation: React.FC<{
-  children: React.ReactNode;
-}> = ({ children }) => <AbsoluteFill>{children}</AbsoluteFill>;
 
 // ═══════════════════════════════════════════════════════════════
 //  Transition mapping helpers

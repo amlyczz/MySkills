@@ -3,12 +3,12 @@
 Usage:
     python -m media_generator voiceover \\
         --text "欢迎收看今天的项目" \\
-        --voice-id male-tech-01 \\
+        --voice-id male-qn-jingying \\
         --output voiceover.mp3
 
     python -m media_generator voiceover \\
         --from-content content.json \\
-        --voice-id female-tech-01 \\
+        --voice-id female-qn-jingying \\
         --output voiceover.mp3
 
     python -m media_generator bgm \\
@@ -51,20 +51,21 @@ async def _generate_voiceover(args: argparse.Namespace) -> int:
     result = await media.generate(
         "voiceover",
         text=text,
-        voice_id=args.voice_id or "male-tech-01",
+        voice_id=args.voice_id or "Chinese (Mandarin)_Male_Announcer",
         speed=args.speed or 1.0,
+        pitch=args.pitch or 0,
     )
     if not result.success:
         print(f"ERROR: Voiceover generation failed: {result.error}")
         return 1
 
-    src = result.data.audio_path
+    src = result.data.audio_path if hasattr(result.data, 'audio_path') else (result.data.get('audio_path', '') if isinstance(result.data, dict) else '')
     if os.path.isfile(src):
         import shutil
         os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
         shutil.copy2(src, args.output)
         print(f"Voiceover saved: {args.output}")
-        print(f"Duration: {getattr(result.data, 'duration_seconds', '?')}s")
+        print(f"Duration: {getattr(result.data, 'duration_seconds', result.data.get('duration_seconds', '?') if isinstance(result.data, dict) else '?')}s")
         return 0
     else:
         print(f"ERROR: Generated file not found: {src}")
@@ -85,13 +86,13 @@ async def _generate_bgm(args: argparse.Namespace) -> int:
         print(f"ERROR: BGM generation failed: {result.error}")
         return 1
 
-    src = result.data.audio_path
+    src = result.data.audio_path if hasattr(result.data, 'audio_path') else (result.data.get('audio_path', '') if isinstance(result.data, dict) else '')
     if os.path.isfile(src):
         import shutil
         os.makedirs(os.path.dirname(args.output) or ".", exist_ok=True)
         shutil.copy2(src, args.output)
         print(f"BGM saved: {args.output}")
-        print(f"Duration: {getattr(result.data, 'duration_seconds', '?')}s")
+        print(f"Duration: {getattr(result.data, 'duration_seconds', result.data.get('duration_seconds', '?') if isinstance(result.data, dict) else '?')}s")
         return 0
     else:
         print(f"ERROR: Generated file not found: {src}")
@@ -106,8 +107,9 @@ def main() -> None:
     vo = sub.add_parser("voiceover", help="Generate voiceover (TTS)")
     vo.add_argument("--text", default="", help="Text to synthesize")
     vo.add_argument("--from-content", default="", help="Path to content.json (extracts script text)")
-    vo.add_argument("--voice-id", default="male-tech-01", help="Voice ID (default: male-tech-01)")
+    vo.add_argument("--voice-id", default="Chinese (Mandarin)_Male_Announcer", help="Voice ID (default: Chinese (Mandarin)_Male_Announcer)")
     vo.add_argument("--speed", type=float, default=1.0, help="Speech speed (0.5-2.0)")
+    vo.add_argument("--pitch", type=int, default=0, help="Pitch adjustment (-12 to 12, positive = brighter)")
     vo.add_argument("--output", "-o", default="voiceover.mp3", help="Output file path")
 
     # bgm

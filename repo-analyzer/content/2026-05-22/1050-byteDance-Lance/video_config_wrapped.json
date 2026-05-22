@@ -1,0 +1,365 @@
+{
+  "config": {
+    "generated_by": {
+      "phase": "phase2",
+      "layer": "agent-matcher",
+      "timestamp": "2026-05-22T18:00:00",
+      "version": "3.0"
+    },
+    "structureId": "timeline-adaptive",
+    "styleId": "glassmorphism",
+    "bgType": "bokeh",
+    "sceneConfigs": {
+      "seg_001": {
+        "layoutId": "hero-center",
+        "motionMap": {
+          "title": "spring-slide-up",
+          "subtitle": "scale-fade"
+        },
+        "content": {
+          "title": "Lance",
+          "headline": "字节跳动开源统一多模态模型",
+          "subtitle": "3B 参数原生支持图像/视频的理解、生成与编辑",
+          "visual": "lance-logo.webp"
+        },
+        "durationSeconds": 14,
+        "transitionIn": {
+          "type": "crossfade",
+          "durationFrames": 1
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 1
+        }
+      },
+      "seg_002": {
+        "layoutId": "split-left-text",
+        "motionMap": {
+          "headline": "spring-elastic",
+          "body": "reveal-mask"
+        },
+        "content": {
+          "headline": "3B 激活参数的统一模型",
+          "body": "单框架原生支持图像理解、图像生成、图像编辑、视频理解、视频生成、视频编辑六大任务",
+          "visual": "text-to-image-overview.webp"
+        },
+        "durationSeconds": 10,
+        "transitionIn": {
+          "type": "slide-in",
+          "direction": "left",
+          "durationFrames": 20
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 15
+        }
+      },
+      "seg_003": {
+        "layoutId": "stat-highlight",
+        "motionMap": {
+          "headline": "smooth-scale-up",
+          "stats": "scale-fade"
+        },
+        "content": {
+          "headline": "3B 规模达到 7B 水平",
+          "stats": "接近 7B 开源模型性能",
+          "visual": "benchmark-overview.png"
+        },
+        "durationSeconds": 12,
+        "transitionIn": {
+          "type": "crossfade",
+          "durationFrames": 18
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 15
+        }
+      },
+      "seg_004": {
+        "layoutId": "media-full",
+        "motionMap": {
+          "headline": "blur-focus"
+        },
+        "content": {
+          "headline": "智能视频生成展示",
+          "visual": "intelligent-video-demo-01.gif"
+        },
+        "durationSeconds": 6,
+        "wrapperType": "device-frame",
+        "transitionIn": {
+          "type": "crossfade",
+          "durationFrames": 20
+        },
+        "transitionOut": {
+          "type": "slide-out",
+          "direction": "right",
+          "durationFrames": 18
+        }
+      },
+      "seg_005": {
+        "layoutId": "card-grid",
+        "motionMap": {
+          "headline": "bounce-in",
+          "cards": "staggered-grow"
+        },
+        "content": {
+          "headline": "六大任务·一个模型",
+          "points": [
+            "图像理解 & 生成",
+            "图像编辑",
+            "视频理解",
+            "视频生成",
+            "视频编辑",
+            "多任务协同训练"
+          ],
+          "visual": "image-editing-overview.webp"
+        },
+        "durationSeconds": 22,
+        "transitionIn": {
+          "type": "slide-in",
+          "direction": "right",
+          "durationFrames": 22
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 15
+        }
+      },
+      "seg_005_b": {
+        "layoutId": "media-full",
+        "motionMap": {
+          "headline": "glow-pulse"
+        },
+        "content": {
+          "headline": "视频编辑能力展示",
+          "visual": "video-editing-demo-01.gif"
+        },
+        "durationSeconds": 8,
+        "wrapperType": "device-frame",
+        "transitionIn": {
+          "type": "crossfade",
+          "durationFrames": 15
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 15
+        }
+      },
+      "seg_006": {
+        "layoutId": "split-left-text",
+        "motionMap": {
+          "headline": "spring-elastic",
+          "body": "arc-entrance"
+        },
+        "content": {
+          "headline": "从零训练，开源开放",
+          "body": "128 张 A100 GPU 预算内完成分阶段多任务训练，3B 参数达到领先水平",
+          "visual": "github-repo-screenshot.png"
+        },
+        "durationSeconds": 20,
+        "transitionIn": {
+          "type": "slide-in",
+          "direction": "left",
+          "durationFrames": 18
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 15
+        }
+      },
+      "seg_007": {
+        "layoutId": "media-full",
+        "motionMap": {
+          "headline": "subtle-float"
+        },
+        "content": {
+          "headline": "视频生成多样化展示",
+          "visual": "t2v-demo-02.gif"
+        },
+        "durationSeconds": 12,
+        "wrapperType": "glow",
+        "transitionIn": {
+          "type": "whip-pan",
+          "direction": "left",
+          "durationFrames": 22
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 15
+        }
+      },
+      "seg_008": {
+        "layoutId": "media-full",
+        "motionMap": {
+          "headline": "glow-pulse"
+        },
+        "content": {
+          "headline": "多轮一致性编辑",
+          "visual": "multi-turn-editing-demo-01.gif"
+        },
+        "durationSeconds": 22,
+        "wrapperType": "glow",
+        "transitionIn": {
+          "type": "crossfade",
+          "durationFrames": 20
+        },
+        "transitionOut": {
+          "type": "slide-out",
+          "direction": "left",
+          "durationFrames": 18
+        }
+      },
+      "seg_009": {
+        "layoutId": "code-display",
+        "motionMap": {
+          "headline": "smooth-scale-up",
+          "code": "typewriter"
+        },
+        "content": {
+          "headline": "开源即用·快速开始",
+          "code": "pip install lance\n# 或从源码安装\ngit clone https://github.com/bytedance/Lance\ncd Lance\npip install -r requirements.txt\n# 运行 Gradio Demo\npython inference_lance.py",
+          "language": "bash",
+          "highlightLines": [
+            "1"
+          ],
+          "codeAnimation": "type",
+          "showLineNumbers": "true",
+          "visual": "code_quickstart_t2i.sh"
+        },
+        "durationSeconds": 28,
+        "transitionIn": {
+          "type": "slide-in",
+          "direction": "right",
+          "durationFrames": 20
+        },
+        "transitionOut": {
+          "type": "crossfade",
+          "durationFrames": 15
+        }
+      },
+      "seg_010": {
+        "layoutId": "hero-center",
+        "motionMap": {
+          "title": "arc-entrance",
+          "body": "spring-slide-up",
+          "stats": "scale-fade"
+        },
+        "content": {
+          "title": "byteDance/Lance",
+          "body": "多模态 AI 研究者、AIGC 工程师不可错过的开源项目",
+          "stats": "690+ Stars · 38 Forks",
+          "visual": "github-code-screenshot.png"
+        },
+        "durationSeconds": 12,
+        "transitionIn": {
+          "type": "crossfade",
+          "durationFrames": 30
+        },
+        "transitionOut": {
+          "type": "none",
+          "durationFrames": 1
+        }
+      }
+    },
+    "audio": {
+      "bgm": {
+        "id": "bgm_ambient_tech",
+        "src": "bgm.mp3",
+        "mood": "tech",
+        "volumeCurve": []
+      },
+      "sfxEnabled": true,
+      "voiceover": [
+        {
+          "sceneId": "seg_001",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "今天要介绍的是字节跳动刚刚开源的一个重磅项目——Lance",
+          "durationSeconds": 6.78,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_002",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "这是一个仅有3B激活参数的原生统一多模态模型",
+          "durationSeconds": 5.14,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_003",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "却能在一个框架内同时处理图像和视频的理解、生成和编辑",
+          "durationSeconds": 6.08,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_004",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "你没听错",
+          "durationSeconds": 0.86,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_005",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "理解、生成、编辑。六个任务。一个模型。传统方法通常需要为每个任务单独训练专门的模型。而 Lance 通过多任务协同训练。让不同任务之间互相增强",
+          "durationSeconds": 14.14,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_005_b",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "无论是视频编辑还是图像编辑，Lance 都能通过简单的文字描述完成复杂的编辑任务",
+          "durationSeconds": 6.0,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_006",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "项目团队在 128 张 A100 GPU 的预算内。从零训练了一个统一的 Transformer 骨干网络。在图像生成基准上。Lance 以 3B 规模达到了接近 7B 开源模型的水平",
+          "durationSeconds": 12.0,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_007",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "在视频理解方面。它可以回答关于视频内容的细致问题。比如识别物体的运动方向。或者理解视频中不合理的物理现象",
+          "durationSeconds": 10.0,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_008",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "在视频编辑方面。你只需要输入文字描述。就能改变视频中的物体外观或场景风格。而且 Lance 还支持多轮一致性编辑。你可以连续多次修改同一个视频。每次修改都会保持之前的结果",
+          "durationSeconds": 15.0,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_009",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "此外它还能生成具有物理常识的视频。比如理解物体之间的交互关系。目前模型权重和推理代码都已经在 GitHub 和 HuggingFace 上开源。还提供了一个 Gradio Demo 让你可以直接上手体验",
+          "durationSeconds": 14.0,
+          "startOffsetSeconds": 0
+        },
+        {
+          "sceneId": "seg_010",
+          "elementRole": "voiceover",
+          "src": "voiceover.mp3",
+          "text": "如果你在做多模态 AI 相关的工作。Lance 绝对值得关注和尝试",
+          "durationSeconds": 6.0,
+          "startOffsetSeconds": 0
+        }
+      ],
+      "voiceoverEnabled": true
+    }
+  }
+}

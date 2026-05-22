@@ -140,10 +140,10 @@ def _curve_to_ffmpeg_expr(curve: list[dict], total_seconds: float) -> str:
                 )
         else:
             if abs(v1 - v0) < 0.001:
-                parts.append(f",if(lt(t,{t1}),{v0})")
+                parts.append(f",if(lt(t,{t1}),{v0}")
             else:
                 parts.append(
-                    f",if(lt(t,{t1}),{v0}+({v1}-{v0})*(t-{t0})/{t1 - t0})"
+                    f",if(lt(t,{t1}),{v0}+({v1}-{v0})*(t-{t0})/{t1 - t0}"
                 )
 
     parts.append(f",{pts[-1][1]}")
@@ -222,9 +222,14 @@ def mix_audio(video_path: str,
     bgm_idx = 2
 
     # ── Voiceover ────────────────────────────────────────────
+    # loudnorm first, then pad with silence to full video
+    # duration. Use pad_dur (not whole_len) because loudnorm
+    # can change the output duration, making whole_len fail.
+    required_pad = max(0.0, total_dur - vo_dur)
     filters.append(
-        f"[{vo_idx}:a]atrim=0:{total_dur},"
-        f"loudnorm=I=-16:TP=-1.5:LRA=11:linear=true[vo_norm]"
+        f"[{vo_idx}:a]loudnorm=I=-16:TP=-1.5:LRA=11:linear=true,"
+        f"atrim=0:{total_dur},"
+        f"apad=pad_dur={required_pad}[vo_norm]"
     )
 
     # ── BGM ──────────────────────────────────────────────────
@@ -297,7 +302,6 @@ def mix_audio(video_path: str,
         "-map", final_audio,
         "-c:v", "copy",
         "-c:a", "aac", "-b:a", "192k",
-        "-shortest",
         os.path.abspath(output_path),
     ]
 
@@ -305,6 +309,19 @@ def mix_audio(video_path: str,
     _run(cmd)
 
     return os.path.abspath(output_path)
+
+
+def _find_ffmpeg_with_subtitles() -> str:
+    """Find an ffmpeg binary with the subtitles filter (libass)."""
+    candidates = ["ffmpeg-full", "/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg", "ffmpeg"]
+    for c in candidates:
+        try:
+            res = subprocess.run([c, "-filters"], capture_output=True, text=True, timeout=15)
+            if "subtitles" in res.stdout:
+                return c
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+    return ""
 
 
 def burn_subtitles(video_path: str, srt_path: str, output_path: str | None = None) -> str:
@@ -319,10 +336,20 @@ def burn_subtitles(video_path: str, srt_path: str, output_path: str | None = Non
     out = output_path or video_path.replace('.mp4', '_subtitled.mp4')
     srt_abs = os.path.abspath(srt_path)
     print(f"  Burning subtitles: {os.path.basename(srt_path)} \u2192 {os.path.basename(out)}")
+
+    ffmpeg_bin = _find_ffmpeg_with_subtitles()
+    if not ffmpeg_bin:
+        print(f"  WARNING: No ffmpeg with libass (subtitles filter) found. Skipping subtitle burn.")
+        print(f"  Subtitles file available at: {srt_abs}")
+        import shutil as _sh
+        _sh.copy2(video_path, out)
+        return out
+
+    # MarginV pushes subtitles above the bottom progress bar (48px + 2px gap)
     _run([
-        'ffmpeg', '-y',
+        ffmpeg_bin, '-y',
         '-i', video_path,
-        '-vf', f"subtitles={srt_abs}:force_style='FontSize=24,OutlineColour=&H80000000,BorderStyle=1'",
+        '-vf', f"subtitles={srt_abs}:force_style='MarginV=50'",
         '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
         '-c:a', 'copy',
         out,

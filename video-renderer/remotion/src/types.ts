@@ -446,7 +446,8 @@ export type ProgressBarStyle =
   | "labeled-bar"
   | "gradient-fill"
   | "segment-blocks"
-  | "timeline-ticks";
+  | "timeline-ticks"
+  | "water-flow";
 
 export interface Chapter {
   label: string;

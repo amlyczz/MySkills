@@ -17,7 +17,6 @@ import re
 import sys
 import argparse
 import os
-from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -28,34 +27,11 @@ from pipeline_contracts import (
     VoiceoverSegment,
     VoiceoverSplit,
     SfxEntry,
+    ChapterMarker,
+    SubtitleEntry,
 )
-from pipeline_contracts.enums import LAYOUTS, TRANSITIONS
 
-# ── seg.type → template mapping (from spec) ─────────────────
-
-SEG_TYPE_LAYOUT = {
-    "hook":               {"layout_id": "hero-center",          "motion": {"headline": "bounce-in"}},
-    "problem":            {"layout_id": "hero-center",          "motion": {}},
-    "solution":           {"layout_id": "split-left-text",      "motion": {}},
-    "features":           {"layout_id": "card-grid",            "motion": {"cards": "spring-slide-up"}},
-    "showcase":           {"layout_id": "media-full",           "motion": {}},
-    "code_showcase":      {"layout_id": "code-display",         "motion": {}},
-    "source_highlight":   {"layout_id": "code-display",         "motion": {}},
-    "stats_showcase":     {"layout_id": "stat-highlight",       "motion": {}},
-    "proof":              {"layout_id": "stat-highlight",       "motion": {"title": "spring-elastic"}},
-    "changelog_showcase": {"layout_id": "card-grid",            "motion": {"cards": "spring-slide-up"}},
-    "social_proof":       {"layout_id": "quote-style",          "motion": {}},
-    "comparison":         {"layout_id": "stat-highlight",       "motion": {}},
-    "cta":                {"layout_id": "hero-center",          "motion": {"title": "spring-slide-up"}},
-    "manual":             {"layout_id": "media-full",           "motion": {}},
-}
-
-# ── Segment type sequence pattern (funnel structure) ────────
-
-FUNNEL_SEQUENCE = [
-    "hook", "problem", "solution", "showcase",
-    "code_showcase", "features", "stats_showcase", "cta",
-]
+# (no static seg.type → layout mapping; Agent decides layout per scene)
 
 
 class Utterance(BaseModel):
@@ -227,6 +203,79 @@ class TimelineComposer:
             if best_score >= 1:
                 utt.matched_material = best_id
 
+        # Step 3b: Ensure coverage — force-assign materials of types that have
+        # zero matches (e.g. logo, screenshots, code_snippets with weak keyword overlap).
+        utterances = self._ensure_material_coverage(utterances, materials)
+
+        return utterances
+
+    def _ensure_material_coverage(self, utterances: list[Utterance],
+                                   materials: list[dict]) -> list[Utterance]:
+        """Force-assign materials of types with zero matches to prevent gaps.
+
+        Priority order: code_snippet > scroll_video/link_video > image >
+        screenshot > logo > benchmark_chart > demo_gif > social_proof.
+        Higher-signal materials get first pick of the best-matching utterance.
+        """
+        if not materials or not utterances:
+            return utterances
+
+        # Build type → materials map
+        type_materials: dict[str, list[dict]] = {}
+        for mat in materials:
+            mat_type = mat.get("type", "unknown")
+            type_materials.setdefault(mat_type, []).append(mat)
+
+        # Determine which material types already have coverage
+        covered_types: set[str] = set()
+        for utt in utterances:
+            if utt.matched_material:
+                mat = next((m for m in materials if m.get("id") == utt.matched_material), None)
+                if mat:
+                    covered_types.add(mat.get("type", ""))
+
+        # Priority order: code > video > image > screenshot > logo > gif > chart > proof
+        priority = ["code_snippet", "source_code", "scroll_video", "link_video",
+                     "image", "screenshot", "logo", "benchmark_chart", "demo_gif",
+                     "social_proof", "comparison", "repo_stats", "changelog"]
+
+        # Collect utterances already matched (to avoid overwriting good matches)
+        matched_utterance_ids: set[int] = set()
+        for i, utt in enumerate(utterances):
+            if utt.matched_material:
+                matched_utterance_ids.add(i)
+
+        for mat_type in priority:
+            if mat_type in covered_types:
+                continue  # Already covered
+            mats = type_materials.get(mat_type, [])
+            if not mats:
+                continue  # No materials of this type
+
+            # Find best utterance for this type's materials
+            best_score = 0
+            best_utt_idx = -1
+            best_mat = mats[0]
+
+            for utt_idx, utt in enumerate(utterances):
+                # Prefer utterances that are NOT already matched
+                for mat in mats:
+                    score = self._score_material(utt, mat)
+                    if utt_idx not in matched_utterance_ids:
+                        score += 1  # Bias toward unmatched utterances
+                    if score > best_score:
+                        best_score = score
+                        best_utt_idx = utt_idx
+                        best_mat = mat
+
+            if best_utt_idx >= 0 and best_mat:
+                utterances[best_utt_idx].matched_material = best_mat.get("id")
+                # Also add type-relevant keywords if empty
+                if not utterances[best_utt_idx].keywords:
+                    utterances[best_utt_idx].keywords = [mat_type]
+                covered_types.add(mat_type)
+                matched_utterance_ids.add(best_utt_idx)
+
         return utterances
 
     def _score_material(self, utt: Utterance, mat: dict) -> int:
@@ -390,14 +439,9 @@ class TimelineComposer:
     # ── Step 6: Layout + Audio orchestration ─────────────────
 
     def _build_layout_and_audio(self, segments: list[TimelineSegment]) -> list[TimelineSegment]:
-        """Assign layout, motion, and audio configuration per segment."""
+        """Assign audio configuration per segment. Layout is decided by Agent."""
         for seg in segments:
             seg_type = seg.type or "showcase"
-            map_entry = SEG_TYPE_LAYOUT.get(seg_type, SEG_TYPE_LAYOUT["showcase"])
-            seg.layout = LayoutConfig(
-                layout_id=map_entry["layout_id"],
-                motion_map=map_entry.get("motion", {}),
-            )
 
             if seg_type == "hook":
                 seg.audio = AudioConfig(
@@ -483,123 +527,7 @@ class TimelineComposer:
         return chunks
 
 
-# ── to_video_config: timeline → VideoConfig ────────────────
-
-def to_video_config(timeline: dict,
-                    style_id: str = "dark-purple",
-                    bg_type: str = "starfield",
-                    structure_id: str = "timeline-adaptive",
-                    existing_config: Optional[dict] = None) -> dict:
-    """Convert timeline.json output to VideoConfig format for Remotion VideoComposer.
-
-    Maps each timeline segment to a SceneConfig with layoutId, motionMap,
-    content, voiceover splits, material refs, code template, and duration.
-
-    If existing_config is provided (e.g., from Agent's initial decision),
-    top-level fields like styleId/bgType/audio.bgm are preserved.
-    sceneConfigs and audio.voiceover are always overwritten with
-    timeline-derived data (more precise).
-    """
-    segments = timeline.get("segments", [])
-    scene_configs = {}
-    voiceover_list = []
-
-    for seg in segments:
-        seg_id = seg.get("id", f"seg_{len(scene_configs) + 1:03d}")
-        seg_type = seg.get("type", "showcase")
-        layout_entry = SEG_TYPE_LAYOUT.get(seg_type, SEG_TYPE_LAYOUT["showcase"])
-
-        content = {}
-        vo = seg.get("voiceover", {})
-        vo_text = vo.get("text", "")
-        vo_dur = vo.get("duration_est", 0)
-        if vo_text:
-            content["headline"] = vo_text[:60]
-            if len(vo_text) > 60:
-                content["body"] = vo_text
-
-        mat_ref = seg.get("primary_material")
-        if mat_ref:
-            content["visual"] = mat_ref
-
-        # ── Transition mapping (timeline → VideoConfig) ──
-        tin = _map_transition(seg.get("transition_in", "crossfade"))
-        tout = _map_transition(seg.get("transition_out", "crossfade"))
-
-        scene = {
-            "layoutId": layout_entry["layout_id"],
-            "motionMap": layout_entry.get("motion", {}),
-            "content": content,
-            "durationSeconds": max(seg.get("duration", 5), 2),
-        }
-
-        # Carry code_template if present
-        ct = seg.get("code_template")
-        if ct:
-            scene["content"]["code"] = ct.get("language", "")
-            scene["content"]["codeAnimation"] = ct.get("animation", "fade")
-
-        # Carry transition configs
-        seg_audio = seg.get("audio", {})
-        seg_audio_sfx = seg_audio.get("sfx", [])
-        if tin and tin != "none":
-            scene["transitionIn"] = {"type": tin, "durationFrames": 15}
-        if tout and tout != "none":
-            scene["transitionOut"] = {"type": tout, "durationFrames": 15}
-
-        scene_configs[seg_id] = scene
-
-        # ── Build voiceover list from splits ──
-        for split in vo.get("splits", []):
-            voiceover_list.append({
-                "sceneId": seg_id,
-                "elementRole": "voiceover",
-                "src": "",
-                "text": split.get("text", ""),
-                "durationSeconds": vo_dur / max(len(vo.get("splits", [])), 1),
-                "startOffsetSeconds": split.get("time_offset", 0),
-            })
-
-    # ── Build audio config: merge existing bgm with timeline voiceover ──
-    existing_audio = (existing_config or {}).get("audio", {})
-    audio_config = {
-        "sfxEnabled": bool(any(
-            seg.get("audio", {}).get("sfx", [])
-            for seg in segments
-        )),
-        "voiceover": voiceover_list,
-        "voiceoverEnabled": bool(voiceover_list),
-    }
-    # Preserve BGM track from Agent's initial decision if not regenerating
-    if existing_audio.get("bgm"):
-        audio_config["bgm"] = existing_audio["bgm"]
-        # Attach pre-computed volume curve so both Remotion and post-producer
-        # consume the same curve, eliminating duplicate bgmCurve logic.
-        curve = _generate_bgm_curve(segments, timeline.get("global", {}).get("total_duration", 180))
-        audio_config["bgm"]["volumeCurve"] = curve
-
-    result = {
-        "generated_by": {
-            "phase": "phase2",
-            "layer": "timeline-composer",
-            "timestamp": datetime.now().isoformat(),
-            "version": "2.0",
-        },
-        "structureId": structure_id,
-        "styleId": style_id,
-        "bgType": bg_type,
-        "sceneConfigs": scene_configs,
-        "audio": audio_config,
-    }
-
-    # Preserve top-level fields from Agent's initial config
-    if existing_config:
-        result["structureId"] = existing_config.get("structureId", structure_id)
-        result["styleId"] = existing_config.get("styleId", style_id)
-        result["bgType"] = existing_config.get("bgType", bg_type)
-
-    return result
-
+# ── BGM volume curve (shared with post-producer) ────────────
 
 def _generate_bgm_curve(segments: list[dict],
                         total_duration: float) -> list[dict]:
@@ -653,26 +581,6 @@ def _generate_bgm_curve(segments: list[dict],
     return deduped
 
 
-def _map_transition(timeline_transition: str) -> str:
-    """Map timeline transition enum to VideoConfig transition enum.
-
-    Timeline (old): fade, dissolve, slide-left, slide-right, none
-    VideoConfig:    crossfade, whip-pan, slide-in, slide-out, none
-    """
-    mapping = {
-        "fade": "crossfade",
-        "dissolve": "crossfade",
-        "slide-left": "slide-in",
-        "slide-right": "slide-out",
-        "none": "none",
-        "crossfade": "crossfade",
-        "whip-pan": "whip-pan",
-        "slide-in": "slide-in",
-        "slide-out": "slide-out",
-    }
-    return mapping.get(timeline_transition, "crossfade")
-
-
 # ── CLI ─────────────────────────────────────────────────────
 
 def main():
@@ -684,13 +592,7 @@ def main():
     parser.add_argument("--bgm-track", default="bgm_ambient_tech", help="BGM track identifier")
     parser.add_argument("--bgm-volume", type=float, default=0.2, help="Global BGM volume (0-1)")
     parser.add_argument("--progress-bar-style", default="labeled-bar",
-                        choices=["minimal-dots", "labeled-bar", "gradient-fill", "segment-blocks", "timeline-ticks"])
-    parser.add_argument("--output-video-config", default=None,
-                        help="Also output VideoConfig JSON for Remotion VideoComposer render")
-    parser.add_argument("--style-id", default="dark-purple",
-                        help="Style template ID for VideoConfig (default: dark-purple)")
-    parser.add_argument("--bg-type", default="starfield",
-                        help="Background type for VideoConfig (default: starfield)")
+                        choices=["minimal-dots", "labeled-bar", "gradient-fill", "segment-blocks", "timeline-ticks", "water-flow"])
     args = parser.parse_args()
 
     # Load inputs
@@ -713,10 +615,6 @@ def main():
     with open(args.output, "w") as f:
         json.dump(timeline, f, indent=2, ensure_ascii=False)
 
-    # Write SRT subtitle file
-    srt_path = os.path.splitext(args.output)[0] + ".srt"
-    _write_srt(timeline["subtitles"], srt_path)
-
     # Write BGM volume curve for post-producer consumption
     # (eliminates duplicate curve logic in audio_mixer.py and bgmCurve.ts)
     _write_bgm_curve(timeline, args.output)
@@ -724,30 +622,18 @@ def main():
     # Summary
     n_segs = len(timeline["segments"])
     n_chapters = len(timeline["chapters"])
-    n_subs = len(timeline["subtitles"])
-    print(f"Timeline composed: {n_segs} segments, {n_chapters} chapters, {n_subs} subtitles")
+    print(f"Timeline composed: {n_segs} segments, {n_chapters} chapters")
     print(f"Output: {args.output}")
-    print(f"SRT:     {srt_path}")
-
-    # Optional: write VideoConfig for Remotion VideoComposer
-    if args.output_video_config:
-        # Read existing config (from Agent) to merge, if present
-        existing_vc = None
-        if os.path.exists(args.output_video_config):
-            try:
-                with open(args.output_video_config) as f:
-                    existing_vc = json.load(f)
-            except (json.JSONDecodeError, OSError):
-                pass
-        vc = to_video_config(timeline, style_id=args.style_id, bg_type=args.bg_type,
-                             existing_config=existing_vc)
-        with open(args.output_video_config, "w") as f:
-            json.dump(vc, f, indent=2, ensure_ascii=False)
-        print(f"VideoConfig: {args.output_video_config}")
+    print(f"SRT: use gen_srt.py (post-producer/scripts/gen_srt.py) with video_config.json for correct timing")
 
 
 def _write_srt(subtitles: list[dict], output_path: str) -> None:
-    """Convert subtitle entries to standard .srt format and write to disk."""
+    """DEPRECATED: Use gen_srt.py (post-producer/scripts/) with video_config.json instead.
+
+    Timeline-composer's SRT is based on script-split timestamps, not actual
+    voiceover timing. gen_srt.py uses video_config.json voiceover entries with
+    adjusted scene start times for frame-accurate subtitles.
+    """
     if not subtitles:
         print("  (no subtitles to write)")
         return

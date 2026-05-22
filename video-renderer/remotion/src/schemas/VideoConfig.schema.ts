@@ -220,7 +220,7 @@ const zGeneratedBy = z.object({
 
 export const videoConfigSchema = z.object({
   generated_by: zGeneratedBy.optional(),
-  structureId: z.enum(["funnel", "timeline", "product-showcase", "performance-launch"]),
+  structureId: z.enum(["funnel", "timeline", "product-showcase", "performance-launch", "timeline-adaptive"]),
   styleId: z.string(),
   bgType: zBgType,
   sceneConfigs: z.record(z.string(), zSceneConfig),

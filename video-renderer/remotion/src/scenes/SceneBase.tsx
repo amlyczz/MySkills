@@ -8,6 +8,7 @@ import React from "react";
 import {
   AbsoluteFill,
   useCurrentFrame,
+  staticFile,
   interpolate,
 } from "remotion";
 import { Video } from "@remotion/media";
@@ -104,7 +105,7 @@ export const SceneBase: React.FC<SceneProps> = ({
         points={Array.isArray(content.points) ? content.points : undefined}
         stats={typeof content.stats === "string" ? content.stats : undefined}
         mediaUrl={
-          typeof content.visual === "string" ? content.visual : undefined
+          typeof content.visual === "string" ? staticFile(content.visual) : undefined
         }
         code={typeof content.code === "string" ? content.code : undefined}
         language={typeof content.language === "string" ? content.language : undefined}

@@ -7,6 +7,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  AnimatedImage,
   Img,
   useCurrentFrame,
   interpolate,
@@ -150,7 +151,11 @@ export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right
         {chartData && chartData.length > 0 ? (
           <AnimatedBarChart data={chartData} accentColor={theme.colors.accent} />
         ) : mediaUrl ? (
-          <Img src={mediaUrl} alt="" style={{ maxWidth: "100%", maxHeight: "80%", borderRadius: theme.decoration.borderRadius, objectFit: "contain" }} />
+          mediaUrl.endsWith(".gif") ? (
+            <AnimatedImage src={mediaUrl} style={{ maxWidth: "100%", maxHeight: "80%", borderRadius: theme.decoration.borderRadius, objectFit: "contain" }} />
+          ) : (
+            <Img src={mediaUrl} alt="" style={{ maxWidth: "100%", maxHeight: "80%", borderRadius: theme.decoration.borderRadius, objectFit: "contain" }} />
+          )
         ) : null}
       </div>
 

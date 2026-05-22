@@ -5,7 +5,7 @@
  * 叠加在视频最上层，底部 60px 半透明区域。
  */
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "remotion";
 import { Chapter, ProgressBarStyle } from "../types";
 
 interface ChapterProgressBarProps {
@@ -39,6 +39,8 @@ export const ChapterProgressBar: React.FC<ChapterProgressBarProps> = ({
       return <SegmentBlocks chapters={chapters} currentIndex={currentChapterIndex} totalDuration={totalDuration} />;
     case "timeline-ticks":
       return <TimelineTicks chapters={chapters} currentTime={currentTime} totalDuration={totalDuration} progress={progress} />;
+    case "water-flow":
+      return <WaterFlowBar chapters={chapters} currentIndex={currentChapterIndex} currentTime={currentTime} totalDuration={totalDuration} />;
     default:
       return <LabeledBar chapters={chapters} currentIndex={currentChapterIndex} currentTime={currentTime} totalDuration={totalDuration} />;
   }
@@ -312,6 +314,137 @@ function SegmentBlocks({
           />
         );
       })}
+    </div>
+  );
+}
+
+/** water-flow: 底部全宽水流式进度条 */
+function WaterFlowBar({
+  chapters,
+  currentIndex,
+  currentTime,
+  totalDuration,
+}: {
+  chapters: Chapter[];
+  currentIndex: number;
+  currentTime: number;
+  totalDuration: number;
+}) {
+  const frame = useCurrentFrame();
+  const progress = totalDuration > 0 ? Math.min(1, Math.max(0, currentTime / totalDuration)) : 0;
+
+  // Continuous left-to-right shimmer across entire bar (not oscillating)
+  const shimmerPos = ((frame * 0.6) % 150) - 25;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 48,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+      }}
+    >
+      {/* 背景条 */}
+      <div
+        style={{
+          position: "relative",
+          height: 40,
+          margin: "4px 8px",
+          background: "rgba(255,255,255,0.08)",
+          borderRadius: 6,
+          overflow: "hidden",
+        }}
+      >
+        {/* 水流填充层 — 从左向右连续推进 */}
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: `${progress * 100}%`,
+            background: "linear-gradient(90deg, #2563eb, #06b6d4)",
+            borderRadius: 6,
+            transition: "none",
+          }}
+        >
+          {/* 光泽滑动效果 — 单向连续流动 */}
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: "40%",
+              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+              transform: `translateX(${shimmerPos}%)`,
+            }}
+          />
+        </div>
+
+        {/* 垂直分割线 + 章节标签 (标签在填充层上方,避免叠加) */}
+        {chapters.map((ch, i) => {
+          const chStart = ch.time;
+          const chEnd =
+            i < chapters.length - 1
+              ? chapters[i + 1].time
+              : totalDuration;
+          const centerPct =
+            totalDuration > 0
+              ? ((chStart + chEnd) / 2 / totalDuration) * 100
+              : ((i + 0.5) / chapters.length) * 100;
+          const dividerPct =
+            i > 0 && totalDuration > 0
+              ? (chStart / totalDuration) * 100
+              : 0;
+          const isCurrent = i === currentIndex;
+          const isPast = i < currentIndex;
+
+          return (
+            <React.Fragment key={i}>
+              {/* 分割线 */}
+              {i > 0 && (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: `${dividerPct}%`,
+                    top: 0,
+                    bottom: 0,
+                    width: 2,
+                    background: "rgba(255,255,255,0.2)",
+                  }}
+                />
+              )}
+              {/* 章节标签 —— 添加文字阴影穿透背景 */}
+              <span
+                style={{
+                  position: "absolute",
+                  left: `${centerPct}%`,
+                  top: "50%",
+                  transform: "translate(-50%, -50%)",
+                  fontSize: 11,
+                  fontWeight: isCurrent ? 600 : 400,
+                  color: isCurrent ? "#e0f2fe" : "rgba(255,255,255,0.5)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  maxWidth: "18%",
+                  zIndex: 2,
+                  textShadow: "0 0 6px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7)",
+                }}
+              >
+                {ch.label}
+              </span>
+            </React.Fragment>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -78,7 +78,7 @@ class MiniMaxProvider(BaseProvider):
 
         args = ["mmx", "image", "generate",
                 "--prompt", prompt,
-                "--output", output_path,
+                "--out", output_path,
                 "--quiet"]
         if size:
             args += ["--size", size]
@@ -102,14 +102,16 @@ class MiniMaxProvider(BaseProvider):
     # ── Speech ───────────────────────────────────────────────
 
     async def generate_speech(self, request: Optional[SpeechRequest] = None,
-                              text: str = "", voice_id: str = "male-tech-01",
-                              speed: float = 1.0, output: Optional[str] = None,
+                              text: str = "", voice_id: str = "male-qn-jingying",
+                              speed: float = 1.0, pitch: int = 0,
+                              output: Optional[str] = None,
                               **kwargs) -> GenerationResult:
         t0 = time.monotonic()
         if request is not None:
             text = request.text
             voice_id = request.voice_id
             speed = request.speed
+            pitch = request.pitch
         if not text:
             return GenerationResult.fail("BAD_REQUEST", "text is required", self.name)
 
@@ -120,8 +122,10 @@ class MiniMaxProvider(BaseProvider):
                 "--text", text,
                 "--voice", voice_id,
                 "--speed", str(speed),
-                "--output", output_path,
+                "--out", output_path,
                 "--quiet"]
+        if pitch != 0:
+            args.extend(["--pitch", str(pitch)])
 
         try:
             await self._run_mmx(args)
@@ -158,7 +162,7 @@ class MiniMaxProvider(BaseProvider):
 
         args = ["mmx", "music", "generate",
                 "--prompt", prompt,
-                "--output", output_path,
+                "--out", output_path,
                 "--quiet"]
         if instrumental:
             args.append("--instrumental")
@@ -198,7 +202,7 @@ class MiniMaxProvider(BaseProvider):
         model = self._models["video"]
 
         args = ["mmx", "video", "generate",
-                "--output", output_path,
+                "--out", output_path,
                 "--quiet"]
         if image_path:
             args += ["--image", image_path]

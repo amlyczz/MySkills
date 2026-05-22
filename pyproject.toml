@@ -8,6 +8,9 @@ dependencies = [
     "pipeline-contracts",
 ]
 
+[tool.uv.sources]
+pipeline-contracts = { path = "contracts", editable = true }
+
 [dependency-groups]
 dev = [
     "jsonschema>=4.0",

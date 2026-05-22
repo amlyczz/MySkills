@@ -1,0 +1,145 @@
+{
+  "repo": {
+    "full_name": "bytedance/Lance",
+    "url": "https://github.com/bytedance/Lance",
+    "language": "Python",
+    "stars": 690,
+    "forks": 38,
+    "topics": [
+      "image-editing",
+      "image-generation",
+      "image-understanding",
+      "unified-multimodal-models",
+      "video-generation",
+      "video-understanding"
+    ],
+    "license": null,
+    "created_at": "2026-05-15T05:42:08Z",
+    "updated_at": "2026-05-22T06:22:06Z",
+    "homepage": "https://lance-project.github.io/"
+  },
+  "content": {
+    "title": "Lance",
+    "tagline": "字节跳动开源统一多模态模型，3B 参数原生支持图像/视频的理解、生成与编辑",
+    "points": [
+      "3B 激活参数在单框架内原生支持图像理解、图像生成、图像编辑、视频理解、视频生成、视频编辑六大任务",
+      "从零训练的 Transformer 骨干网络，128 张 A100 GPU 预算内完成分阶段多任务训练",
+      "开源模型权重 + 推理代码 + Gradio Demo，HuggingFace 可下载",
+      "多项基准测试表现强劲：图像生成、编辑和视频生成达到开源同规模领先水平",
+      "支持多轮一致性编辑、智能视频生成（含运动理解与物体交互推理）",
+      "基于 Qwen2.5-VL ViT + Wan VAE，统一文本/图像/视频 token 空间"
+    ],
+    "summary": "Lance 证明了在有限算力预算下，统一多模态模型可以实现理解与生成的双向融通。3B 规模即可覆盖从图像到视频、从理解到编辑的全链路，是多模态统一的里程碑式开源工作。",
+    "stats_text": "2026-05-15 开源，7 天收获 690+ Star，38 个 Fork，ByteDance 出品",
+    "target_users": "多模态 AI 研究者、视频/图像生成应用开发者、AIGC 工程师",
+    "domains": "多模态、计算机视觉、AIGC、视频生成、图像编辑"
+  },
+  "script": {
+    "full_text": "今天要介绍的是字节跳动刚刚开源的一个重磅项目——Lance。这是一个仅有3B激活参数的原生统一多模态模型，却能在一个框架内同时处理图像和视频的理解、生成和编辑。你没听错，理解、生成、编辑，六个任务，一个模型。传统方法通常需要为每个任务单独训练专门的模型，而 Lance 通过多任务协同训练，让不同任务之间互相增强。项目团队在 128 张 A100 GPU 的预算内，从零训练了一个统一的 Transformer 骨干网络。在图像生成基准上，Lance 以 3B 规模达到了接近 7B 开源模型的水平。在视频理解方面，它可以回答关于视频内容的细致问题，比如识别物体的运动方向，或者理解视频中不合理的物理现象。在视频编辑方面，你只需要输入文字描述，就能改变视频中的物体外观或场景风格。而且 Lance 还支持多轮一致性编辑，你可以连续多次修改同一个视频，每次修改都会保持之前的结果。此外它还能生成具有物理常识的视频，比如理解物体之间的交互关系。目前模型权重和推理代码都已经在 GitHub 和 HuggingFace 上开源，还提供了一个 Gradio Demo 让你可以直接上手体验。如果你在做多模态 AI 相关的工作，Lance 绝对值得关注和尝试。",
+    "segments": [
+      {
+        "text": "今天要介绍的是字节跳动刚刚开源的一个重磅项目——Lance。这是一个仅有3B激活参数的原生统一多模态模型，却能在一个框架内同时处理图像和视频的理解、生成和编辑。",
+        "duration_est": 18
+      },
+      {
+        "text": "你没听错，理解、生成、编辑，六个任务，一个模型。传统方法通常需要为每个任务单独训练专门的模型，而 Lance 通过多任务协同训练，让不同任务之间互相增强。",
+        "duration_est": 15
+      },
+      {
+        "text": "项目团队在 128 张 A100 GPU 的预算内，从零训练了一个统一的 Transformer 骨干网络。在图像生成基准上，Lance 以 3B 规模达到了接近 7B 开源模型的水平。",
+        "duration_est": 12
+      },
+      {
+        "text": "在视频理解方面，它可以回答关于视频内容的细致问题，比如识别物体的运动方向，或者理解视频中不合理的物理现象。",
+        "duration_est": 10
+      },
+      {
+        "text": "在视频编辑方面，你只需要输入文字描述，就能改变视频中的物体外观或场景风格。而且 Lance 还支持多轮一致性编辑，你可以连续多次修改同一个视频，每次修改都会保持之前的结果。",
+        "duration_est": 15
+      },
+      {
+        "text": "此外它还能生成具有物理常识的视频，比如理解物体之间的交互关系。目前模型权重和推理代码都已经在 GitHub 和 HuggingFace 上开源，还提供了一个 Gradio Demo 让你可以直接上手体验。",
+        "duration_est": 14
+      },
+      {
+        "text": "如果你在做多模态 AI 相关的工作，Lance 绝对值得关注和尝试。",
+        "duration_est": 6
+      }
+    ],
+    "total_duration_est": 90
+  },
+  "covers": {
+    "3x4": {
+      "prompt_zh": "深蓝色科技风格背景，中央显示 Lance 发光 Logo，周围环绕六边形图标代表图像理解、生成、编辑和视频理解、生成、编辑，ByteDance 标志位于底部，文字标语 '3B Unified Multimodal Model'，3:4 竖版",
+      "prompt_en": "Dark blue tech background, glowing Lance logo at center, surrounded by hexagonal icons representing image understanding, generation, editing and video understanding, generation, editing, ByteDance logo at bottom, text '3B Unified Multimodal Model', 3:4 vertical format"
+    },
+    "16x9": {
+      "prompt_zh": "宽幅科技蓝色背景，左侧展示 Lance 模型架构图，右侧显示三种 demo 截图（文生视频、视频编辑、视频理解），顶部标题 'Lance: Unified Multimodal Model'，底部标注 ByteDance Research，16:9 横版",
+      "prompt_en": "Wide tech blue background, Lance model architecture diagram on left, three demo screenshots (text-to-video, video editing, video understanding) on right, title 'Lance: Unified Multimodal Model' at top, ByteDance Research credit at bottom, 16:9 horizontal format"
+    }
+  },
+  "publish_copy": {
+    "title": "字节跳动开源 Lance：3B 统一多模态模型，一个模型搞定图像/视频的理解、生成与编辑",
+    "summary": "ByteDance 开源 Lance：3B 参数原生统一多模态模型，单一框架支持图像和视频的理解、生成与编辑六大任务。128 张 A100 从零训练，多项基准表现优异。",
+    "tags": [
+      "ByteDance",
+      "多模态",
+      "视频生成",
+      "图像生成",
+      "开源",
+      "AIGC",
+      "AI"
+    ],
+    "platforms": {
+      "twitter": "ByteDance just open-sourced Lance — a 3B native unified multimodal model that handles image/video understanding, generation, and editing in one framework.\n\nTrained from scratch on 128 A100 GPUs. Strong benchmarks across all 6 tasks.\n\nOpen source weights + inference code + Gradio demo.\n\nhttps://github.com/bytedance/Lance",
+      "weibo": "字节跳动开源 Lance！3B 参数原生统一多模态模型，一个框架搞定图像和视频的理解、生成与编辑六大任务。128 张 A100 GPU 从零训练，多项基准表现优异。模型权重和推理代码已开源，还有 Gradio Demo 可以直接玩。多模态 AI 研究者不要错过。",
+      "linkedin": "ByteDance Research has open-sourced Lance, a 3B-parameter native unified multimodal model that handles image/video understanding, generation, and editing within a single framework. Trained from scratch on 128 A100 GPUs, Lance achieves competitive results across all six tasks. The model weights, inference code, and a Gradio demo are available on GitHub."
+    }
+  },
+  "source_code_insight": {
+    "architecture": {
+      "summary": "Lance 采用 Qwen2.5-VL ViT 作为视觉编码器 + Wan VAE 作为视频编解码器 + 自定义 Lance Transformer 作为统一生成/理解骨干，基于 Qwen2 架构扩展适配多模态生成任务",
+      "design_patterns": [
+        "多任务协同训练",
+        "统一 token 空间",
+        "分阶段训练策略",
+        "Diffusion + AR 混合生成"
+      ],
+      "tech_stack": [
+        "Python",
+        "PyTorch",
+        "Qwen2.5-VL",
+        "Wan VideoVAE",
+        "Diffusers",
+        "Gradio"
+      ]
+    },
+    "code_quality": {
+      "structure": "清晰的模块化设计：modeling/ 包含 ViT / VAE / Lance 各组件独立子模块，common/ 提供工具函数和验证逻辑，config/ 集中管理所有配置",
+      "readability": "代码注释完善，类型注解覆盖全面，推理脚本结构清晰",
+      "testing": "包含验证数据集和推理基准测试"
+    },
+    "innovation": {
+      "key_algorithms": [
+        "Multi-task synergy training",
+        "Unified multimodal token space",
+        "Staged training recipe (pre-train → multi-task → instruction tuning)"
+      ],
+      "technical_challenges": [
+        "在 3B 参数规模内统一理解与生成",
+        "图像与视频任务的原生融合",
+        "单框架覆盖 6 种不同任务形态"
+      ]
+    },
+    "usage": {
+      "setup_difficulty": "中等 — 需要 PyTorch + CUDA 环境，支持分布式推理",
+      "entry_points": "inference_lance.py（主推理入口），lance_gradio_t2v_v2t.py（Web Demo）",
+      "documentation": "README + README_zh 双语详细文档，包含完整 Demo 展示和基准数据"
+    }
+  },
+  "meta": {
+    "generated_at": "2026-05-22T10:50:00",
+    "source": "repo-analyzer",
+    "version": "1.0"
+  }
+}

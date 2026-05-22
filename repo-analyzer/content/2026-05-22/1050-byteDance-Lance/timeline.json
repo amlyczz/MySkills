@@ -1,0 +1,888 @@
+{
+  "version": "2",
+  "repo": {
+    "full_name": "bytedance/Lance",
+    "url": "https://github.com/bytedance/Lance"
+  },
+  "global": {
+    "title": "Lance",
+    "total_duration": 180.0,
+    "resolution": [
+      1920,
+      1080
+    ],
+    "fps": 30,
+    "bgm_track": "bgm_ambient_tech",
+    "bgm_volume": 0.2,
+    "progress_bar_style": "labeled-bar"
+  },
+  "segments": [
+    {
+      "id": "seg_001",
+      "type": "hook",
+      "label": "开篇",
+      "time_start": 0.0,
+      "time_end": 13.558441558441558,
+      "duration": 13.558441558441558,
+      "voiceover": {
+        "text": "今天要介绍的是字节跳动刚刚开源的一个重磅项目——Lance",
+        "duration_est": 6.779220779220779,
+        "splits": [
+          {
+            "text": "今天要介绍的是字节跳动刚刚开源的一个重磅项目——Lance",
+            "time_offset": 0.0
+          }
+        ]
+      },
+      "primary_material": "demo-image-01",
+      "material_refs": [
+        "demo-image-01"
+      ],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.3,
+        "bgm_fade_in": 0.5,
+        "sfx": [
+          {
+            "id": "whoosh",
+            "time": 0.2,
+            "volume": 0.6
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_002",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 13.558441558441558,
+      "time_end": 23.844155844155843,
+      "duration": 10.285714285714286,
+      "voiceover": {
+        "text": "这是一个仅有3B激活参数的原生统一多模态模型",
+        "duration_est": 5.142857142857143,
+        "splits": [
+          {
+            "text": "这是一个仅有3B激活参数的原生统一多模态模型",
+            "time_offset": 0.0
+          }
+        ]
+      },
+      "primary_material": "logo-01",
+      "material_refs": [
+        "logo-01"
+      ],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_003",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 23.844155844155843,
+      "time_end": 36.0,
+      "duration": 12.155844155844155,
+      "voiceover": {
+        "text": "却能在一个框架内同时处理图像和视频的理解、生成和编辑",
+        "duration_est": 6.077922077922078,
+        "splits": [
+          {
+            "text": "却能在一个框架内同时处理图像和视频的理解、生成和编辑",
+            "time_offset": 0.0
+          }
+        ]
+      },
+      "primary_material": "benchmark-01",
+      "material_refs": [
+        "benchmark-01"
+      ],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_004",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 36.0,
+      "time_end": 37.714285714285715,
+      "duration": 1.7142857142857142,
+      "voiceover": {
+        "text": "你没听错",
+        "duration_est": 0.8571428571428571,
+        "splits": [
+          {
+            "text": "你没听错",
+            "time_offset": 0.0
+          }
+        ]
+      },
+      "primary_material": "demo-gif-01",
+      "material_refs": [
+        "demo-gif-01"
+      ],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_005",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 37.714285714285715,
+      "time_end": 66.0,
+      "duration": 28.285714285714285,
+      "voiceover": {
+        "text": "理解、生成、编辑。六个任务。一个模型。传统方法通常需要为每个任务单独训练专门的模型。而 Lance 通过多任务协同训练。让不同任务之间互相增强",
+        "duration_est": 14.142857142857142,
+        "splits": [
+          {
+            "text": "理解、生成、编辑",
+            "time_offset": 0.0
+          },
+          {
+            "text": "六个任务",
+            "time_offset": 1.714285714285714
+          },
+          {
+            "text": "一个模型",
+            "time_offset": 2.571428571428571
+          },
+          {
+            "text": "传统方法通常需要为每个任务单独训练专门的模型",
+            "time_offset": 3.428571428571428
+          },
+          {
+            "text": "而 Lance 通过多任务协同训练",
+            "time_offset": 8.142857142857142
+          },
+          {
+            "text": "让不同任务之间互相增强",
+            "time_offset": 11.785714285714285
+          }
+        ]
+      },
+      "material_refs": [],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_006",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 66.0,
+      "time_end": 90.0,
+      "duration": 23.999999999999996,
+      "voiceover": {
+        "text": "项目团队在 128 张 A100 GPU 的预算内。从零训练了一个统一的 Transformer 骨干网络。在图像生成基准上。Lance 以 3B 规模达到了接近 7B 开源模型的水平",
+        "duration_est": 11.999999999999998,
+        "splits": [
+          {
+            "text": "项目团队在 128 张 A100 GPU 的预算内",
+            "time_offset": 0.0
+          },
+          {
+            "text": "从零训练了一个统一的 Transformer 骨干网络",
+            "time_offset": 3.370786516853932
+          },
+          {
+            "text": "在图像生成基准上",
+            "time_offset": 7.011235955056178
+          },
+          {
+            "text": "Lance 以 3B 规模达到了接近 7B 开源模型的水平",
+            "time_offset": 8.089887640449437
+          }
+        ]
+      },
+      "material_refs": [],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_007",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 90.0,
+      "time_end": 110.0,
+      "duration": 20.0,
+      "voiceover": {
+        "text": "在视频理解方面。它可以回答关于视频内容的细致问题。比如识别物体的运动方向。或者理解视频中不合理的物理现象",
+        "duration_est": 10.0,
+        "splits": [
+          {
+            "text": "在视频理解方面",
+            "time_offset": 0.0
+          },
+          {
+            "text": "它可以回答关于视频内容的细致问题",
+            "time_offset": 1.4285714285714288
+          },
+          {
+            "text": "比如识别物体的运动方向",
+            "time_offset": 4.6938775510204085
+          },
+          {
+            "text": "或者理解视频中不合理的物理现象",
+            "time_offset": 6.938775510204081
+          }
+        ]
+      },
+      "material_refs": [],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_008",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 110.0,
+      "time_end": 140.0,
+      "duration": 30.0,
+      "voiceover": {
+        "text": "在视频编辑方面。你只需要输入文字描述。就能改变视频中的物体外观或场景风格。而且 Lance 还支持多轮一致性编辑。你可以连续多次修改同一个视频。每次修改都会保持之前的结果",
+        "duration_est": 15.0,
+        "splits": [
+          {
+            "text": "在视频编辑方面",
+            "time_offset": 0.0
+          },
+          {
+            "text": "你只需要输入文字描述",
+            "time_offset": 1.3125
+          },
+          {
+            "text": "就能改变视频中的物体外观或场景风格",
+            "time_offset": 3.1875
+          },
+          {
+            "text": "而且 Lance 还支持多轮一致性编辑",
+            "time_offset": 6.375
+          },
+          {
+            "text": "你可以连续多次修改同一个视频",
+            "time_offset": 9.9375
+          },
+          {
+            "text": "每次修改都会保持之前的结果",
+            "time_offset": 12.5625
+          }
+        ]
+      },
+      "material_refs": [],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_009",
+      "type": "features",
+      "label": "核心功能",
+      "time_start": 140.0,
+      "time_end": 168.0,
+      "duration": 28.0,
+      "voiceover": {
+        "text": "此外它还能生成具有物理常识的视频。比如理解物体之间的交互关系。目前模型权重和推理代码都已经在 GitHub 和 HuggingFace 上开源。还提供了一个 Gradio Demo 让你可以直接上手体验",
+        "duration_est": 14.0,
+        "splits": [
+          {
+            "text": "此外它还能生成具有物理常识的视频",
+            "time_offset": 0.0
+          },
+          {
+            "text": "比如理解物体之间的交互关系",
+            "time_offset": 2.285714285714285
+          },
+          {
+            "text": "目前模型权重和推理代码都已经在 GitHub 和 HuggingFace 上开源",
+            "time_offset": 4.142857142857143
+          },
+          {
+            "text": "还提供了一个 Gradio Demo 让你可以直接上手体验",
+            "time_offset": 9.857142857142858
+          }
+        ]
+      },
+      "material_refs": [],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.25,
+        "sfx": [
+          {
+            "id": "pop",
+            "time": 0.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 2.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 5.0,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 7.5,
+            "volume": 0.5
+          },
+          {
+            "id": "pop",
+            "time": 10.0,
+            "volume": 0.5
+          }
+        ]
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    },
+    {
+      "id": "seg_010",
+      "type": "cta",
+      "label": "结尾",
+      "time_start": 168.0,
+      "time_end": 180.0,
+      "duration": 12.0,
+      "voiceover": {
+        "text": "如果你在做多模态 AI 相关的工作。Lance 绝对值得关注和尝试",
+        "duration_est": 6.0,
+        "splits": [
+          {
+            "text": "如果你在做多模态 AI 相关的工作",
+            "time_offset": 0.0
+          },
+          {
+            "text": "Lance 绝对值得关注和尝试",
+            "time_offset": 3.1875
+          }
+        ]
+      },
+      "material_refs": [],
+      "layout": {
+        "layout_id": "hero-center",
+        "motion_map": {}
+      },
+      "style": {
+        "theme_id": "dark-purple",
+        "bg_type": "starfield"
+      },
+      "audio": {
+        "bgm_volume": 0.3,
+        "bgm_fade_out": 2.0,
+        "sfx": []
+      },
+      "transition_in": "crossfade",
+      "transition_out": "crossfade"
+    }
+  ],
+  "chapters": [
+    {
+      "label": "开篇",
+      "time": 0.0
+    },
+    {
+      "label": "核心功能",
+      "time": 13.558441558441558
+    },
+    {
+      "label": "核心功能",
+      "time": 23.844155844155843
+    },
+    {
+      "label": "核心功能",
+      "time": 36.0
+    },
+    {
+      "label": "核心功能",
+      "time": 37.714285714285715
+    },
+    {
+      "label": "核心功能",
+      "time": 66.0
+    },
+    {
+      "label": "核心功能",
+      "time": 90.0
+    },
+    {
+      "label": "核心功能",
+      "time": 110.0
+    },
+    {
+      "label": "核心功能",
+      "time": 140.0
+    },
+    {
+      "label": "结尾",
+      "time": 168.0
+    }
+  ],
+  "subtitles": [
+    {
+      "text": "今天要介绍的是字节跳动刚刚开源",
+      "time_start": 0.0,
+      "time_end": 3.3896103896103895
+    },
+    {
+      "text": "的一个重磅项目——Lance",
+      "time_start": 3.3896103896103895,
+      "time_end": 6.779220779220779
+    },
+    {
+      "text": "这是一个仅有3B激活参数的原生",
+      "time_start": 13.558441558441558,
+      "time_end": 16.12987012987013
+    },
+    {
+      "text": "统一多模态模型",
+      "time_start": 16.12987012987013,
+      "time_end": 18.7012987012987
+    },
+    {
+      "text": "却能在一个框架内同时处理图像和",
+      "time_start": 23.844155844155843,
+      "time_end": 26.88311688311688
+    },
+    {
+      "text": "视频的理解、生成和编辑",
+      "time_start": 26.88311688311688,
+      "time_end": 29.92207792207792
+    },
+    {
+      "text": "你没听错",
+      "time_start": 36.0,
+      "time_end": 36.857142857142854
+    },
+    {
+      "text": "理解、生成、编辑。六个任务。一",
+      "time_start": 37.714285714285715,
+      "time_end": 40.542857142857144
+    },
+    {
+      "text": "个模型。传统方法通常需要为每个",
+      "time_start": 40.542857142857144,
+      "time_end": 43.371428571428574
+    },
+    {
+      "text": "任务单独训练专门的模型。而 L",
+      "time_start": 43.371428571428574,
+      "time_end": 46.2
+    },
+    {
+      "text": "ance 通过多任务协同训练。",
+      "time_start": 46.2,
+      "time_end": 49.028571428571425
+    },
+    {
+      "text": "让不同任务之间互相增强",
+      "time_start": 49.028571428571425,
+      "time_end": 51.85714285714286
+    },
+    {
+      "text": "项目团队在 128 张 A10",
+      "time_start": 66.0,
+      "time_end": 68.0
+    },
+    {
+      "text": "0 GPU 的预算内。从零训练",
+      "time_start": 68.0,
+      "time_end": 70.0
+    },
+    {
+      "text": "了一个统一的 Transfor",
+      "time_start": 70.0,
+      "time_end": 72.0
+    },
+    {
+      "text": "mer 骨干网络。在图像生成基",
+      "time_start": 72.0,
+      "time_end": 74.0
+    },
+    {
+      "text": "准上。Lance 以 3B 规",
+      "time_start": 74.0,
+      "time_end": 76.0
+    },
+    {
+      "text": "模达到了接近 7B 开源模型的水平",
+      "time_start": 76.0,
+      "time_end": 78.0
+    },
+    {
+      "text": "在视频理解方面。它可以回答关于",
+      "time_start": 90.0,
+      "time_end": 92.5
+    },
+    {
+      "text": "视频内容的细致问题。比如识别物",
+      "time_start": 92.5,
+      "time_end": 95.0
+    },
+    {
+      "text": "体的运动方向。或者理解视频中不",
+      "time_start": 95.0,
+      "time_end": 97.5
+    },
+    {
+      "text": "合理的物理现象",
+      "time_start": 97.5,
+      "time_end": 100.0
+    },
+    {
+      "text": "在视频编辑方面。你只需要输入文",
+      "time_start": 110.0,
+      "time_end": 112.5
+    },
+    {
+      "text": "字描述。就能改变视频中的物体外",
+      "time_start": 112.5,
+      "time_end": 115.0
+    },
+    {
+      "text": "观或场景风格。而且 Lance",
+      "time_start": 115.0,
+      "time_end": 117.5
+    },
+    {
+      "text": " 还支持多轮一致性编辑。你可以",
+      "time_start": 117.5,
+      "time_end": 120.0
+    },
+    {
+      "text": "连续多次修改同一个视频。每次修",
+      "time_start": 120.0,
+      "time_end": 122.5
+    },
+    {
+      "text": "改都会保持之前的结果",
+      "time_start": 122.5,
+      "time_end": 125.0
+    },
+    {
+      "text": "此外它还能生成具有物理常识的视",
+      "time_start": 140.0,
+      "time_end": 142.0
+    },
+    {
+      "text": "频。比如理解物体之间的交互关系",
+      "time_start": 142.0,
+      "time_end": 144.0
+    },
+    {
+      "text": "。目前模型权重和推理代码都已经",
+      "time_start": 144.0,
+      "time_end": 146.0
+    },
+    {
+      "text": "在 GitHub 和 Hugg",
+      "time_start": 146.0,
+      "time_end": 148.0
+    },
+    {
+      "text": "ingFace 上开源。还提供",
+      "time_start": 148.0,
+      "time_end": 150.0
+    },
+    {
+      "text": "了一个 Gradio Demo",
+      "time_start": 150.0,
+      "time_end": 152.0
+    },
+    {
+      "text": " 让你可以直接上手体验",
+      "time_start": 152.0,
+      "time_end": 154.0
+    },
+    {
+      "text": "如果你在做多模态 AI 相关的",
+      "time_start": 168.0,
+      "time_end": 171.0
+    },
+    {
+      "text": "工作。Lance 绝对值得关注和尝试",
+      "time_start": 171.0,
+      "time_end": 174.0
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "version": "2",
+  "repo": {
+    "full_name": "bytedance/Lance",
+    "url": "https://github.com/bytedance/Lance"
+  },
+  "created_at": "2026-05-22T14:55:00",
+  "materials": [
+    {
+      "id": "benchmark-01",
+      "type": "benchmark_chart",
+      "path": "materials/benchmark-overview.png",
+      "dimensions": [
+        1920,
+        980
+      ]
+    },
+    {
+      "id": "logo-01",
+      "type": "logo",
+      "path": "materials/lance-logo.webp"
+    },
+    {
+      "id": "demo-image-01",
+      "type": "screenshot",
+      "path": "materials/text-to-image-overview.webp"
+    },
+    {
+      "id": "demo-image-02",
+      "type": "screenshot",
+      "path": "materials/image-editing-overview.webp"
+    },
+    {
+      "id": "demo-gif-01",
+      "type": "demo_gif",
+      "path": "materials/t2v-demo-01.gif",
+      "dimensions": [
+        480,
+        480
+      ]
+    },
+    {
+      "id": "demo-gif-02",
+      "type": "demo_gif",
+      "path": "materials/t2v-demo-02.gif"
+    },
+    {
+      "id": "demo-gif-03",
+      "type": "demo_gif",
+      "path": "materials/video-editing-demo-01.gif"
+    },
+    {
+      "id": "demo-gif-04",
+      "type": "demo_gif",
+      "path": "materials/multi-turn-editing-demo-01.gif"
+    },
+    {
+      "id": "demo-gif-05",
+      "type": "demo_gif",
+      "path": "materials/intelligent-video-demo-01.gif"
+    },
+    {
+      "id": "demo-gif-06",
+      "type": "demo_gif",
+      "path": "materials/video-understanding-vqa-01.gif"
+    },
+    {
+      "id": "code-install-01",
+      "type": "code_install",
+      "path": "materials/code_install.sh"
+    },
+    {
+      "id": "code-quickstart-01",
+      "type": "code_quickstart",
+      "path": "materials/code_quickstart_t2v.sh"
+    },
+    {
+      "id": "code-quickstart-02",
+      "type": "code_quickstart",
+      "path": "materials/code_quickstart_t2i.sh"
+    }
+  ]
+}

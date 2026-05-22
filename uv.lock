@@ -52,6 +52,7 @@ name = "myskills"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "pipeline-contracts" },
     { name = "pydantic" },
 ]
 
@@ -61,10 +62,24 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.0" }]
+requires-dist = [
+    { name = "pipeline-contracts", editable = "contracts" },
+    { name = "pydantic", specifier = ">=2.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [{ name = "jsonschema", specifier = ">=4.0" }]
+
+[[package]]
+name = "pipeline-contracts"
+version = "0.1.0"
+source = { editable = "contracts" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2.0" }]
 
 [[package]]
 name = "pydantic"

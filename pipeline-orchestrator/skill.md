@@ -99,21 +99,26 @@ pipelines/                ← Pipeline 定义文件
 
 ### OUTPUT_DIR
 
+所有管线产物按信息源分类统一输出到 `output/{source_category}/`：
+
 ```bash
-OUTPUT_DIR="repo-analyzer/content/YYYY-MM-DD/HHmm-{repo_name}"
-CONTENT_JSON="${OUTPUT_DIR}-content.json"
+SOURCE_CATEGORY="github"  # 信息来源分类
+OUTPUT_DIR="output/${SOURCE_CATEGORY}/YYYY-MM-DD/{repo_name}"
+CONTENT_DIR="repo-analyzer/content/YYYY-MM-DD/{repo_name}"
 ```
 
 各 Processor 产出的统一目录：
 
-| 文件 | 产出 Processor |
-|------|---------------|
-| `$OUTPUT_DIR/-content.json` + `material_discovery.json` + `materials/` | RepoAnalyzer |
-| `$OUTPUT_DIR/timeline.json` + `.srt` | ScriptTimelineComposer |
-| `$OUTPUT_DIR/video_config.json` | ScriptTimelineComposer |
-| `$OUTPUT_DIR/voiceover.mp3` + `bgm.mp3` | MediaGenerator |
-| `$OUTPUT_DIR/video.mp4` | VideoRenderer |
-| `$OUTPUT_DIR/final.mp4` | PostProducer |
+| 文件 | 产出 Processor | 位置 |
+|------|---------------|------|
+| `content.json` + `material_discovery.json` + `materials/` | RepoAnalyzer | `$CONTENT_DIR/` |
+| `timeline.json` + `.srt` + `.bgm_curve.json` | ScriptTimelineComposer | `$OUTPUT_DIR/` |
+| `video_config.json` | Agent 决策 | `$OUTPUT_DIR/` |
+| `voiceover.mp3` + `bgm.mp3` | MediaGenerator | `$OUTPUT_DIR/` |
+| `video.mp4` | VideoRenderer | `$OUTPUT_DIR/` |
+| `final.mp4` | PostProducer | `$OUTPUT_DIR/` |
+
+> **注意**：渲染前需将 voiceover/bgm 复制到 `video-renderer/remotion/public/`；素材文件也需复制到该目录供 `staticFile()` 引用。
 
 ### TOTAL_DURATION
 
@@ -153,10 +158,10 @@ source pipeline-orchestrator/scripts/proxy.sh
 4. 高价值素材自动下载（评分 ≥ 3 的素材 + 代码段）
 5. 内容创作（口播脚本/封面提示词/发布文案/源码洞察）
 
-**输出**：
-- `$OUTPUT_DIR-content.json`（含 script/covers/publish_copy，完整 ContentModel）
-- `$OUTPUT_DIR/material_discovery.json` — 素材发现与评估清单
-- `$OUTPUT_DIR/materials/` — 下载的高价值素材文件
+**输出**（保存在 `repo-analyzer/content/` 仓库分析目录）：
+- `$CONTENT_DIR/content.json`（含 script/covers/publish_copy，完整 ContentModel）
+- `$CONTENT_DIR/material_discovery.json` — 素材发现与评估清单
+- `$CONTENT_DIR/materials/` — 下载的高价值素材文件
 
 ---
 
@@ -173,7 +178,7 @@ Agent 基于 RepoAnalyzer 已产出的口播脚本初稿 + 素材评估清单，
 
 **产出 timeline.json 时覆盖写入 script**（脚本措辞微调，匹配实际可用素材）。
 
-**输出**：
+**输出**（到 `$OUTPUT_DIR/`）：
 - `$OUTPUT_DIR/timeline.json` + `.srt`
 - `$OUTPUT_DIR/video_config.json`（含 BGM 音量曲线）
 
@@ -183,9 +188,25 @@ Agent 基于 RepoAnalyzer 已产出的口播脚本初稿 + 素材评估清单，
 
 ### 语音
 
+推荐使用 `Chinese (Mandarin)_Male_Announcer` 音色 + `--pitch 3` 使声音更饱满有精神：
+
 ```bash
 source pipeline-orchestrator/scripts/proxy.sh
-python3 -m media_generator voiceover --from-content "$CONTENT_JSON" --output "$OUTPUT_DIR/voiceover.mp3"
+python3 -m media_generator voiceover --from-content "$CONTENT_JSON" \
+  --voice-id "Chinese (Mandarin)_Male_Announcer" \
+  --pitch 3 \
+  --output "$OUTPUT_DIR/voiceover.mp3"
+```
+
+如需场景对齐（voiceover 段间插静默间隙匹配场景位置），使用 `gen_voiceover_timed.py`：
+
+```bash
+cd post-producer/scripts
+python3 gen_voiceover_timed.py "$OUTPUT_DIR/video_config.json" \
+  --output-dir "$OUTPUT_DIR" \
+  --voice-id "Chinese (Mandarin)_Male_Announcer" \
+  --pitch 3
+cp "$OUTPUT_DIR/voiceover.mp3" video-renderer/remotion/public/
 ```
 
 ### 背景音乐
@@ -194,18 +215,41 @@ python3 -m media_generator voiceover --from-content "$CONTENT_JSON" --output "$O
 python3 -m media_generator bgm --duration $TOTAL_DURATION --output "$OUTPUT_DIR/bgm.mp3"
 ```
 
-**输出**：`$OUTPUT_DIR/voiceover.mp3` + `$OUTPUT_DIR/bgm.mp3`
+**输出**（到 `$OUTPUT_DIR/`）：`$OUTPUT_DIR/voiceover.mp3` + `$OUTPUT_DIR/bgm.mp3`
 
 ---
 
 ## Processor：VideoRenderer（Remotion 渲染）
 
+### 渲染前准备
+
+Remotion 的 `staticFile()` 从 `public/` 加载资源。渲染前需将音频和素材文件复制到该目录：
+
+```bash
+# 复制音频文件
+cp "$OUTPUT_DIR/voiceover.mp3" video-renderer/remotion/public/
+cp "$OUTPUT_DIR/bgm.mp3"       video-renderer/remotion/public/
+# 复制素材文件（video_config.json 的 content.visual 引用的文件）
+cp "$CONTENT_DIR/materials/"*  video-renderer/remotion/public/
+```
+
+### 渲染
+
 ```bash
 source pipeline-orchestrator/scripts/proxy.sh
 cd video-renderer/remotion
 
+# --props 必须包装为 {"config": <video_config>}
+python3 -c "
+import json
+with open('$OUTPUT_DIR/video_config.json') as f:
+    cfg = json.load(f)
+with open('/tmp/render_props.json', 'w') as f:
+    json.dump({'config': cfg}, f, ensure_ascii=False)
+"
+
 npx remotion render VideoComposer "$OUTPUT_DIR/video.mp4" \
-  --props="$OUTPUT_DIR/video_config.json" --codec h264 --crf 18
+  --props=/tmp/render_props.json --codec h264 --crf 18
 
 cd "$OLDPWD"
 ```
@@ -216,9 +260,43 @@ cd "$OLDPWD"
 
 ## Processor：PostProducer（后期合成 + 字幕）
 
+### 后期合成流程
+
 ```bash
+source pipeline-orchestrator/scripts/proxy.sh
 cd post-producer/scripts
 
+# 1) 语音场景对齐（推荐 per-segment TTS + 静默间隙）
+python3 gen_voiceover_timed.py "$OUTPUT_DIR/video_config.json" \
+  --output-dir "$OUTPUT_DIR" \
+  --voice-id "Chinese (Mandarin)_Male_Announcer" \
+  --pitch 3
+cp "$OUTPUT_DIR/voiceover.mp3" "$RENDER_PUBLIC/"
+
+# 2) 从 voiceover_timing.json 生成 SRT
+python3 -c "
+import json
+from datetime import timedelta
+def fmt_time(t):
+    td = timedelta(seconds=t)
+    h = int(td.total_seconds()) // 3600
+    m = (int(td.total_seconds()) % 3600) // 60
+    s = int(td.total_seconds()) % 60
+    ms = int(round((t - int(t)) * 1000))
+    return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
+with open('$OUTPUT_DIR/voiceover_timing.json') as f:
+    timing = json.load(f)
+srt = []
+for i, t in enumerate(timing):
+    srt.append(f\"\"\"{i + 1}
+{fmt_time(t['start'])} --> {fmt_time(t['end'])}
+{t['text']}
+\"\"\")
+with open('$OUTPUT_DIR/timeline.srt', 'w') as f:
+    f.write('\n'.join(srt))
+"
+
+# 3) 校验 + 混音
 python3 verify_output.py "$OUTPUT_DIR" $TOTAL_DURATION
 python3 audio_mixer.py \
   "$OUTPUT_DIR/video.mp4" "$OUTPUT_DIR/voiceover.mp3" "$OUTPUT_DIR/bgm.mp3" \
@@ -229,7 +307,19 @@ python3 audio_mixer.py \
 cd "$OLDPWD"
 ```
 
-**输出**：**`$OUTPUT_DIR/final.mp4`** ✅
+**输出**（到 `$OUTPUT_DIR/`）：**`$OUTPUT_DIR/final.mp4`** ✅
+
+### 字幕烧录
+
+使用 ffmpeg-full（含 libass）：
+
+```bash
+/opt/homebrew/opt/ffmpeg-full/bin/ffmpeg -y \
+  -i "$OUTPUT_DIR/final.mp4" \
+  -vf "subtitles=$OUTPUT_DIR/timeline.srt:force_style='FontName=Arial,FontSize=18'" \
+  -c:v libx264 -preset fast -crf 23 -c:a copy \
+  "$OUTPUT_DIR/final_subtitled.mp4"
+```
 
 ---
 

@@ -1,0 +1,1327 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - link "Skip to content" [ref=e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=e6]:
+      - heading "Navigation Menu" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - link "Homepage" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+        - generic [ref=e13]:
+          - navigation "Global" [ref=e16]:
+            - list [ref=e17]:
+              - listitem [ref=e18]:
+                - button "Platform" [ref=e20] [cursor=pointer]:
+                  - text: Platform
+                  - img [ref=e21]
+              - listitem [ref=e23]:
+                - button "Solutions" [ref=e25] [cursor=pointer]:
+                  - text: Solutions
+                  - img [ref=e26]
+              - listitem [ref=e28]:
+                - button "Resources" [ref=e30] [cursor=pointer]:
+                  - text: Resources
+                  - img [ref=e31]
+              - listitem [ref=e33]:
+                - button "Open Source" [ref=e35] [cursor=pointer]:
+                  - text: Open Source
+                  - img [ref=e36]
+              - listitem [ref=e38]:
+                - button "Enterprise" [ref=e40] [cursor=pointer]:
+                  - text: Enterprise
+                  - img [ref=e41]
+              - listitem [ref=e43]:
+                - link "Pricing" [ref=e44] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+                  - generic [ref=e45]: Pricing
+          - generic [ref=e46]:
+            - button "Search or jump to…" [ref=e49] [cursor=pointer]:
+              - img [ref=e51]
+            - link "Sign in" [ref=e54] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Fbytedance%2FLance%3Ftab%3Dreadme-ov-file
+            - link "Sign up" [ref=e55] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E&source=header-repo&source_repo=bytedance%2FLance
+            - button "Appearance settings" [ref=e58] [cursor=pointer]:
+              - img
+  - main [ref=e62]:
+    - generic [ref=e63]:
+      - generic [ref=e64]:
+        - generic [ref=e66]:
+          - img [ref=e67]
+          - link "bytedance" [ref=e70] [cursor=pointer]:
+            - /url: /bytedance
+          - generic [ref=e71]: /
+          - strong [ref=e72]:
+            - link "Lance" [ref=e73] [cursor=pointer]:
+              - /url: /bytedance/Lance
+          - generic [ref=e74]: Public
+        - generic [ref=e75]:
+          - list:
+            - listitem [ref=e76]:
+              - link "You must be signed in to change notification settings" [ref=e77] [cursor=pointer]:
+                - /url: /login?return_to=%2Fbytedance%2FLance
+                - img [ref=e78]
+                - text: Notifications
+            - listitem [ref=e80]:
+              - link "Fork 40" [ref=e81] [cursor=pointer]:
+                - /url: /login?return_to=%2Fbytedance%2FLance
+                - img [ref=e82]
+                - text: Fork
+                - generic "40" [ref=e84]
+            - listitem [ref=e85]:
+              - link "You must be signed in to star a repository" [ref=e87] [cursor=pointer]:
+                - /url: /login?return_to=%2Fbytedance%2FLance
+                - img [ref=e88]
+                - text: Star
+                - generic "719 users starred this repository" [ref=e90]: "719"
+      - navigation "Repository" [ref=e91]:
+        - list [ref=e92]:
+          - listitem [ref=e93]:
+            - link "Code" [ref=e94] [cursor=pointer]:
+              - /url: /bytedance/Lance
+              - img [ref=e95]
+              - generic [ref=e97]: Code
+          - listitem [ref=e98]:
+            - link "Issues 11" [ref=e99] [cursor=pointer]:
+              - /url: /bytedance/Lance/issues
+              - img [ref=e100]
+              - generic [ref=e103]: Issues
+              - generic "11" [ref=e104]
+          - listitem [ref=e105]:
+            - link "Pull requests" [ref=e106] [cursor=pointer]:
+              - /url: /bytedance/Lance/pulls
+              - img [ref=e107]
+              - generic [ref=e109]: Pull requests
+          - listitem [ref=e110]:
+            - link "Actions" [ref=e111] [cursor=pointer]:
+              - /url: /bytedance/Lance/actions
+              - img [ref=e112]
+              - generic [ref=e114]: Actions
+          - listitem [ref=e115]:
+            - link "Projects" [ref=e116] [cursor=pointer]:
+              - /url: /bytedance/Lance/projects
+              - img [ref=e117]
+              - generic [ref=e119]: Projects
+          - listitem [ref=e120]:
+            - link "Security and quality" [ref=e121] [cursor=pointer]:
+              - /url: /bytedance/Lance/security
+              - img [ref=e122]
+              - generic [ref=e124]: Security and quality
+          - listitem [ref=e125]:
+            - link "Insights" [ref=e126] [cursor=pointer]:
+              - /url: /bytedance/Lance/pulse
+              - img [ref=e127]
+              - generic [ref=e129]: Insights
+    - generic [ref=e142]:
+      - heading "bytedance/Lance" [level=1] [ref=e144]
+      - generic [ref=e145]:
+        - generic [ref=e148]:
+          - generic [ref=e149]:
+            - generic [ref=e150]:
+              - button "main branch" [ref=e152] [cursor=pointer]:
+                - generic [ref=e153]:
+                  - generic [ref=e155]:
+                    - img [ref=e157]
+                    - generic [ref=e160]: main
+                  - generic:
+                    - img
+              - generic [ref=e161]:
+                - link "1 Branch" [ref=e162] [cursor=pointer]:
+                  - /url: /bytedance/Lance/branches
+                  - generic [ref=e163]:
+                    - generic:
+                      - img
+                    - generic [ref=e165]:
+                      - strong [ref=e166]: "1"
+                      - text: Branch
+                - link "0 Tags" [ref=e167] [cursor=pointer]:
+                  - /url: /bytedance/Lance/tags
+                  - generic [ref=e168]:
+                    - generic:
+                      - img
+                    - generic [ref=e170]:
+                      - strong [ref=e171]: "0"
+                      - text: Tags
+            - generic [ref=e172]:
+              - generic [ref=e176]:
+                - img [ref=e178]
+                - combobox "Go to file" [ref=e180]
+              - button "Code" [ref=e181] [cursor=pointer]:
+                - generic [ref=e182]:
+                  - generic:
+                    - img
+                  - generic [ref=e183]: Code
+                  - generic:
+                    - img
+          - generic [ref=e184]:
+            - generic [ref=e185]:
+              - heading "Folders and files" [level=2] [ref=e186]
+              - table "Folders and files" [ref=e187]:
+                - rowgroup:
+                  - row "Name Last commit message Last commit date":
+                    - columnheader "Name"
+                    - columnheader "Last commit message":
+                      - generic "Last commit message"
+                    - columnheader "Last commit date":
+                      - generic "Last commit date"
+                - rowgroup [ref=e188]:
+                  - 'row "Latest commit cleardusk commits by cleardusk docs: revert README QA label colors Commit 3c757d2 · May 20, 20262 days ago History 71 Commits" [ref=e189]':
+                    - 'cell "Latest commit cleardusk commits by cleardusk docs: revert README QA label colors Commit 3c757d2 · May 20, 20262 days ago History 71 Commits" [ref=e190]':
+                      - generic [ref=e191]:
+                        - heading "Latest commit" [level=2] [ref=e192]
+                        - generic [ref=e193]:
+                          - generic [ref=e195]:
+                            - link "cleardusk" [ref=e196] [cursor=pointer]:
+                              - /url: /cleardusk
+                              - img "cleardusk" [ref=e197]
+                            - link "commits by cleardusk" [ref=e198] [cursor=pointer]:
+                              - /url: /bytedance/Lance/commits?author=cleardusk
+                              - text: cleardusk
+                          - 'link "docs: revert README QA label colors" [ref=e202] [cursor=pointer]':
+                            - /url: /bytedance/Lance/commit/3c757d257eecf9b88b83124c63883038bafccf72
+                        - generic [ref=e203]:
+                          - generic [ref=e205]:
+                            - link "Commit 3c757d2" [ref=e206] [cursor=pointer]:
+                              - /url: /bytedance/Lance/commit/3c757d257eecf9b88b83124c63883038bafccf72
+                              - text: 3c757d2
+                            - text: ·
+                            - generic "May 20, 2026, 11:32 PM GMT+8" [ref=e207]: May 20, 20262 days ago
+                          - generic [ref=e208]:
+                            - heading "History" [level=2] [ref=e209]
+                            - link "71 Commits" [ref=e210] [cursor=pointer]:
+                              - /url: /bytedance/Lance/commits/main/
+                              - generic [ref=e211]:
+                                - generic:
+                                  - img
+                                - generic [ref=e212]: 71 Commits
+                  - 'row "assets, (Directory) docs: revert README QA label colors May 20, 20262 days ago" [ref=e213]':
+                    - cell "assets, (Directory)" [ref=e214]:
+                      - generic [ref=e215]:
+                        - img [ref=e216]
+                        - link "assets, (Directory)" [ref=e221] [cursor=pointer]:
+                          - /url: /bytedance/Lance/tree/main/assets
+                          - text: assets
+                    - 'cell "docs: revert README QA label colors" [ref=e222]':
+                      - 'link "docs: revert README QA label colors" [ref=e225] [cursor=pointer]':
+                        - /url: /bytedance/Lance/commit/3c757d257eecf9b88b83124c63883038bafccf72
+                    - cell "May 20, 20262 days ago" [ref=e226]:
+                      - generic [ref=e227]: May 20, 20262 days ago
+                  - 'row "benchmarks, (Directory) fix: remove unused release code May 20, 20263 days ago" [ref=e228]':
+                    - cell "benchmarks, (Directory)" [ref=e229]:
+                      - generic [ref=e230]:
+                        - img [ref=e231]
+                        - link "benchmarks, (Directory)" [ref=e236] [cursor=pointer]:
+                          - /url: /bytedance/Lance/tree/main/benchmarks
+                          - text: benchmarks
+                    - 'cell "fix: remove unused release code" [ref=e237]':
+                      - 'link "fix: remove unused release code" [ref=e240] [cursor=pointer]':
+                        - /url: /bytedance/Lance/commit/26d78b4d5617b0a900290a8c9cec4b609a2fd682
+                    - cell "May 20, 20263 days ago" [ref=e241]:
+                      - generic [ref=e242]: May 20, 20263 days ago
+                  - row "common, (Directory) Update inference instructions in README May 20, 20262 days ago" [ref=e243]:
+                    - cell "common, (Directory)" [ref=e244]:
+                      - generic [ref=e245]:
+                        - img [ref=e246]
+                        - link "common, (Directory)" [ref=e251] [cursor=pointer]:
+                          - /url: /bytedance/Lance/tree/main/common
+                          - text: common
+                    - cell "Update inference instructions in README" [ref=e252]:
+                      - link "Update inference instructions in README" [ref=e255] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/607fd56ccce1b9d0c3b643959dd3a0987115c879
+                    - cell "May 20, 20262 days ago" [ref=e256]:
+                      - generic [ref=e257]: May 20, 20262 days ago
+                  - row "config, (Directory) update code May 20, 20262 days ago" [ref=e258]:
+                    - cell "config, (Directory)" [ref=e259]:
+                      - generic [ref=e260]:
+                        - img [ref=e261]
+                        - link "config, (Directory)" [ref=e266] [cursor=pointer]:
+                          - /url: /bytedance/Lance/tree/main/config
+                          - text: config
+                    - cell "update code" [ref=e267]:
+                      - link "update code" [ref=e270] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/298a531b653aaae02f883240ae13fa7a340ec3c7
+                    - cell "May 20, 20262 days ago" [ref=e271]:
+                      - generic [ref=e272]: May 20, 20262 days ago
+                  - 'row "data, (Directory) fix: remove unused release code May 20, 20263 days ago" [ref=e273]':
+                    - cell "data, (Directory)" [ref=e274]:
+                      - generic [ref=e275]:
+                        - img [ref=e276]
+                        - link "data, (Directory)" [ref=e281] [cursor=pointer]:
+                          - /url: /bytedance/Lance/tree/main/data
+                          - text: data
+                    - 'cell "fix: remove unused release code" [ref=e282]':
+                      - 'link "fix: remove unused release code" [ref=e285] [cursor=pointer]':
+                        - /url: /bytedance/Lance/commit/26d78b4d5617b0a900290a8c9cec4b609a2fd682
+                    - cell "May 20, 20263 days ago" [ref=e286]:
+                      - generic [ref=e287]: May 20, 20263 days ago
+                  - row "modeling, (Directory) initial commit May 16, 2026last week" [ref=e288]:
+                    - cell "modeling, (Directory)" [ref=e289]:
+                      - generic [ref=e290]:
+                        - img [ref=e291]
+                        - link "modeling, (Directory)" [ref=e296] [cursor=pointer]:
+                          - /url: /bytedance/Lance/tree/main/modeling
+                          - text: modeling
+                    - cell "initial commit" [ref=e297]:
+                      - link "initial commit" [ref=e300] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/91f4d28fbc5987173fe60169deef0af8bea035d3
+                    - cell "May 16, 2026last week" [ref=e301]:
+                      - generic [ref=e302]: May 16, 2026last week
+                  - row ".gitignore, (File) initial commit May 16, 2026last week" [ref=e303]:
+                    - cell ".gitignore, (File)" [ref=e304]:
+                      - generic [ref=e305]:
+                        - img [ref=e306]
+                        - link ".gitignore, (File)" [ref=e311] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/.gitignore
+                          - text: .gitignore
+                    - cell "initial commit" [ref=e312]:
+                      - link "initial commit" [ref=e315] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/91f4d28fbc5987173fe60169deef0af8bea035d3
+                    - cell "May 16, 2026last week" [ref=e316]:
+                      - generic [ref=e317]: May 16, 2026last week
+                  - row "LICENSE, (File) Initial commit May 15, 2026last week" [ref=e318]:
+                    - cell "LICENSE, (File)" [ref=e319]:
+                      - generic [ref=e320]:
+                        - img [ref=e321]
+                        - link "LICENSE, (File)" [ref=e326] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/LICENSE
+                          - text: LICENSE
+                    - cell "Initial commit" [ref=e327]:
+                      - link "Initial commit" [ref=e330] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/1e825a679a137fc9b8322ae23ff82c0e3b8f5ef6
+                    - cell "May 15, 2026last week" [ref=e331]:
+                      - generic [ref=e332]: May 15, 2026last week
+                  - 'row "README.md, (File) docs: revert README QA label colors May 20, 20262 days ago" [ref=e333]':
+                    - cell "README.md, (File)" [ref=e334]:
+                      - generic [ref=e335]:
+                        - img [ref=e336]
+                        - link "README.md, (File)" [ref=e341] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/README.md
+                          - text: README.md
+                    - 'cell "docs: revert README QA label colors" [ref=e342]':
+                      - 'link "docs: revert README QA label colors" [ref=e345] [cursor=pointer]':
+                        - /url: /bytedance/Lance/commit/3c757d257eecf9b88b83124c63883038bafccf72
+                    - cell "May 20, 20262 days ago" [ref=e346]:
+                      - generic [ref=e347]: May 20, 20262 days ago
+                  - 'row "README_zh.md, (File) docs: revert README QA label colors May 20, 20262 days ago" [ref=e348]':
+                    - cell "README_zh.md, (File)" [ref=e349]:
+                      - generic [ref=e350]:
+                        - img [ref=e351]
+                        - link "README_zh.md, (File)" [ref=e356] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/README_zh.md
+                          - text: README_zh.md
+                    - 'cell "docs: revert README QA label colors" [ref=e357]':
+                      - 'link "docs: revert README QA label colors" [ref=e360] [cursor=pointer]':
+                        - /url: /bytedance/Lance/commit/3c757d257eecf9b88b83124c63883038bafccf72
+                    - cell "May 20, 20262 days ago" [ref=e361]:
+                      - generic [ref=e362]: May 20, 20262 days ago
+                  - row "SECURITY.md, (File) initial commit May 16, 2026last week" [ref=e363]:
+                    - cell "SECURITY.md, (File)" [ref=e364]:
+                      - generic [ref=e365]:
+                        - img [ref=e366]
+                        - link "SECURITY.md, (File)" [ref=e371] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/SECURITY.md
+                          - text: SECURITY.md
+                    - cell "initial commit" [ref=e372]:
+                      - link "initial commit" [ref=e375] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/91f4d28fbc5987173fe60169deef0af8bea035d3
+                    - cell "May 16, 2026last week" [ref=e376]:
+                      - generic [ref=e377]: May 16, 2026last week
+                  - row "inference_lance.py, (File) initial commit May 16, 2026last week" [ref=e378]:
+                    - cell "inference_lance.py, (File)" [ref=e379]:
+                      - generic [ref=e380]:
+                        - img [ref=e381]
+                        - link "inference_lance.py, (File)" [ref=e386] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/inference_lance.py
+                          - text: inference_lance.py
+                    - cell "initial commit" [ref=e387]:
+                      - link "initial commit" [ref=e390] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/91f4d28fbc5987173fe60169deef0af8bea035d3
+                    - cell "May 16, 2026last week" [ref=e391]:
+                      - generic [ref=e392]: May 16, 2026last week
+                  - row "inference_lance.sh, (File) Update inference instructions in README May 20, 20262 days ago" [ref=e393]:
+                    - cell "inference_lance.sh, (File)" [ref=e394]:
+                      - generic [ref=e395]:
+                        - img [ref=e396]
+                        - link "inference_lance.sh, (File)" [ref=e401] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/inference_lance.sh
+                          - text: inference_lance.sh
+                    - cell "Update inference instructions in README" [ref=e402]:
+                      - link "Update inference instructions in README" [ref=e405] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/607fd56ccce1b9d0c3b643959dd3a0987115c879
+                    - cell "May 20, 20262 days ago" [ref=e406]:
+                      - generic [ref=e407]: May 20, 20262 days ago
+                  - row "lance_gradio_t2v_v2t.py, (File) Update lance_gradio_t2v_v2t.py May 19, 20263 days ago" [ref=e408]:
+                    - cell "lance_gradio_t2v_v2t.py, (File)" [ref=e409]:
+                      - generic [ref=e410]:
+                        - img [ref=e411]
+                        - link "lance_gradio_t2v_v2t.py, (File)" [ref=e416] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/lance_gradio_t2v_v2t.py
+                          - text: lance_gradio_t2v_v2t.py
+                    - cell "Update lance_gradio_t2v_v2t.py" [ref=e417]:
+                      - link "Update lance_gradio_t2v_v2t.py" [ref=e420] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/64ad983479aeb7e2e819d2e0f2c7643dab342ef6
+                    - cell "May 19, 20263 days ago" [ref=e421]:
+                      - generic [ref=e422]: May 19, 20263 days ago
+                  - row "requirements.txt, (File) initial commit May 16, 2026last week" [ref=e423]:
+                    - cell "requirements.txt, (File)" [ref=e424]:
+                      - generic [ref=e425]:
+                        - img [ref=e426]
+                        - link "requirements.txt, (File)" [ref=e431] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/requirements.txt
+                          - text: requirements.txt
+                    - cell "initial commit" [ref=e432]:
+                      - link "initial commit" [ref=e435] [cursor=pointer]:
+                        - /url: /bytedance/Lance/commit/91f4d28fbc5987173fe60169deef0af8bea035d3
+                    - cell "May 16, 2026last week" [ref=e436]:
+                      - generic [ref=e437]: May 16, 2026last week
+                  - 'row "setup_env.sh, (File) fix: remove unused release code May 20, 20263 days ago" [ref=e438]':
+                    - cell "setup_env.sh, (File)" [ref=e439]:
+                      - generic [ref=e440]:
+                        - img [ref=e441]
+                        - link "setup_env.sh, (File)" [ref=e446] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/setup_env.sh
+                          - text: setup_env.sh
+                    - 'cell "fix: remove unused release code" [ref=e447]':
+                      - 'link "fix: remove unused release code" [ref=e450] [cursor=pointer]':
+                        - /url: /bytedance/Lance/commit/26d78b4d5617b0a900290a8c9cec4b609a2fd682
+                    - cell "May 20, 20263 days ago" [ref=e451]:
+                      - generic [ref=e452]: May 20, 20263 days ago
+            - generic [ref=e454]:
+              - generic [ref=e455]:
+                - heading "Repository files navigation" [level=2] [ref=e456]
+                - navigation "Repository files" [ref=e457]:
+                  - list [ref=e458]:
+                    - listitem [ref=e459]:
+                      - link "README" [ref=e460] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e462]
+                        - generic [ref=e464]: README
+                    - listitem [ref=e465]:
+                      - link "Apache-2.0 license" [ref=e466] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e468]
+                        - generic [ref=e470]: Apache-2.0 license
+                    - listitem [ref=e471]:
+                      - link "Security" [ref=e472] [cursor=pointer]:
+                        - /url: "#"
+                        - img [ref=e474]
+                        - generic [ref=e476]: Security
+                - button "Outline" [ref=e477] [cursor=pointer]:
+                  - img [ref=e478]
+              - article [ref=e481]:
+                - generic [ref=e482]:
+                  - link "Lance logo" [ref=e483] [cursor=pointer]:
+                    - /url: /bytedance/Lance/blob/main/assets/logo/lance-logo.webp
+                    - img "Lance logo" [ref=e484]
+                  - generic [ref=e485]:
+                    - 'heading "Lance: Unified Multimodal Modeling by Multi-Task Synergy" [level=1] [ref=e486]':
+                      - superscript [ref=e487]: "Lance: Unified Multimodal Modeling by Multi-Task Synergy"
+                    - link "Permalink:" [ref=e488] [cursor=pointer]:
+                      - /url: "#lance-unified-multimodal-modeling-by-multi-task-synergy"
+                      - img [ref=e489]
+                  - paragraph [ref=e491]:
+                    - strong [ref=e492]:
+                      - link "Fengyi Fu" [ref=e493] [cursor=pointer]:
+                        - /url: https://scholar.google.com.hk/citations?user=FXxoQlsAAAAJ&hl=zh-CN&oi=ao
+                      - superscript [ref=e494]: "*"
+                      - text: ","
+                      - link "Mengqi Huang" [ref=e495] [cursor=pointer]:
+                        - /url: https://corleone-huang.github.io/
+                      - superscript [ref=e496]: "*,✉"
+                      - text: ","
+                      - link "Shaojin Wu" [ref=e497] [cursor=pointer]:
+                        - /url: https://scholar.google.com.hk/citations?user=9ER6nVkAAAAJ&hl=zh-CN&oi=ao
+                      - superscript [ref=e498]: "*"
+                      - text: ", Yunsheng Jiang"
+                      - superscript [ref=e499]: "*"
+                      - text: ", Yufei Huo,"
+                      - link "Jianzhu Guo" [ref=e500] [cursor=pointer]:
+                        - /url: https://guojianzhu.com/
+                      - superscript [ref=e501]: ✉,§
+                    - text: Hao Li, Yinghang Song, Fei Ding, Qian He, Zheren Fu, Zhendong Mao, Yongdong Zhang
+                    - emphasis [ref=e502]: ByteDance
+                    - superscript [ref=e503]: "*"
+                    - text: Equal contribution
+                    - superscript [ref=e504]: ✉
+                    - text: Corresponding authors
+                    - superscript [ref=e505]: §
+                    - text: Project lead
+                  - paragraph [ref=e506]:
+                    - link "Homepage" [ref=e507] [cursor=pointer]:
+                      - /url: https://lance-project.github.io/
+                      - img "Homepage" [ref=e508]
+                    - link "arXiv" [ref=e509] [cursor=pointer]:
+                      - /url: http://arxiv.org/abs/2605.18678
+                      - img "arXiv" [ref=e510]
+                    - link "Model" [ref=e511] [cursor=pointer]:
+                      - /url: https://huggingface.co/bytedance-research/Lance
+                      - img "Model" [ref=e512]
+                    - text: English |
+                    - link "简体中文" [ref=e513] [cursor=pointer]:
+                      - /url: /bytedance/Lance/blob/main/README_zh.md
+                      - insertion [ref=e514]: 简体中文
+                - generic [ref=e515]:
+                  - heading "🌟 Highlights" [level=2] [ref=e516]
+                  - 'link "Permalink: 🌟 Highlights" [ref=e517] [cursor=pointer]':
+                    - /url: "#-highlights"
+                    - img [ref=e518]
+                - paragraph [ref=e520]:
+                  - strong [ref=e521]: Lance
+                  - text: is a 3B native unified multimodal model that supports
+                  - strong [ref=e522]: image and video understanding, generation, and editing
+                  - text: within a single framework.
+                - list [ref=e523]:
+                  - listitem [ref=e524]:
+                    - strong [ref=e525]: Efficient at 3B scale.
+                    - text: With only
+                    - strong [ref=e526]: 3B active parameters
+                    - text: ", Lance delivers strong performance across image generation, image editing, and video generation benchmarks."
+                  - listitem [ref=e527]:
+                    - strong [ref=e528]: Trained from scratch.
+                    - text: Lance is built with a staged multi-task recipe and trained entirely from scratch (except for the ViT and VAE encoders; the transformer backbone is trained entirely from scratch) within a
+                    - strong [ref=e529]: 128-A100-GPU
+                    - text: budget.
+                - paragraph [ref=e530]: We are actively updating and improving this repository. If you find any bugs or have suggestions, please feel free to open an issue or submit a pull request (PR) 💖.
+                - link "Lance benchmark overview across image generation, image editing, video generation, and video understanding" [ref=e532] [cursor=pointer]:
+                  - /url: /bytedance/Lance/blob/main/assets/benchmarks/benchmark-overview.png
+                  - img "Lance benchmark overview across image generation, image editing, video generation, and video understanding" [ref=e533]
+                - generic [ref=e534]:
+                  - heading "🎨 Demo" [level=2] [ref=e535]
+                  - 'link "Permalink: 🎨 Demo" [ref=e536] [cursor=pointer]':
+                    - /url: "#-demo"
+                    - img [ref=e537]
+                - generic [ref=e539]:
+                  - heading "Text-to-Video" [level=3] [ref=e540]
+                  - 'link "Permalink: Text-to-Video" [ref=e541] [cursor=pointer]':
+                    - /url: "#text-to-video"
+                    - img [ref=e542]
+                - table [ref=e545]:
+                  - rowgroup [ref=e546]:
+                    - row [ref=e547]:
+                      - cell [ref=e548]:
+                        - link [ref=e550] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-01.mp4
+                          - img [ref=e551]
+                      - cell [ref=e552]:
+                        - link [ref=e554] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-02.mp4
+                          - img [ref=e555]
+                      - cell [ref=e556]:
+                        - link [ref=e558] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-03.mp4
+                          - img [ref=e559]
+                      - cell [ref=e560]:
+                        - link [ref=e562] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-04.mp4
+                          - img [ref=e563]
+                    - row [ref=e564]:
+                      - cell [ref=e565]:
+                        - link [ref=e567] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-05.mp4
+                          - img [ref=e568]
+                      - cell [ref=e569]:
+                        - link [ref=e571] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-06.mp4
+                          - img [ref=e572]
+                      - cell [ref=e573]:
+                        - link [ref=e575] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-07.mp4
+                          - img [ref=e576]
+                      - cell [ref=e577]:
+                        - link [ref=e579] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/text-to-video/videos/text-to-video-demo-08.mp4
+                          - img [ref=e580]
+                - generic [ref=e581]:
+                  - heading "Video Editing" [level=3] [ref=e582]
+                  - 'link "Permalink: Video Editing" [ref=e583] [cursor=pointer]':
+                    - /url: "#video-editing"
+                    - img [ref=e584]
+                - table [ref=e587]:
+                  - rowgroup [ref=e588]:
+                    - row [ref=e589]:
+                      - cell [ref=e590]:
+                        - link [ref=e592] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-01.mp4
+                          - img [ref=e593]
+                      - cell [ref=e594]:
+                        - link [ref=e596] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-02.mp4
+                          - img [ref=e597]
+                      - cell [ref=e598]:
+                        - link [ref=e600] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-03.mp4
+                          - img [ref=e601]
+                      - cell [ref=e602]:
+                        - link [ref=e604] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-04.mp4
+                          - img [ref=e605]
+                    - row [ref=e606]:
+                      - cell [ref=e607]:
+                        - link [ref=e609] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-05.mp4
+                          - img [ref=e610]
+                      - cell [ref=e611]:
+                        - link [ref=e613] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-06.mp4
+                          - img [ref=e614]
+                      - cell [ref=e615]:
+                        - link [ref=e617] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-07.mp4
+                          - img [ref=e618]
+                      - cell [ref=e619]:
+                        - link [ref=e621] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-editing/videos/video-editing-demo-08.mp4
+                          - img [ref=e622]
+                - generic [ref=e623]:
+                  - heading "Multi-turn Consistency Editing" [level=3] [ref=e624]
+                  - 'link "Permalink: Multi-turn Consistency Editing" [ref=e625] [cursor=pointer]':
+                    - /url: "#multi-turn-consistency-editing"
+                    - img [ref=e626]
+                - link [ref=e630] [cursor=pointer]:
+                  - /url: /bytedance/Lance/blob/main/assets/multi-turn-editing/videos/multi-turn-editing-demo-01.mp4
+                  - img [ref=e631]
+                - generic [ref=e632]:
+                  - heading "Intelligent Video Generation" [level=3] [ref=e633]
+                  - 'link "Permalink: Intelligent Video Generation" [ref=e634] [cursor=pointer]':
+                    - /url: "#intelligent-video-generation"
+                    - img [ref=e635]
+                - table [ref=e638]:
+                  - rowgroup [ref=e639]:
+                    - row [ref=e640]:
+                      - cell [ref=e641]:
+                        - link [ref=e643] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/intelligent-video/videos/intelligent-video-demo-01.mp4
+                          - img [ref=e644]
+                      - cell [ref=e645]:
+                        - link [ref=e647] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/intelligent-video/videos/intelligent-video-demo-02.mp4
+                          - img [ref=e648]
+                      - cell [ref=e649]:
+                        - link [ref=e651] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/intelligent-video/videos/intelligent-video-demo-03.mp4
+                          - img [ref=e652]
+                      - cell [ref=e653]:
+                        - link [ref=e655] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/intelligent-video/videos/intelligent-video-demo-04.mp4
+                          - img [ref=e656]
+                - generic [ref=e657]:
+                  - heading "Video Understanding" [level=3] [ref=e658]
+                  - 'link "Permalink: Video Understanding" [ref=e659] [cursor=pointer]':
+                    - /url: "#video-understanding"
+                    - img [ref=e660]
+                - table [ref=e664]:
+                  - rowgroup [ref=e665]:
+                    - 'row "Question: How many times did the person launch objects on the table? Options: (A) 3 (B) 2 (C) 4 Response: (A) 3 Question: The person makes sets of repeated actions. How many distinct repeated actions did the person do? Options: (A) 2 (B) 3 (C) 4 Response: (A) 2 Question: In which direction does the purple sphere move in the video? Options: (A) Down and to the right. (B) Up and to the left. (C) Up and to the right. (D) The object is stationary. Response: (A) Down and to the right." [ref=e666]':
+                      - 'cell "Question: How many times did the person launch objects on the table? Options: (A) 3 (B) 2 (C) 4 Response: (A) 3" [ref=e667]':
+                        - link [ref=e669] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-understanding/videos/video-understanding-vqa-01.mp4
+                          - img [ref=e670]
+                        - paragraph [ref=e671]:
+                          - strong [ref=e672]: "Question:"
+                          - text: "How many times did the person launch objects on the table? Options: (A) 3 (B) 2 (C) 4"
+                        - paragraph [ref=e673]:
+                          - strong [ref=e674]: "Response:"
+                          - text: (A) 3
+                      - 'cell "Question: The person makes sets of repeated actions. How many distinct repeated actions did the person do? Options: (A) 2 (B) 3 (C) 4 Response: (A) 2" [ref=e675]':
+                        - link [ref=e677] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-understanding/videos/video-understanding-vqa-02.mp4
+                          - img [ref=e678]
+                        - paragraph [ref=e679]:
+                          - strong [ref=e680]: "Question:"
+                          - text: "The person makes sets of repeated actions. How many distinct repeated actions did the person do? Options: (A) 2 (B) 3 (C) 4"
+                        - paragraph [ref=e681]:
+                          - strong [ref=e682]: "Response:"
+                          - text: (A) 2
+                      - 'cell "Question: In which direction does the purple sphere move in the video? Options: (A) Down and to the right. (B) Up and to the left. (C) Up and to the right. (D) The object is stationary. Response: (A) Down and to the right." [ref=e683]':
+                        - link [ref=e685] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-understanding/videos/video-understanding-vqa-03.mp4
+                          - img [ref=e686]
+                        - paragraph [ref=e687]:
+                          - strong [ref=e688]: "Question:"
+                          - text: "In which direction does the purple sphere move in the video? Options: (A) Down and to the right. (B) Up and to the left. (C) Up and to the right. (D) The object is stationary."
+                        - paragraph [ref=e689]:
+                          - strong [ref=e690]: "Response:"
+                          - text: (A) Down and to the right.
+                    - row [ref=e691]:
+                      - 'cell "Question: What is the unrealistic phenomenon displayed in the video? Options: (A) The man can manipulate time via phone. (B) Man grabs an object through a phone screen. (C) Chocolate transforms into different objects. (D) Visible means of propulsion enables flight. Response: (B) Man grabs an object through a phone screen." [ref=e692]':
+                        - link [ref=e694] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-understanding/videos/video-understanding-vqa-04.mp4
+                          - img [ref=e695]
+                        - paragraph [ref=e696]:
+                          - strong [ref=e697]: "Question:"
+                          - text: "What is the unrealistic phenomenon displayed in the video? Options: (A) The man can manipulate time via phone. (B) Man grabs an object through a phone screen. (C) Chocolate transforms into different objects. (D) Visible means of propulsion enables flight."
+                        - paragraph [ref=e698]:
+                          - strong [ref=e699]: "Response:"
+                          - text: (B) Man grabs an object through a phone screen.
+                      - 'cell "Question: Offer a succinct account of the culinary process shown in this video. Response: Add tomato puree and mix it well with chicken pieces." [ref=e700]':
+                        - link [ref=e702] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-understanding/videos/video-understanding-caption-short-01.mp4
+                          - img [ref=e703]
+                        - paragraph [ref=e704]:
+                          - strong [ref=e705]: "Question:"
+                          - text: Offer a succinct account of the culinary process shown in this video.
+                        - paragraph [ref=e706]:
+                          - strong [ref=e707]: "Response:"
+                          - text: Add tomato puree and mix it well with chicken pieces.
+                      - 'cell "Question: Provide a detailed description of the given video, capturing its key moments. Response: In a sunlit meadow, a small tortoiseshell butterfly rests on a purple flower. A bee, with black and yellow stripes, lands on the same flower. The butterfly flaps its wings gently, while the bee busies itself, collecting nectar. The flower sways slightly in the breeze. The butterfly then takes off, and the bee follows, both heading to the next flower. The scene is a vivid display of insect interaction in a natural setting, with the colors of the butterfly and the bee contrasting against the green background of the meadow. The video captures this peaceful moment in a short 6-second duration." [ref=e708]':
+                        - link [ref=e710] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/video-understanding/videos/video-understanding-caption-long-01.mp4
+                          - img [ref=e711]
+                        - paragraph [ref=e712]:
+                          - strong [ref=e713]: "Question:"
+                          - text: Provide a detailed description of the given video, capturing its key moments.
+                        - paragraph [ref=e714]:
+                          - strong [ref=e715]: "Response:"
+                          - text: In a sunlit meadow, a small tortoiseshell butterfly rests on a purple flower. A bee, with black and yellow stripes, lands on the same flower. The butterfly flaps its wings gently, while the bee busies itself, collecting nectar. The flower sways slightly in the breeze. The butterfly then takes off, and the bee follows, both heading to the next flower. The scene is a vivid display of insect interaction in a natural setting, with the colors of the butterfly and the bee contrasting against the green background of the meadow. The video captures this peaceful moment in a short 6-second duration.
+                - generic [ref=e716]:
+                  - heading "Text-to-Image Generation" [level=3] [ref=e717]
+                  - 'link "Permalink: Text-to-Image Generation" [ref=e718] [cursor=pointer]':
+                    - /url: "#text-to-image-generation"
+                    - img [ref=e719]
+                - link "Lance text-to-image generation examples" [ref=e722] [cursor=pointer]:
+                  - /url: /bytedance/Lance/blob/main/assets/text-to-image/text-to-image-overview.webp
+                  - img "Lance text-to-image generation examples" [ref=e723]
+                - generic [ref=e724]:
+                  - heading "Image Editing" [level=3] [ref=e725]
+                  - 'link "Permalink: Image Editing" [ref=e726] [cursor=pointer]':
+                    - /url: "#image-editing"
+                    - img [ref=e727]
+                - link "Lance image editing examples" [ref=e730] [cursor=pointer]:
+                  - /url: /bytedance/Lance/blob/main/assets/image-editing/image-editing-overview.webp
+                  - img "Lance image editing examples" [ref=e731]
+                - generic [ref=e732]:
+                  - heading "Image Understanding" [level=3] [ref=e733]
+                  - 'link "Permalink: Image Understanding" [ref=e734] [cursor=pointer]':
+                    - /url: "#image-understanding"
+                    - img [ref=e735]
+                - table [ref=e739]:
+                  - rowgroup [ref=e740]:
+                    - 'row "Pie chart reasoning case Question: Is the largest segment greater than sum of all the other segments? Response: Yes, the largest segment in the pie chart is the blue one, which is the most populous segment. Survey chart about border security priorities Question: What percentage of respondents want better border security? Response: 29% License plate recognition case Question: What is the license plate number of the car? Response: The license plate number of the car is BX62 BFY." [ref=e741]':
+                      - 'cell "Pie chart reasoning case Question: Is the largest segment greater than sum of all the other segments? Response: Yes, the largest segment in the pie chart is the blue one, which is the most populous segment." [ref=e742]':
+                        - link "Pie chart reasoning case" [ref=e743] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/image-understanding/cases/image-understanding-case-01.png
+                          - img "Pie chart reasoning case" [ref=e744]
+                        - paragraph [ref=e745]:
+                          - strong [ref=e746]: "Question:"
+                          - text: Is the largest segment greater than sum of all the other segments?
+                        - paragraph [ref=e747]:
+                          - strong [ref=e748]: "Response:"
+                          - text: Yes, the largest segment in the pie chart is the blue one, which is the most populous segment.
+                      - 'cell "Survey chart about border security priorities Question: What percentage of respondents want better border security? Response: 29%" [ref=e749]':
+                        - link "Survey chart about border security priorities" [ref=e750] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/image-understanding/cases/image-understanding-case-02.png
+                          - img "Survey chart about border security priorities" [ref=e751]
+                        - paragraph [ref=e752]:
+                          - strong [ref=e753]: "Question:"
+                          - text: What percentage of respondents want better border security?
+                        - paragraph [ref=e754]:
+                          - strong [ref=e755]: "Response:"
+                          - text: 29%
+                      - 'cell "License plate recognition case Question: What is the license plate number of the car? Response: The license plate number of the car is BX62 BFY." [ref=e756]':
+                        - link "License plate recognition case" [ref=e757] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/image-understanding/cases/image-understanding-case-03.png
+                          - img "License plate recognition case" [ref=e758]
+                        - paragraph [ref=e759]:
+                          - strong [ref=e760]: "Question:"
+                          - text: What is the license plate number of the car?
+                        - paragraph [ref=e761]:
+                          - strong [ref=e762]: "Response:"
+                          - text: The license plate number of the car is BX62 BFY.
+                    - row [ref=e763]:
+                      - 'cell "Market research chart reasoning case Question: According to the data from the proprietary market research, how much amount was spent on the promotional meetings and events during 1998? Response: According to the data from the proprietary market research, the total amount spent on the promotional meetings and events during 1998 was approximately $1.3 billion." [ref=e764]':
+                        - link "Market research chart reasoning case" [ref=e765] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/image-understanding/cases/image-understanding-case-04.png
+                          - img "Market research chart reasoning case" [ref=e766]
+                        - paragraph [ref=e767]:
+                          - strong [ref=e768]: "Question:"
+                          - text: According to the data from the proprietary market research, how much amount was spent on the promotional meetings and events during 1998?
+                        - paragraph [ref=e769]:
+                          - strong [ref=e770]: "Response:"
+                          - text: According to the data from the proprietary market research, the total amount spent on the promotional meetings and events during 1998 was approximately $1.3 billion.
+                      - 'cell "Colosseum description case Question: What is the appearance of the Colosseum in Rome, Italy? Response: The Colosseum in Rome, Italy is a magnificent ancient amphitheater made of stone and concrete. It is characterized by its large, arched openings and its semi-circular shape. The Colosseum has been partially restored, and its original color has faded, but the architectural details, like the columns and the semi-circular arches, are still visible. The lighting in the image highlights the grandeur and historical significance of the Colosseum, making it stand out against the backdrop of the evening sky." [ref=e771]':
+                        - link "Colosseum description case" [ref=e772] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/image-understanding/cases/image-understanding-case-05.png
+                          - img "Colosseum description case" [ref=e773]
+                        - paragraph [ref=e774]:
+                          - strong [ref=e775]: "Question:"
+                          - text: What is the appearance of the Colosseum in Rome, Italy?
+                        - paragraph [ref=e776]:
+                          - strong [ref=e777]: "Response:"
+                          - text: The Colosseum in Rome, Italy is a magnificent ancient amphitheater made of stone and concrete. It is characterized by its large, arched openings and its semi-circular shape. The Colosseum has been partially restored, and its original color has faded, but the architectural details, like the columns and the semi-circular arches, are still visible. The lighting in the image highlights the grandeur and historical significance of the Colosseum, making it stand out against the backdrop of the evening sky.
+                      - 'cell "Total solar eclipse case Question: How does a total solar eclipse look like from Earth? Response: A total solar eclipse looks like a dark circle with a bright, white outer edge. This is a result of the Earth''s rotation and the Earth''s shadow, which partially obscures the sun''s light. The bright white edge of the eclipse is caused by the sun''s high energy and its interaction with the Earth''s atmosphere, while the dark part of the eclipse is due to the Earth''s shadow and the surrounding air currents. The solar eclipse''s shape, with its bright white edge and dark center, is similar to the shape of a full moon or a dark disk. It is a natural phenomenon that occurs in the atmosphere of the Earth and is an important part of the solar system." [ref=e778]':
+                        - link "Total solar eclipse case" [ref=e779] [cursor=pointer]:
+                          - /url: /bytedance/Lance/blob/main/assets/image-understanding/cases/image-understanding-case-06.png
+                          - img "Total solar eclipse case" [ref=e780]
+                        - paragraph [ref=e781]:
+                          - strong [ref=e782]: "Question:"
+                          - text: How does a total solar eclipse look like from Earth?
+                        - paragraph [ref=e783]:
+                          - strong [ref=e784]: "Response:"
+                          - text: A total solar eclipse looks like a dark circle with a bright, white outer edge. This is a result of the Earth's rotation and the Earth's shadow, which partially obscures the sun's light. The bright white edge of the eclipse is caused by the sun's high energy and its interaction with the Earth's atmosphere, while the dark part of the eclipse is due to the Earth's shadow and the surrounding air currents. The solar eclipse's shape, with its bright white edge and dark center, is similar to the shape of a full moon or a dark disk. It is a natural phenomenon that occurs in the atmosphere of the Earth and is an important part of the solar system.
+                - generic [ref=e785]:
+                  - heading "🚀 Installation" [level=2] [ref=e786]
+                  - 'link "Permalink: 🚀 Installation" [ref=e787] [cursor=pointer]':
+                    - /url: "#-installation"
+                    - img [ref=e788]
+                - generic [ref=e790]:
+                  - heading "Recommended Environment" [level=3] [ref=e791]
+                  - 'link "Permalink: Recommended Environment" [ref=e792] [cursor=pointer]':
+                    - /url: "#recommended-environment"
+                    - img [ref=e793]
+                - list [ref=e795]:
+                  - listitem [ref=e796]:
+                    - strong [ref=e797]: "Software:"
+                    - text: Python 3.10+, CUDA 12.4+ (required)
+                  - listitem [ref=e798]:
+                    - strong [ref=e799]: "Hardware:"
+                    - text: A GPU with at least 40GB VRAM is required for inference
+                - generic [ref=e800]:
+                  - heading "Installation Steps" [level=3] [ref=e801]
+                  - 'link "Permalink: Installation Steps" [ref=e802] [cursor=pointer]':
+                    - /url: "#installation-steps"
+                    - img [ref=e803]
+                - generic [ref=e805]:
+                  - generic [ref=e806]: bash ./setup_env.sh
+                  - button "Copy code to clipboard" [ref=e808] [cursor=pointer]:
+                    - img [ref=e809]
+                - generic [ref=e812]:
+                  - heading "Download Model Weights" [level=3] [ref=e813]
+                  - 'link "Permalink: Download Model Weights" [ref=e814] [cursor=pointer]':
+                    - /url: "#download-model-weights"
+                    - img [ref=e815]
+                - paragraph [ref=e817]:
+                  - text: Please download all necessary model checkpoints from
+                  - link "Lance-3B on Hugging Face" [ref=e818] [cursor=pointer]:
+                    - /url: https://huggingface.co/bytedance-research/Lance
+                  - text: and place them in the
+                  - code [ref=e819]: downloads/
+                  - text: directory.
+                - generic [ref=e820]:
+                  - heading "📚 Usage" [level=2] [ref=e821]
+                  - 'link "Permalink: 📚 Usage" [ref=e822] [cursor=pointer]':
+                    - /url: "#-usage"
+                    - img [ref=e823]
+                - generic [ref=e825]:
+                  - heading "Inference" [level=3] [ref=e826]
+                  - 'link "Permalink: Inference" [ref=e827] [cursor=pointer]':
+                    - /url: "#inference"
+                    - img [ref=e828]
+                - paragraph [ref=e830]: "We provide a unified command-line interface for all generation / editing / understanding tasks:"
+                - generic [ref=e831]:
+                  - 'heading "Option 1: Configure and Run the Unified Script" [level=4] [ref=e832]'
+                  - 'link "Permalink: Option 1: Configure and Run the Unified Script" [ref=e833] [cursor=pointer]':
+                    - /url: "#option-1-configure-and-run-the-unified-script"
+                    - img [ref=e834]
+                - generic [ref=e836]:
+                  - generic [ref=e837]: bash inference_lance.sh
+                  - button "Copy code to clipboard" [ref=e839] [cursor=pointer]:
+                    - img [ref=e840]
+                - list [ref=e843]:
+                  - listitem [ref=e844]:
+                    - text: Before running, please configure the inference parameters at the top of
+                    - code [ref=e845]: inference_lance.sh
+                    - text: .
+                  - listitem [ref=e846]:
+                    - strong [ref=e847]: "Supported tasks:"
+                    - code [ref=e848]: t2i
+                    - text: ","
+                    - code [ref=e849]: t2v
+                    - text: ","
+                    - code [ref=e850]: image_edit
+                    - text: ","
+                    - code [ref=e851]: video_edit
+                    - text: ","
+                    - code [ref=e852]: x2t_image
+                    - text: ", and"
+                    - code [ref=e853]: x2t_video
+                    - text: . You can modify
+                    - code [ref=e854]: TASK_DEFAULT_CONFIGS
+                    - text: in
+                    - code [ref=e855]: inference_lance.py
+                    - text: to customize the default data samples for each task.
+                  - listitem [ref=e856]:
+                    - strong [ref=e857]: "Note:"
+                    - text: For all tasks, we recommend following the
+                    - code [ref=e858]: prompt
+                    - text: format used in the provided examples when writing input prompts, as this typically leads to better generation quality.
+                - generic [ref=e859]:
+                  - 'heading "Option 2: Configure and Run the Unified Script" [level=4] [ref=e860]'
+                  - 'link "Permalink: Option 2: Configure and Run the Unified Script" [ref=e861] [cursor=pointer]':
+                    - /url: "#option-2-configure-and-run-the-unified-script"
+                    - img [ref=e862]
+                - paragraph [ref=e864]: We provide task-specific one-click commands for different generation, editing, and understanding tasks.
+                - generic [ref=e865]:
+                  - heading "Text-to-Video Generation" [level=5] [ref=e866]
+                  - 'link "Permalink: Text-to-Video Generation" [ref=e867] [cursor=pointer]':
+                    - /url: "#text-to-video-generation"
+                    - img [ref=e868]
+                - generic [ref=e870]:
+                  - generic [ref=e871]: bash inference_lance.sh \ --TASK_NAME t2v \ --MODEL_PATH downloads/Lance_3B_Video \ --RESOLUTION video_480p \ --NUM_FRAMES 121 \ --VIDEO_HEIGHT 480 \ --VIDEO_WIDTH 848 \ --SAVE_PATH_GEN results/t2v
+                  - button "Copy code to clipboard" [ref=e873] [cursor=pointer]:
+                    - img [ref=e874]
+                - generic [ref=e877]:
+                  - heading "Text-to-Image Generation" [level=5] [ref=e878]
+                  - 'link "Permalink: Text-to-Image Generation" [ref=e879] [cursor=pointer]':
+                    - /url: "#text-to-image-generation-1"
+                    - img [ref=e880]
+                - generic [ref=e882]:
+                  - generic [ref=e883]: bash inference_lance.sh \ --TASK_NAME t2i \ --MODEL_PATH downloads/Lance_3B \ --RESOLUTION image_768res \ --VIDEO_HEIGHT 768 \ --VIDEO_WIDTH 768 \ --SAVE_PATH_GEN results/t2i
+                  - button "Copy code to clipboard" [ref=e885] [cursor=pointer]:
+                    - img [ref=e886]
+                - generic [ref=e889]:
+                  - heading "Video Editing" [level=5] [ref=e890]
+                  - 'link "Permalink: Video Editing" [ref=e891] [cursor=pointer]':
+                    - /url: "#video-editing-1"
+                    - img [ref=e892]
+                - generic [ref=e894]:
+                  - generic [ref=e895]: bash inference_lance.sh \ --TASK_NAME video_edit \ --MODEL_PATH downloads/Lance_3B_Video \ --RESOLUTION video_480p \ --SAVE_PATH_GEN results/video_edit
+                  - button "Copy code to clipboard" [ref=e897] [cursor=pointer]:
+                    - img [ref=e898]
+                - generic [ref=e901]:
+                  - heading "Image Editing" [level=5] [ref=e902]
+                  - 'link "Permalink: Image Editing" [ref=e903] [cursor=pointer]':
+                    - /url: "#image-editing-1"
+                    - img [ref=e904]
+                - generic [ref=e906]:
+                  - generic [ref=e907]: bash inference_lance.sh \ --TASK_NAME image_edit \ --MODEL_PATH downloads/Lance_3B \ --RESOLUTION image_768res \ --SAVE_PATH_GEN results/image_edit
+                  - button "Copy code to clipboard" [ref=e909] [cursor=pointer]:
+                    - img [ref=e910]
+                - generic [ref=e913]:
+                  - heading "Video Understanding" [level=5] [ref=e914]
+                  - 'link "Permalink: Video Understanding" [ref=e915] [cursor=pointer]':
+                    - /url: "#video-understanding-1"
+                    - img [ref=e916]
+                - generic [ref=e918]:
+                  - generic [ref=e919]: bash inference_lance.sh \ --TASK_NAME x2t_video \ --MODEL_PATH downloads/Lance_3B_Video \ --RESOLUTION video_480p \ --NUM_FRAMES 50 \ --SAVE_PATH_GEN results/x2t_video
+                  - button "Copy code to clipboard" [ref=e921] [cursor=pointer]:
+                    - img [ref=e922]
+                - generic [ref=e925]:
+                  - heading "Image Understanding" [level=5] [ref=e926]
+                  - 'link "Permalink: Image Understanding" [ref=e927] [cursor=pointer]':
+                    - /url: "#image-understanding-1"
+                    - img [ref=e928]
+                - generic [ref=e930]:
+                  - generic [ref=e931]: bash inference_lance.sh \ --TASK_NAME x2t_image \ --MODEL_PATH downloads/Lance_3B \ --RESOLUTION image_768res \ --SAVE_PATH_GEN results/x2t_image
+                  - button "Copy code to clipboard" [ref=e933] [cursor=pointer]:
+                    - img [ref=e934]
+                - generic [ref=e937]:
+                  - heading "Available Tasks" [level=4] [ref=e938]
+                  - 'link "Permalink: Available Tasks" [ref=e939] [cursor=pointer]':
+                    - /url: "#available-tasks"
+                    - img [ref=e940]
+                - table [ref=e943]:
+                  - rowgroup [ref=e944]:
+                    - row "Task Name Description Example JSON" [ref=e945]:
+                      - columnheader "Task Name" [ref=e946]
+                      - columnheader "Description" [ref=e947]
+                      - columnheader "Example JSON" [ref=e948]
+                  - rowgroup [ref=e949]:
+                    - row "t2v Text-to-Video generation config/examples/t2v_example.json" [ref=e950]:
+                      - cell "t2v" [ref=e951]:
+                        - code [ref=e952]: t2v
+                      - cell "Text-to-Video generation" [ref=e953]
+                      - cell "config/examples/t2v_example.json" [ref=e954]:
+                        - code [ref=e955]: config/examples/t2v_example.json
+                    - row "t2i Text-to-Image generation config/examples/t2i_example.json" [ref=e956]:
+                      - cell "t2i" [ref=e957]:
+                        - code [ref=e958]: t2i
+                      - cell "Text-to-Image generation" [ref=e959]
+                      - cell "config/examples/t2i_example.json" [ref=e960]:
+                        - code [ref=e961]: config/examples/t2i_example.json
+                    - row "image_edit Image editing config/examples/image_edit_example.json" [ref=e962]:
+                      - cell "image_edit" [ref=e963]:
+                        - code [ref=e964]: image_edit
+                      - cell "Image editing" [ref=e965]
+                      - cell "config/examples/image_edit_example.json" [ref=e966]:
+                        - code [ref=e967]: config/examples/image_edit_example.json
+                    - row "video_edit Video editing config/examples/video_edit_example.json" [ref=e968]:
+                      - cell "video_edit" [ref=e969]:
+                        - code [ref=e970]: video_edit
+                      - cell "Video editing" [ref=e971]
+                      - cell "config/examples/video_edit_example.json" [ref=e972]:
+                        - code [ref=e973]: config/examples/video_edit_example.json
+                    - row "x2t_image Image understanding config/examples/x2t_image_example.json" [ref=e974]:
+                      - cell "x2t_image" [ref=e975]:
+                        - code [ref=e976]: x2t_image
+                      - cell "Image understanding" [ref=e977]
+                      - cell "config/examples/x2t_image_example.json" [ref=e978]:
+                        - code [ref=e979]: config/examples/x2t_image_example.json
+                    - row "x2t_video Video understanding config/examples/x2t_video_example.json" [ref=e980]:
+                      - cell "x2t_video" [ref=e981]:
+                        - code [ref=e982]: x2t_video
+                      - cell "Video understanding" [ref=e983]
+                      - cell "config/examples/x2t_video_example.json" [ref=e984]:
+                        - code [ref=e985]: config/examples/x2t_video_example.json
+                - paragraph [ref=e986]: "For understanding examples:"
+                - list [ref=e987]:
+                  - listitem [ref=e988]:
+                    - code [ref=e989]: config/examples/x2t_image_example.json
+                    - text: ": image understanding examples for visual question answering and image-based reasoning."
+                  - listitem [ref=e990]:
+                    - code [ref=e991]: config/examples/x2t_video_example.json
+                    - text: ": video understanding examples for video question answering and video captioning."
+                - generic [ref=e992]:
+                  - heading "Parameters" [level=4] [ref=e993]
+                  - 'link "Permalink: Parameters" [ref=e994] [cursor=pointer]':
+                    - /url: "#parameters"
+                    - img [ref=e995]
+                - paragraph [ref=e997]:
+                  - text: You can configure the following hyperparameters at the top of the
+                  - code [ref=e998]: inference_lance.sh
+                  - text: "script:"
+                - table [ref=e1000]:
+                  - rowgroup [ref=e1001]:
+                    - row "Parameter Default Value Description" [ref=e1002]:
+                      - columnheader "Parameter" [ref=e1003]
+                      - columnheader "Default Value" [ref=e1004]
+                      - columnheader "Description" [ref=e1005]
+                  - rowgroup [ref=e1006]:
+                    - row "MODEL_PATH \"downloads/Lance_3B\" Path to the downloaded Lance model weights (Lance_3B or Lance_3B_Video)." [ref=e1007]:
+                      - cell "MODEL_PATH" [ref=e1008]:
+                        - code [ref=e1009]: MODEL_PATH
+                      - cell "\"downloads/Lance_3B\"" [ref=e1010]:
+                        - code [ref=e1011]: "\"downloads/Lance_3B\""
+                      - cell "Path to the downloaded Lance model weights (Lance_3B or Lance_3B_Video)." [ref=e1012]:
+                        - text: Path to the downloaded Lance model weights (
+                        - code [ref=e1013]: Lance_3B
+                        - text: or
+                        - code [ref=e1014]: Lance_3B_Video
+                        - text: ).
+                    - row "NUM_GPUS 1 Number of GPUs to use for inference." [ref=e1015]:
+                      - cell "NUM_GPUS" [ref=e1016]:
+                        - code [ref=e1017]: NUM_GPUS
+                      - cell "1" [ref=e1018]:
+                        - code [ref=e1019]: "1"
+                      - cell "Number of GPUs to use for inference." [ref=e1020]
+                    - row "VALIDATION_NUM_TIMESTEPS 30 Number of denoising steps (e.g., 30 or 50)." [ref=e1021]:
+                      - cell "VALIDATION_NUM_TIMESTEPS" [ref=e1022]:
+                        - code [ref=e1023]: VALIDATION_NUM_TIMESTEPS
+                      - cell "30" [ref=e1024]:
+                        - code [ref=e1025]: "30"
+                      - cell "Number of denoising steps (e.g., 30 or 50)." [ref=e1026]
+                    - row "VALIDATION_TIMESTEP_SHIFT 3.5 Timestep shift parameter for flow matching scheduling." [ref=e1027]:
+                      - cell "VALIDATION_TIMESTEP_SHIFT" [ref=e1028]:
+                        - code [ref=e1029]: VALIDATION_TIMESTEP_SHIFT
+                      - cell "3.5" [ref=e1030]:
+                        - code [ref=e1031]: "3.5"
+                      - cell "Timestep shift parameter for flow matching scheduling." [ref=e1032]
+                    - row "CFG_TEXT_SCALE 4.0 Classifier-Free Guidance (CFG) scale for text conditioning." [ref=e1033]:
+                      - cell "CFG_TEXT_SCALE" [ref=e1034]:
+                        - code [ref=e1035]: CFG_TEXT_SCALE
+                      - cell "4.0" [ref=e1036]:
+                        - code [ref=e1037]: "4.0"
+                      - cell "Classifier-Free Guidance (CFG) scale for text conditioning." [ref=e1038]
+                    - row "VALIDATION_DATA_SEED 42 Random seed for generation reproducibility." [ref=e1039]:
+                      - cell "VALIDATION_DATA_SEED" [ref=e1040]:
+                        - code [ref=e1041]: VALIDATION_DATA_SEED
+                      - cell "42" [ref=e1042]:
+                        - code [ref=e1043]: "42"
+                      - cell "Random seed for generation reproducibility." [ref=e1044]
+                    - 'row "NUM_FRAMES 50 Number of frames for video generation (Max: 121). Unused for image tasks." [ref=e1045]':
+                      - cell "NUM_FRAMES" [ref=e1046]:
+                        - code [ref=e1047]: NUM_FRAMES
+                      - cell "50" [ref=e1048]:
+                        - code [ref=e1049]: "50"
+                      - 'cell "Number of frames for video generation (Max: 121). Unused for image tasks." [ref=e1050]':
+                        - text: "Number of frames for video generation (Max: 121)."
+                        - emphasis [ref=e1051]: Unused for image tasks.
+                    - row "VIDEO_HEIGHT / VIDEO_WIDTH 768 Spatial resolution. Unused for editing tasks (determined by input image/video)." [ref=e1052]:
+                      - cell "VIDEO_HEIGHT / VIDEO_WIDTH" [ref=e1053]:
+                        - code [ref=e1054]: VIDEO_HEIGHT
+                        - text: /
+                        - code [ref=e1055]: VIDEO_WIDTH
+                      - cell "768" [ref=e1056]:
+                        - code [ref=e1057]: "768"
+                      - cell "Spatial resolution. Unused for editing tasks (determined by input image/video)." [ref=e1058]:
+                        - text: Spatial resolution.
+                        - emphasis [ref=e1059]: Unused for editing tasks (determined by input image/video).
+                    - row "RESOLUTION \"video_480p\" Base resolution preset (image_768res or video_480p)." [ref=e1060]:
+                      - cell "RESOLUTION" [ref=e1061]:
+                        - code [ref=e1062]: RESOLUTION
+                      - cell "\"video_480p\"" [ref=e1063]:
+                        - code [ref=e1064]: "\"video_480p\""
+                      - cell "Base resolution preset (image_768res or video_480p)." [ref=e1065]:
+                        - text: Base resolution preset (
+                        - code [ref=e1066]: image_768res
+                        - text: or
+                        - code [ref=e1067]: video_480p
+                        - text: ).
+                - generic [ref=e1068]:
+                  - heading "Gradio" [level=3] [ref=e1069]
+                  - 'link "Permalink: Gradio" [ref=e1070] [cursor=pointer]':
+                    - /url: "#gradio"
+                    - img [ref=e1071]
+                - generic [ref=e1073]:
+                  - generic [ref=e1074]: python lance_gradio_t2v_v2t.py --gpus 0 --server-port 7860
+                  - button "Copy code to clipboard" [ref=e1076] [cursor=pointer]:
+                    - img [ref=e1077]
+                - generic [ref=e1080]:
+                  - heading "Benchmarks" [level=3] [ref=e1081]
+                  - 'link "Permalink: Benchmarks" [ref=e1082] [cursor=pointer]':
+                    - /url: "#benchmarks"
+                    - img [ref=e1083]
+                - group [ref=e1085]:
+                  - generic "DPG-Bench Evaluation" [ref=e1086] [cursor=pointer]:
+                    - strong [ref=e1087]: DPG-Bench Evaluation
+                - group [ref=e1088]:
+                  - generic "GenEval Evaluation" [ref=e1089] [cursor=pointer]:
+                    - strong [ref=e1090]: GenEval Evaluation
+                - group [ref=e1091]:
+                  - generic "GEdit-Bench Evaluation" [ref=e1092] [cursor=pointer]:
+                    - strong [ref=e1093]: GEdit-Bench Evaluation
+                - group [ref=e1094]:
+                  - generic "VBench Evaluation (Video Generation)" [ref=e1095] [cursor=pointer]:
+                    - strong [ref=e1096]: VBench Evaluation (Video Generation)
+                - generic [ref=e1097]:
+                  - heading "Running Benchmarks" [level=4] [ref=e1098]
+                  - 'link "Permalink: Running Benchmarks" [ref=e1099] [cursor=pointer]':
+                    - /url: "#running-benchmarks"
+                    - img [ref=e1100]
+                - paragraph [ref=e1102]:
+                  - text: Ready-to-run benchmark scripts are provided under
+                  - code [ref=e1103]: benchmarks/
+                  - text: ":"
+                - table [ref=e1105]:
+                  - rowgroup [ref=e1106]:
+                    - row "Benchmark Modality Script" [ref=e1107]:
+                      - columnheader "Benchmark" [ref=e1108]
+                      - columnheader "Modality" [ref=e1109]
+                      - columnheader "Script" [ref=e1110]
+                  - rowgroup [ref=e1111]:
+                    - row "GenEVAL (image gen) Image benchmarks/image_gen/GenEVAL/sample_GenEVAL.sh" [ref=e1112]:
+                      - cell "GenEVAL (image gen)" [ref=e1113]
+                      - cell "Image" [ref=e1114]
+                      - cell "benchmarks/image_gen/GenEVAL/sample_GenEVAL.sh" [ref=e1115]:
+                        - code [ref=e1116]: benchmarks/image_gen/GenEVAL/sample_GenEVAL.sh
+                    - row "DPG (image gen) Image benchmarks/image_gen/DPG/sample_DPG.sh" [ref=e1117]:
+                      - cell "DPG (image gen)" [ref=e1118]
+                      - cell "Image" [ref=e1119]
+                      - cell "benchmarks/image_gen/DPG/sample_DPG.sh" [ref=e1120]:
+                        - code [ref=e1121]: benchmarks/image_gen/DPG/sample_DPG.sh
+                    - row "GEdit (image edit) Image benchmarks/image_gen/GEdit/sample_GEdit.sh" [ref=e1122]:
+                      - cell "GEdit (image edit)" [ref=e1123]
+                      - cell "Image" [ref=e1124]
+                      - cell "benchmarks/image_gen/GEdit/sample_GEdit.sh" [ref=e1125]:
+                        - code [ref=e1126]: benchmarks/image_gen/GEdit/sample_GEdit.sh
+                    - row "VBench (video gen) Video benchmarks/video_gen/Vbench/sample_vbench.sh" [ref=e1127]:
+                      - cell "VBench (video gen)" [ref=e1128]
+                      - cell "Video" [ref=e1129]
+                      - cell "benchmarks/video_gen/Vbench/sample_vbench.sh" [ref=e1130]:
+                        - code [ref=e1131]: benchmarks/video_gen/Vbench/sample_vbench.sh
+                - generic [ref=e1132]:
+                  - heading "📄 License" [level=2] [ref=e1133]
+                  - 'link "Permalink: 📄 License" [ref=e1134] [cursor=pointer]':
+                    - /url: "#-license"
+                    - img [ref=e1135]
+                - paragraph [ref=e1137]: Copyright 2025 Bytedance Ltd. and/or its affiliates.
+                - generic [ref=e1138]:
+                  - heading "🙏 Acknowledgements" [level=2] [ref=e1139]
+                  - 'link "Permalink: 🙏 Acknowledgements" [ref=e1140] [cursor=pointer]':
+                    - /url: "#-acknowledgements"
+                    - img [ref=e1141]
+                - paragraph [ref=e1143]:
+                  - text: We would like to thank the contributors of
+                  - link "BAGEL" [ref=e1144] [cursor=pointer]:
+                    - /url: https://github.com/ByteDance-Seed/bagel
+                  - text: ","
+                  - link "Qwen2.5-VL-3B-Instruct" [ref=e1145] [cursor=pointer]:
+                    - /url: https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct
+                  - text: ", and"
+                  - link "Wan2.2" [ref=e1146] [cursor=pointer]:
+                    - /url: https://github.com/Wan-Video/Wan2.2
+                  - text: for their open research and contributions.
+                - generic [ref=e1147]:
+                  - heading "💖 Citation" [level=2] [ref=e1148]
+                  - 'link "Permalink: 💖 Citation" [ref=e1149] [cursor=pointer]':
+                    - /url: "#-citation"
+                    - img [ref=e1150]
+                - paragraph [ref=e1152]:
+                  - text: If you find
+                  - strong [ref=e1153]: Lance
+                  - text: "useful for your project or research, welcome to 🌟 this repo and cite our work using the following BibTeX:"
+                - generic [ref=e1154]:
+                  - generic [ref=e1155]:
+                    - text: "@misc{fu2026lanceunifiedmultimodalmodeling, title ="
+                    - generic [ref=e1156]: "{Lance: Unified Multimodal Modeling by Multi-Task Synergy}"
+                    - text: ", author ="
+                    - generic [ref=e1157]: "{Fengyi Fu and Mengqi Huang and Shaojin Wu and Yunsheng Jiang and Yufei Huo and Hao Li and Yinghang Song and Fei Ding and Jianzhu Guo and Qian He and Zheren Fu and Zhendong Mao and Yongdong Zhang}"
+                    - text: ", year ="
+                    - generic [ref=e1158]: "{2026}"
+                    - text: ", eprint ="
+                    - generic [ref=e1159]: "{2605.18678}"
+                    - text: ", archivePrefix ="
+                    - generic [ref=e1160]: "{arXiv}"
+                    - text: ", primaryClass ="
+                    - generic [ref=e1161]: "{cs.CV}"
+                    - text: ", url ="
+                    - generic [ref=e1162]: "{https://arxiv.org/abs/2605.18678}"
+                    - text: ", }"
+                  - button "Copy code to clipboard" [ref=e1164] [cursor=pointer]:
+                    - img [ref=e1165]
+                - generic [ref=e1168]:
+                  - heading "📞 Contact" [level=2] [ref=e1169]
+                  - 'link "Permalink: 📞 Contact" [ref=e1170] [cursor=pointer]':
+                    - /url: "#-contact"
+                    - img [ref=e1171]
+                - paragraph [ref=e1173]:
+                  - text: For questions, issues, or collaborations, please contact
+                  - link "Mengqi Huang" [ref=e1174] [cursor=pointer]:
+                    - /url: https://corleone-huang.github.io/
+                  - text: and
+                  - link "Jianzhu Guo" [ref=e1175] [cursor=pointer]:
+                    - /url: https://guojianzhu.com/
+                  - text: .
+        - generic [ref=e1179]:
+          - generic [ref=e1182]:
+            - heading "About" [level=2] [ref=e1183]
+            - paragraph [ref=e1184]: A 3B-active-parameter native unified multimodal model for image and video understanding, generation, and editing.
+            - generic [ref=e1185]:
+              - img [ref=e1186]
+              - link "lance-project.github.io" [ref=e1189] [cursor=pointer]:
+                - /url: https://lance-project.github.io
+            - heading "Topics" [level=3] [ref=e1190]
+            - generic [ref=e1192]:
+              - link "image-editing" [ref=e1193] [cursor=pointer]:
+                - /url: /topics/image-editing
+              - link "image-generation" [ref=e1194] [cursor=pointer]:
+                - /url: /topics/image-generation
+              - link "video-understanding" [ref=e1195] [cursor=pointer]:
+                - /url: /topics/video-understanding
+              - link "image-understanding" [ref=e1196] [cursor=pointer]:
+                - /url: /topics/image-understanding
+              - link "video-generation" [ref=e1197] [cursor=pointer]:
+                - /url: /topics/video-generation
+              - link "unified-multimodal-models" [ref=e1198] [cursor=pointer]:
+                - /url: /topics/unified-multimodal-models
+            - heading "Resources" [level=3] [ref=e1199]
+            - link "Readme" [ref=e1201] [cursor=pointer]:
+              - /url: "#readme-ov-file"
+              - img [ref=e1202]
+              - text: Readme
+            - heading "License" [level=3] [ref=e1204]
+            - link "Apache-2.0 license" [ref=e1206] [cursor=pointer]:
+              - /url: "#Apache-2.0-1-ov-file"
+              - img [ref=e1207]
+              - text: Apache-2.0 license
+            - heading "Security policy" [level=3] [ref=e1209]
+            - link "Security policy" [ref=e1211] [cursor=pointer]:
+              - /url: "#security-ov-file"
+              - img [ref=e1212]
+              - text: Security policy
+            - link "Activity" [ref=e1215] [cursor=pointer]:
+              - /url: /bytedance/Lance/activity
+              - img [ref=e1216]
+              - text: Activity
+            - link "Custom properties" [ref=e1219] [cursor=pointer]:
+              - /url: /bytedance/Lance/custom-properties
+              - img [ref=e1220]
+              - text: Custom properties
+            - heading "Stars" [level=3] [ref=e1222]
+            - link "719 stars" [ref=e1224] [cursor=pointer]:
+              - /url: /bytedance/Lance/stargazers
+              - img [ref=e1225]
+              - strong [ref=e1227]: "719"
+              - text: stars
+            - heading "Watchers" [level=3] [ref=e1228]
+            - link "6 watching" [ref=e1230] [cursor=pointer]:
+              - /url: /bytedance/Lance/watchers
+              - img [ref=e1231]
+              - strong [ref=e1233]: "6"
+              - text: watching
+            - heading "Forks" [level=3] [ref=e1234]
+            - link "40 forks" [ref=e1236] [cursor=pointer]:
+              - /url: /bytedance/Lance/forks
+              - img [ref=e1237]
+              - strong [ref=e1239]: "40"
+              - text: forks
+            - link "Report repository" [ref=e1241] [cursor=pointer]:
+              - /url: /contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Fbytedance%2FLance&report=bytedance+%28user%29
+          - generic [ref=e1243]:
+            - heading "Releases" [level=2] [ref=e1244]:
+              - link "Releases" [ref=e1245] [cursor=pointer]:
+                - /url: /bytedance/Lance/releases
+            - generic [ref=e1246]: No releases published
+          - generic [ref=e1248]:
+            - heading "Packages" [level=2] [ref=e1249]:
+              - link "Packages" [ref=e1250] [cursor=pointer]:
+                - /url: /orgs/bytedance/packages?repo_name=Lance
+            - generic [ref=e1251]: No packages published
+          - generic [ref=e1253]:
+            - heading "Contributors 5" [level=2] [ref=e1254]:
+              - link "Contributors 5" [ref=e1255] [cursor=pointer]:
+                - /url: /bytedance/Lance/graphs/contributors
+                - text: Contributors
+                - generic "5" [ref=e1256]
+            - list [ref=e1257]:
+              - listitem [ref=e1258]:
+                - link "@fengyifu2000" [ref=e1259] [cursor=pointer]:
+                  - /url: https://github.com/fengyifu2000
+                  - img "@fengyifu2000" [ref=e1260]
+              - listitem [ref=e1261]:
+                - link "@cleardusk" [ref=e1262] [cursor=pointer]:
+                  - /url: https://github.com/cleardusk
+                  - img "@cleardusk" [ref=e1263]
+              - listitem [ref=e1264]:
+                - link "@Corleone-Huang" [ref=e1265] [cursor=pointer]:
+                  - /url: https://github.com/Corleone-Huang
+                  - img "@Corleone-Huang" [ref=e1266]
+              - listitem [ref=e1267]:
+                - link "@fenfenfenfan" [ref=e1268] [cursor=pointer]:
+                  - /url: https://github.com/fenfenfenfan
+                  - img "@fenfenfenfan" [ref=e1269]
+              - listitem [ref=e1270]:
+                - link "@oss-bd" [ref=e1271] [cursor=pointer]:
+                  - /url: https://github.com/oss-bd
+                  - img "@oss-bd" [ref=e1272]
+          - generic [ref=e1274]:
+            - heading "Languages" [level=2] [ref=e1275]
+            - list [ref=e1280]:
+              - listitem [ref=e1281]:
+                - link "Python 96.3%" [ref=e1282] [cursor=pointer]:
+                  - /url: /bytedance/Lance/search?l=python
+                  - img [ref=e1283]
+                  - generic [ref=e1285]: Python
+                  - generic [ref=e1286]: 96.3%
+              - listitem [ref=e1287]:
+                - link "Shell 3.7%" [ref=e1288] [cursor=pointer]:
+                  - /url: /bytedance/Lance/search?l=shell
+                  - img [ref=e1289]
+                  - generic [ref=e1291]: Shell
+                  - generic [ref=e1292]: 3.7%
+  - contentinfo [ref=e1294]:
+    - heading "Footer" [level=2] [ref=e1295]
+    - generic [ref=e1296]:
+      - generic [ref=e1297]:
+        - link "GitHub Homepage" [ref=e1298] [cursor=pointer]:
+          - /url: https://github.com
+          - img [ref=e1299]
+        - generic [ref=e1301]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=e1302]:
+        - heading "Footer navigation" [level=3] [ref=e1303]
+        - list "Footer navigation" [ref=e1304]:
+          - listitem [ref=e1305]:
+            - link "Terms" [ref=e1306] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=e1307]:
+            - link "Privacy" [ref=e1308] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=e1309]:
+            - link "Security" [ref=e1310] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=e1311]:
+            - link "Status" [ref=e1312] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=e1313]:
+            - link "Community" [ref=e1314] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=e1315]:
+            - link "Docs" [ref=e1316] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=e1317]:
+            - link "Contact" [ref=e1318] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=e1319]:
+            - button "Manage cookies" [ref=e1321] [cursor=pointer]
+          - listitem [ref=e1322]:
+            - button "Do not share my personal information" [ref=e1324] [cursor=pointer]
