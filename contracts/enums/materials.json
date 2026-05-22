@@ -1,0 +1,49 @@
+{
+  "material_types": [
+    "scroll_video",
+    "link_video",
+    "manual_video",
+    "manual_image",
+    "image",
+    "extracted_video",
+    "screenshot",
+    "code_snippet",
+    "source_code",
+    "doc_page",
+    "repo_tree",
+    "repo_stats",
+    "changelog",
+    "social_proof",
+    "comparison"
+  ],
+  "source_types": [
+    "readme_embedded",
+    "readme_text",
+    "github_page",
+    "external_link",
+    "gh_api",
+    "gh_clone",
+    "playwright_download",
+    "playwright_screenshot",
+    "user_provided"
+  ],
+  "capture_methods": [
+    "playwright_download",
+    "playwright_screenshot",
+    "gh_api",
+    "gh_clone",
+    "user_provided"
+  ],
+  "usable_material_types": [
+    "scroll_video",
+    "extracted_video",
+    "image",
+    "link_video",
+    "code_snippet",
+    "screenshot",
+    "source_code",
+    "doc_page",
+    "manual_video",
+    "manual_image"
+  ]
+}

@@ -22,6 +22,7 @@ import { matchStyle as matchStyleFromMeta } from "./styleMeta";
 import { defaultMotionMap } from "./motions";
 import { getBgmByMood, toBgmTrack } from "./audio/bgmLibrary";
 import { generateBgmCurve } from "./audio/bgmCurve";
+import layoutsConfig from "./enums/layouts.json";
 
 // ── 1. 结构匹配 ──
 
@@ -43,17 +44,10 @@ export function matchStyle(
 }
 
 // ── 3. 布局匹配 ──
+// Source of truth: contracts/enums/layouts.json (synced to src/enums/layouts.json)
 
-const defaultLayoutBySceneType: Record<string, LayoutType> = {
-  hook: "hero-center",
-  problem: "hero-center",
-  solution: "split-left-text",
-  feature: "card-grid",
-  proof: "stat-highlight",
-  cta: "hero-center",
-  showcase: "media-full",
-  transition: "hero-center",
-};
+const defaultLayoutBySceneType: Record<string, LayoutType> =
+  layoutsConfig.scene_type_default_layout as Record<string, LayoutType>;
 
 export function matchLayout(sceneType: string): LayoutType {
   return defaultLayoutBySceneType[sceneType] ?? "hero-center";

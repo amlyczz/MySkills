@@ -1,0 +1,23 @@
+{
+  "name": "RepoAnalyzer",
+  "description": "分析 GitHub 仓库，提取项目理解、技术栈、源码洞察 — 不含口播脚本",
+  "version": "1.0",
+  "input": {
+    "contract": "pipeline-contracts/py/content#RepoInfo",
+    "description": "GitHub 仓库 URL 或 RepoInfo"
+  },
+  "output": {
+    "contract": "pipeline-contracts/py/content#ContentModel",
+    "description": "完整项目分析（不含 script/covers/publish_copy）"
+  },
+  "config": {
+    "properties": {
+      "repo_url": { "type": "string", "description": "GitHub 仓库 URL" },
+      "max_files": { "type": "integer", "default": 15 }
+    }
+  },
+  "exec": {
+    "type": "skill",
+    "skill": "repo-analyzer"
+  }
+}

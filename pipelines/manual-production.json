@@ -1,0 +1,25 @@
+{
+  "name": "manual-production",
+  "description": "人工提供全量素材，跳过分析和采集，直接编排→渲染",
+  "version": "1.0",
+  "processors": [
+    { "id": "compose", "type": "ScriptTimelineComposer" },
+    { "id": "audio",   "type": "MediaGenerator" },
+    { "id": "render",  "type": "VideoRenderer" },
+    { "id": "post",    "type": "PostProducer" }
+  ],
+  "edges": [
+    { "from": "compose", "to": "audio" },
+    { "from": "compose", "to": "render" },
+    { "from": "audio",   "to": "post" },
+    { "from": "render",  "to": "post" },
+    { "from": "compose", "to": "post", "output": "timeline" }
+  ],
+  "inputs": {
+    "content.json": { "type": "file", "contract": "pipeline-contracts/py/content#ContentModel" },
+    "material_manifest.json": { "type": "file", "contract": "pipeline-contracts/py/material#MaterialManifest" }
+  },
+  "outputs": {
+    "final.mp4": { "from": "post" }
+  }
+}

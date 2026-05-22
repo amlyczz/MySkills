@@ -1,0 +1,22 @@
+{
+  "name": "MediaGenerator",
+  "description": "音频生成：TTS 语音 + BGM 背景音乐",
+  "version": "1.0",
+  "input": {
+    "contract": "pipeline-contracts/py/content#Script",
+    "description": "口播脚本内容"
+  },
+  "output": {
+    "contract": "file",
+    "description": "voiceover.mp3 + bgm.mp3"
+  },
+  "config": {
+    "properties": {
+      "total_duration": { "type": "number", "description": "BGM 时长（秒）" }
+    }
+  },
+  "exec": {
+    "type": "command",
+    "command": "python -m media_generator voiceover --from-content <input> --output <output_dir>/voiceover.mp3 && python -m media_generator bgm --duration <total_duration> --output <output_dir>/bgm.mp3"
+  }
+}

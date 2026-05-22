@@ -1,0 +1,9 @@
+{
+  "transitions": [
+    "none",
+    "crossfade",
+    "whip-pan",
+    "slide-in",
+    "slide-out"
+  ]
+}

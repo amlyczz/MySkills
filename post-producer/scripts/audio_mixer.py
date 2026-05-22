@@ -110,6 +110,47 @@ def _gen_bgm_volume_curve(segments: list[dict], total_duration: float,
     return "".join(parts)
 
 
+def _curve_to_ffmpeg_expr(curve: list[dict], total_seconds: float) -> str:
+    """Convert pre-computed {time, volume} curve to an ffmpeg volume expression.
+
+    Linear interpolation between consecutive curve points with piecewise
+    conditional branches. Allows ffmpeg to smoothly ramp between points.
+    """
+    if not curve:
+        return "0"
+
+    pts: list[tuple[float, float]] = [(p["time"], p["volume"]) for p in curve]
+    # Extend to cover full duration with last value
+    if pts[-1][0] < total_seconds:
+        pts.append((total_seconds, pts[-1][1]))
+    if pts[0][0] > 0:
+        pts.insert(0, (0.0, pts[0][1]))
+
+    parts: list[str] = []
+    for i in range(len(pts) - 1):
+        t0, v0 = pts[i]
+        t1, v1 = pts[i + 1]
+        if i == 0:
+            # First segment: implicit else before this point = v0
+            if abs(v1 - v0) < 0.001:
+                parts.append(f"if(lt(t,{t1}),{v0}")
+            else:
+                parts.append(
+                    f"if(lt(t,{t1}),{v0}+({v1}-{v0})*(t-{t0})/{t1 - t0}"
+                )
+        else:
+            if abs(v1 - v0) < 0.001:
+                parts.append(f",if(lt(t,{t1}),{v0})")
+            else:
+                parts.append(
+                    f",if(lt(t,{t1}),{v0}+({v1}-{v0})*(t-{t0})/{t1 - t0})"
+                )
+
+    parts.append(f",{pts[-1][1]}")
+    parts.append(")" * (len(pts) - 1))
+    return "".join(parts)
+
+
 def _extract_sfx(segments: list[dict], sfx_dir: str | None) -> list[dict]:
     """Collect SFX triggers from timeline segments."""
     if not sfx_dir or not os.path.isdir(sfx_dir):
@@ -153,7 +194,8 @@ def mix_audio(video_path: str,
               output_path: str = "final.mp4",
               sfx_dir: str | None = None,
               bgm_offset: float = 0.5,
-              bgm_tail: float = 1.0) -> str:
+              bgm_tail: float = 1.0,
+              bgm_curve_path: str | None = None) -> str:
     """Mix audio and produce final video."""
 
     with open(timeline_path, "r") as f:
@@ -186,7 +228,15 @@ def mix_audio(video_path: str,
     )
 
     # ── BGM ──────────────────────────────────────────────────
-    vol_curve = _gen_bgm_volume_curve(segments, total_dur, bgm_offset, bgm_tail)
+    # Use pre-computed curve from timeline composer if available,
+    # otherwise fall back to segment-based generation (legacy path).
+    if bgm_curve_path and os.path.exists(bgm_curve_path):
+        with open(bgm_curve_path) as f:
+            curve_data = json.load(f)
+        vol_curve = _curve_to_ffmpeg_expr(curve_data, total_bgm)
+        print(f"  BGM curve: {bgm_curve_path} ({len(curve_data)} points)")
+    else:
+        vol_curve = _gen_bgm_volume_curve(segments, total_dur, bgm_offset, bgm_tail)
     filters.append(
         f"[{bgm_idx}:a]atrim=0:{min(bgm_dur, total_bgm)},"
         f"apad=whole_len={total_bgm},"
@@ -294,6 +344,8 @@ def main():
                         help="Silence before BGM starts (default: 0.5s)")
     parser.add_argument("--bgm-tail", type=float, default=1.0,
                         help="Silence after BGM fade-out (default: 1.0s)")
+    parser.add_argument("--bgm-curve", default=None,
+                        help="Path to pre-computed bgm_volume_curve.json (from timeline composer)")
     parser.add_argument("--srt", default=None,
                         help="Path to SRT subtitle file to burn into final video")
     args = parser.parse_args()
@@ -307,6 +359,7 @@ def main():
         sfx_dir=args.sfx_dir,
         bgm_offset=args.bgm_offset,
         bgm_tail=args.bgm_tail,
+        bgm_curve_path=args.bgm_curve,
     )
     if args.srt:
         output = burn_subtitles(output, args.srt)

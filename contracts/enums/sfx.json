@@ -1,0 +1,15 @@
+{
+  "motion_to_sfx": {
+    "arc-entrance": "whoosh-soft.mp3",
+    "spring-slide-up": "swoosh-up.mp3",
+    "spring-slide-left": "swoosh-up.mp3",
+    "scale-fade": "pop-soft.mp3",
+    "bounce-in": "bounce.mp3",
+    "typewriter": "type-keystroke.mp3",
+    "reveal-mask": "swoosh-reveal.mp3",
+    "spring-elastic": "bounce.mp3",
+    "smooth-scale-up": "pop-soft.mp3",
+    "staggered-grow": "swoosh-up.mp3",
+    "blur-focus": "whoosh-soft.mp3"
+  }
+}

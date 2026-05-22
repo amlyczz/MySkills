@@ -9,7 +9,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 eval "$(
   python3 -c "
 import json, sys
-p = json.load(open('$PROJECT_DIR/material-collector/proxy.json'))
+p = json.load(open('$SCRIPT_DIR/proxy.json'))
 key = 'mac' if sys.platform == 'darwin' else 'wsl'
 h = p[key]['host']
 port = p[key]['port']

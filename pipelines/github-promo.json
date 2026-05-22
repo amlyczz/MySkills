@@ -1,0 +1,29 @@
+{
+  "name": "github-promo",
+  "description": "从 GitHub 仓库到推广视频的全流程 — 当前管线的标准模板",
+  "version": "1.0",
+  "processors": [
+    { "id": "analyze",      "type": "RepoAnalyzer" },
+    { "id": "curate",       "type": "MaterialCurator" },
+    { "id": "compose",      "type": "ScriptTimelineComposer" },
+    { "id": "audio",        "type": "MediaGenerator" },
+    { "id": "render",       "type": "VideoRenderer" },
+    { "id": "post",         "type": "PostProducer" }
+  ],
+  "edges": [
+    { "from": "analyze", "to": "curate" },
+    { "from": "analyze", "to": "compose" },
+    { "from": "curate",  "to": "compose" },
+    { "from": "compose", "to": "audio",   "output": "script" },
+    { "from": "compose", "to": "render" },
+    { "from": "audio",   "to": "post" },
+    { "from": "render",  "to": "post" },
+    { "from": "compose", "to": "post",    "output": "timeline" }
+  ],
+  "inputs": {
+    "repo_url": { "type": "string", "description": "GitHub 仓库 URL" }
+  },
+  "outputs": {
+    "final.mp4": { "from": "post", "description": "最终视频文件" }
+  }
+}

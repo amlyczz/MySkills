@@ -4,6 +4,7 @@
     "module": "commonjs",
     "jsx": "react-jsx",
     "strict": true,
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

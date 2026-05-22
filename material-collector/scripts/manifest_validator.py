@@ -3,8 +3,7 @@
 manifest_validator.py — 素材清单加载与验证
 
 从 allocate.py (v3) 拆分出的职责：
-  - MATERIAL_TYPE_ENUM / USABLE_MATERIAL_TYPES 常量
-  - ManifestMaterial / Manifest Pydantic 模型
+  - MATERIAL_TYPE_ENUM / USABLE_MATERIAL_TYPES 常量（从 pipeline-contracts 引用）
   - load_manifest() / validate_manifest()
 
 Usage:
@@ -12,21 +11,14 @@ Usage:
 """
 
 from pydantic import BaseModel, Field
+from pipeline_contracts.enums import MATERIAL_TYPES, USABLE_MATERIAL_TYPES
 
-# All 15 material types from v2 material_manifest.schema.json
-MATERIAL_TYPE_ENUM = {
-    'scroll_video', 'link_video', 'manual_video', 'manual_image',
-    'image', 'extracted_video', 'screenshot', 'code_snippet',
-    'source_code', 'doc_page', 'repo_tree', 'repo_stats',
-    'changelog', 'social_proof', 'comparison',
-}
 
-# Types usable as visual material in intro/outro
-USABLE_MATERIAL_TYPES = {
-    'scroll_video', 'extracted_video', 'image', 'link_video',
-    'code_snippet', 'screenshot', 'source_code', 'doc_page',
-    'manual_video', 'manual_image',
-}
+# All 15 material types from v2 material_manifest.schema.json (from shared enum source)
+MATERIAL_TYPE_ENUM = MATERIAL_TYPES
+
+# Types usable as visual material (from shared enum source)
+USABLE_MATERIAL_TYPES_SET = USABLE_MATERIAL_TYPES
 
 
 class ManifestMaterial(BaseModel):

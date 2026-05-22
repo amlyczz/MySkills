@@ -23,15 +23,17 @@
 
 ## 1. 系统概述
 
-MySkills 是一个**从 GitHub 仓库 URL 到最终视频**的全自动视频生成管线。输入一个 GitHub 仓库 URL，输出一个结构化的项目演示视频（`final.mp4`）。
+MySkills 是一个**从输入到最终视频**的全自动视频生成管线。支持多种输入（GitHub 仓库 URL、已有素材、纯文案），输出结构化的项目演示视频（`final.mp4`）。
 
 ### 核心设计原则
 
-- **分层解耦**：5 层严格递进的流水线架构，每层只依赖前一层的输出
+- **Processor 架构**：每个功能单元是一个 Processor，输入契约 + 处理逻辑 + 输出契约，不关心上下游
+- **Pipeline DAG 编排**：管线由 `pipelines/*.json` 定义 DAG 连接关系，Orchestrator 拓扑排序后顺序执行
 - **AI 决策 + 机械执行**：创作类任务由 AI agent 主导，确定性任务由脚本自动完成
 - **无降级**：每阶段必须成功，失败即报错退出，不静默跳过
-- **Schema 约束**：所有层间数据交换使用 Pydantic / Zod 类型约束
-- **断点续跑**：checkpoint 机制，重跑时跳过已完成阶段
+- **契约驱动**：所有跨层数据使用 `contracts/pipeline_contracts/` Pydantic/Zod 类型约束
+- **断点续跑**：checkpoint 机制，重跑时跳过已完成的 Processor
+- **全走代理**：所有网络命令先 `source proxy.sh`
 
 ### 适用场景
 
@@ -45,71 +47,72 @@ MySkills 是一个**从 GitHub 仓库 URL 到最终视频**的全自动视频生
 ## 2. 整体架构
 
 ```
-                     ┌─────────────────────────┐
-                     │  内容源层 (可选)          │
-                     │ content-source-github-   │
-                     │ trending                 │
-                     └───────────┬─────────────┘
-                                 │ 选择 repo
-                                 ▼
-┌────────────────────────────────────────────────────────────────┐
-│                    Layer 0: 内容生成                           │
-│                 content-generator (AI 决策)                     │
-│         输入: GitHub URL → 输出: content.json                   │
-└────────────────────────────┬───────────────────────────────────┘
-                             │ content.json
-┌────────────────────────────▼───────────────────────────────────┐
-│                    Layer 1: 素材采集                           │
-│                 material-collector (机械执行)                    │
-│         输入: content.json → 输出: material_manifest.json       │
-└────────────────────────────┬───────────────────────────────────┘
-                             │ material_manifest.json
-┌────────────────────────────▼───────────────────────────────────┐
-│                    Layer 2: 时间线编排                         │
-│                 timeline-composer (机械执行)                     │
-│         输入: content.json + manifest → 输出: timeline.json     │
-│                                  + video_config.json            │
-│                                  + .srt 字幕                    │
-└────────────────────────────┬───────────────────────────────────┘
-                             │ video_config.json + timeline.json
-        ┌────────────────────┼────────────────────┐
-        ▼                    ▼                    ▼
-┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-│  Layer 3      │   │  Layer 2.5    │   │  横向切面      │
-│  video-       │   │  音频生成      │   │  media_        │
-│  renderer     │   │  media_       │   │  generation    │
-│  (Remotion)   │   │  generation   │   │  (图片/语音/    │
-│               │   │  (voiceover   │   │   音乐/视频)    │
-│               │   │   + bgm)      │   │               │
-└───────┬───────┘   └───────┬───────┘   └───────────────┘
-        │                   │
-        ▼                   ▼
-┌────────────────────────────────────────────────────────────────┐
-│                    Layer 4: 后期合成                          │
-│                 post-producer (机械执行)                        │
-│         输入: video.mp4 + voiceover + bgm + timeline           │
-│         输出: final.mp4 ✅                                      │
-└────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  pipelines/*.json — Pipeline 定义文件                            │
+│  github-promo / manual-production / podcast-clip                │
+│  处理器 DAG: RepoAnalyzer→MaterialCurator→ScriptTimelineComposer │
+│             →MediaGenerator→VideoRenderer→PostProducer          │
+└──────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                Pipeline Orchestrator                             │
+│  读定义 → 拓扑排序 → 按序执行 Processor + 断点续跑               │
+└──────────────────────────────────────────────────────────────────┘
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        ▼                      ▼                      ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│ RepoAnalyzer     │  │ MaterialCurator  │  │ ScriptTimeline   │
+│ content-         │  │ material-        │  │ Composer         │
+│ generator/       │  │ collector/       │  │ timeline-        │
+│ GitHub URL →     │  │ ContentModel →   │  │ composer/        │
+│ ContentModel     │  │ MaterialManifest │  │ Content+Material │
+│ (AI 决策)        │  │ (机械执行)        │  │ → TimelineModel  │
+└───────┬──────────┘  └───────┬──────────┘  │ + VideoConfig    │
+        │                     │              │ (机械执行)        │
+        │                     │              └───────┬──────────┘
+        │                     │                      │
+        ▼                     ▼                      ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │ VideoRenderer   │  │ MediaGenerator  │  │ PostProducer    │  │
+│  │ video-renderer/ │  │ media_generator│  │ post-producer/  │  │
+│  │ Remotion 渲染   │  │ voiceover+bgm   │  │ 混音+字幕       │  │
+│  │ → video.mp4     │  │ → *.mp3         │  │ → final.mp4 ✅  │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
 
-┌────────────────────────────────────────────────────────────────┐
-│                    编排层: pipeline-orchestrator               │
-│            AI agent 阅读 skill.md 逐阶段驱动管线的执行           │
-└────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  数据契约层: contracts/pipeline_contracts/ (Pydantic + Zod)      │
+│  多语言共享枚举: contracts/enums/*.json                          │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### 3 种执行路径
+### 3 种 Pipeline
 
-| 路径 | 适用场景 | 说明 |
-|------|---------|------|
-| **全自动** | 从零到最终视频 | content-source → content-generator → pipeline-orchestrator 全阶段执行 |
-| **指定仓库** | 已知目标项目 | 直接调用 content-generator 生成内容，再走 pipeline-orchestrator |
-| **半自动** | 已有 content.json | 从 pipeline-orchestrator Phase 1 开始执行（素材采集 → 渲染） |
+| Pipeline | 适用场景 | Processor 序列 |
+|----------|---------|---------------|
+| `github-promo` | GitHub 仓库 → 视频 | RepoAnalyzer → MaterialCurator → ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
+| `manual-production` | 已有素材 → 视频 | ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
+| `podcast-clip` | 纯文案 → 音频 | ScriptTimelineComposer → MediaGenerator → PostProducer |
+
+### Processor 一览
+
+| Processor | 输入 | 输出 |
+|-----------|------|------|
+| **RepoAnalyzer** | GitHub URL → `repo-analyzer/` | ContentModel |
+| **MaterialCurator** | ContentModel → `material-collector/` | MaterialManifest |
+| **ScriptTimelineComposer** | ContentModel + MaterialManifest → `timeline-composer/` | TimelineModel + VideoConfig + .srt |
+| **MediaGenerator** | Script → `media_generator/` | voiceover.mp3 + bgm.mp3 |
+| **VideoRenderer** | VideoConfig + Timeline → `video-renderer/remotion/` | video.mp4 |
+| **PostProducer** | video.mp4 + audio + timeline → `post-producer/` | final.mp4 |
 
 ---
 
 ## 3. Pipeline 业务流
 
-### Phase 0: 内容生成（AI 决策）
+### Processor: RepoAnalyzer（内容生成 — AI 决策）
 
 **角色**：AI agent 主导
 
@@ -126,17 +129,17 @@ MySkills 是一个**从 GitHub 仓库 URL 到最终视频**的全自动视频生
    - 性能、安全与扩展性
 4. **内容生成**：生成口播脚本（8-20 segments）、文案、封面提示词、发布文案
 
-**输出文件**：`content-generator/content/YYYY-MM-DD/HHmm-{repo_name}-content.json`
+**输出文件**：`repo-analyzer/content/YYYY-MM-DD/HHmm-{repo_name}-content.json`
 
 **质量铁律**：
 - 口播 8-20 segments，总时长 60-360 秒
 - 4 字/秒估算 duration_est
 - 封面提示词中英文各一份，具体到视觉元素
-- 去重记录写入 `content-generator/content/YYYY-repos.md`
+- 去重记录写入 `repo-analyzer/schema/dedup.py`（统一路径 `repo-analyzer/content/YYYY-repos.md`）
 
 ---
 
-### Phase 1: 素材采集（机械执行）
+### Processor: MaterialCurator（素材采集 — 机械执行）
 
 **角色**：Playwright 录制脚本 + allocate.py
 
@@ -176,7 +179,7 @@ MySkills 是一个**从 GitHub 仓库 URL 到最终视频**的全自动视频生
 
 ---
 
-### Phase 2: 时间线编排（机械执行）
+### Processor: ScriptTimelineComposer（时间线编排 — 机械执行）
 
 **角色**：`timeline_composer.py`（805 行编排引擎）
 
@@ -195,40 +198,45 @@ MySkills 是一个**从 GitHub 仓库 URL 到最终视频**的全自动视频生
 | 7 | `_divide_chapters()` | 从 segment boundaries 创建章节标记 |
 | 8 | `_generate_subtitles()` | 从 voiceover 文本生成 15 字/段字幕条目 |
 
-**场景类型 → 布局映射**：
+**场景类型 → 布局映射**（数据源：`contracts/enums/layouts.json` → `scene_type_default_layout` 在 matching.ts 中消费）：
 
 ```
-hook             → hero-center       + bounce-in
-problem          → hero-center       + {}
-solution         → split-left-text   + {}
-features         → card-grid         + spring-slide-up
-showcase         → media-full        + {}
-code_showcase    → code-display      + {}
-source_highlight → code-display      + {}
-stats_showcase   → stat-highlight    + {}
-proof            → stat-highlight    + spring-elastic
-social_proof     → quote-style       + {}
-comparison       → stat-highlight    + {}
-cta              → hero-center       + spring-slide-up
-manual           → media-full        + {}
+hook             → hero-center
+problem          → hero-center
+solution         → split-left-text
+features         → card-grid
+showcase         → media-full
+code_showcase    → code-display
+source_highlight → code-display
+stats_showcase   → stat-highlight
+proof            → stat-highlight
+social_proof     → quote-style
+comparison       → stat-highlight
+cta              → hero-center
+manual           → media-full
+origin           → full-screen-text
+milestones       → card-grid
+today            → full-screen-text
+demo             → media-full
 ```
 
 **输出文件**：
 - `timeline.json` — 完整时间线（segments + chapters + subtitles）
 - `timeline.srt` — 字幕文件
-- `video_config.json` — **唯一**写入此文件的层，Phase 3 的直接输入
+- `timeline.bgm_curve.json` — 预计算 BGM 音量曲线（消除 bgmCurve.ts / audio_mixer.py 重复逻辑）
+- `video_config.json` — Remotion 渲染的直接输入，包含预计算的 `audio.bgm.volumeCurve`
 
 ---
 
-### Phase 2.5: 音频生成（机械执行）
+### Processor: MediaGenerator（音频生成 — 机械执行）
 
-**角色**：`media_generation` CLI
+**角色**：`media_generator` CLI
 
 **输入**：content.json + 总时长
 
 ```
-python -m media_generation voiceover --from-content content.json --output voiceover.mp3
-python -m media_generation bgm --duration $TOTAL_DURATION --output bgm.mp3
+python -m media_generator voiceover --from-content content.json --output voiceover.mp3
+python -m media_generator bgm --duration $TOTAL_DURATION --output bgm.mp3
 ```
 
 **输出文件**：
@@ -239,15 +247,20 @@ python -m media_generation bgm --duration $TOTAL_DURATION --output bgm.mp3
 
 ---
 
-### Phase 3: Remotion 渲染（机械执行）
+### Processor: VideoRenderer（Remotion 渲染 — 机械执行）
 
 **角色**：Remotion + React 组件树
 
 **输入**：`video_config.json`
 
-```
-npx remotion render VideoComposer video.mp4 \
-  --props=video_config.json --codec h264 --crf 18
+```bash
+source pipeline-orchestrator/scripts/proxy.sh
+cd video-renderer/remotion
+
+npx remotion render VideoComposer "$OUTPUT_DIR/video.mp4" \
+  --props="$OUTPUT_DIR/video_config.json" --codec h264 --crf 18
+
+cd "$OLDPWD"
 ```
 
 **输出文件**：`video.mp4`（h264, CRF 18, 1080p@30fps）
@@ -256,21 +269,21 @@ npx remotion render VideoComposer video.mp4 \
 
 ---
 
-### Phase 4: 后期合成（机械执行）
+### Processor: PostProducer（后期合成 — 机械执行）
 
 **角色**：`post-producer` 脚本
 
 **输入文件**：
-- `video.mp4`（Phase 3）
-- `voiceover.mp3` + `bgm.mp3`（Phase 2.5）
-- `timeline.json` + `.srt`（Phase 2）
+- `video.mp4`（VideoRenderer）
+- `voiceover.mp3` + `bgm.mp3`（MediaGenerator）
+- `timeline.json` + `.srt` + `.bgm_curve.json`（ScriptTimelineComposer）
 
 **处理流程**：
 
 1. **verify_output.py**：检查所有必需文件是否存在
 2. **audio_mixer.py**：音频混音管线
    - Voiceover: loudnorm 标准化到 -16 LUFS
-   - BGM: 按 segment 音频编排生成音量包络 + fade in/out
+   - BGM: 优先使用预计算的 `bgm_volume_curve.json`（`--bgm-curve`），消除与 bgmCurve.ts 的重复实现；回退到 segment 级音量包络
    - **Sidechain ducking**: voiceover 激活时 BGM 自动闪避
    - **SFX 放置**: 按 timeline 时间点放置音效
    - **Mux**: video + mixed audio → 最终输出
@@ -281,16 +294,30 @@ npx remotion render VideoComposer video.mp4 \
 
 ## 4. 层间数据契约
 
-| 层 | 输入 | 输出 | Schema 验证 |
-|-----|------|------|-------------|
-| Layer 0 | GitHub repo URL | `content.json` | `ContentModel` (Pydantic) + `content.schema.json` |
-| Layer 1 | Repo URL + 时长 | `material_manifest.json` + `materials/` | `MaterialManifest` (Pydantic) + `material_manifest.schema.json` |
-| Layer 2 | content.json + manifest | `timeline.json` + `.srt` + `video_config.json` | `TimelineComposer` 内联验证 + `timeline.schema.json` / Zod |
-| Layer 3 | `video_config.json` | `video.mp4` | Zod `videoConfigSchema` |
-| Layer 4 | video.mp4 + audio + timeline | `final.mp4` | `TimelineModel` + `MixAudioRequest` (Pydantic) |
-| 横向 | 文本/提示词 | 媒体文件 | 各 capability Pydantic 模型 |
+所有跨层数据模型统一在 `contracts/pipeline_contracts/` 包中定义（Pydantic BaseModel），TypeScript 侧使用 Zod schema 保持一致性。多语言共享枚举放在 `contracts/enums/*.json`：
 
-### ContentModel（Layer 0 输出）
+| 枚举文件 | 用途 |
+|---------|------|
+| `layouts.json` | 15 个布局 ID + 26 条 scene_type→layout 默认映射 |
+| `motions.json` | 18 个动效 ID + 元素角色→动效默认映射 |
+| `transitions.json` | 5 个过渡类型 |
+| `styles.json` | 12 个样式主题 ID |
+| `structures.json` | 5 个结构模板 ID |
+| `materials.json` | 15 个素材类型 + 9 个来源 + 5 个采集方法 |
+| `sfx.json` | 11 个动效→音效文件映射 |
+
+### 各 Processor 数据契约
+
+| Processor | 输入 | 输出 | 模型 |
+|-----------|------|------|------|
+| RepoAnalyzer | GitHub repo URL | `content.json` | `ContentModel` (Pydantic) |
+| MaterialCurator | ContentModel | `material_manifest.json` | `MaterialManifest` (Pydantic) |
+| ScriptTimelineComposer | ContentModel + MaterialManifest | `timeline.json` + `.srt` + `video_config.json` + `.bgm_curve.json` | `TimelineModel` + Zod `VideoConfig` |
+| VideoRenderer | `video_config.json` | `video.mp4` | Zod `videoConfigSchema` |
+| PostProducer | video.mp4 + audio + timeline | `final.mp4` | `TimelineModel` + `MixAudioRequest` |
+| MediaGenerator | 文本/提示词 | 媒体文件 | 各 capability 模型 |
+
+### ContentModel（RepoAnalyzer 输出 — Python Pydantic）
 
 ```python
 class ContentModel(BaseModel):
@@ -303,7 +330,7 @@ class ContentModel(BaseModel):
     meta:        Meta          # generated_at, source
 ```
 
-### MaterialManifest（Layer 1 输出）
+### MaterialManifest（MaterialCurator 输出 — Python Pydantic）
 
 ```python
 class MaterialManifest(BaseModel):
@@ -313,7 +340,7 @@ class MaterialManifest(BaseModel):
     materials:  list[Material]    # Material: id, type, path, duration?, dimensions?
 ```
 
-### TimelineSegment（Layer 2 内部模型）
+### TimelineSegment（ScriptTimelineComposer 内部模型 — Python Pydantic）
 
 ```python
 class TimelineSegment(BaseModel):
@@ -332,7 +359,7 @@ class TimelineSegment(BaseModel):
     transition_out:   str
 ```
 
-### VideoConfig（Layer 3 输入 — Zod 约束）
+### VideoConfig（VideoRenderer 输入 — TypeScript Zod 约束）
 
 ```typescript
 interface VideoConfig {
@@ -368,16 +395,17 @@ total_seconds = max(60, min(300, ceil(total_duration_est * 1.2 + 30)))
 ### 输出目录结构
 
 ```
-$OUTPUT_DIR/                          # content-generator/content/YYYY-MM-DD/HHmm-{repo_name}
-  video_config.json                   # Agent 初始 → Phase 2 精细化覆盖
-  material_manifest.json              # Phase 1 产出
-  materials/                          # Phase 1 素材文件目录
-  timeline.json                       # Phase 2 产出
-  timeline.srt                        # Phase 2 产出字幕
-  voiceover.mp3                       # Phase 2.5 产出
-  bgm.mp3                             # Phase 2.5 产出
-  video.mp4                           # Phase 3 产出
-  final.mp4                           # Phase 4 产出 ✅
+$OUTPUT_DIR/                          # repo-analyzer/content/YYYY-MM-DD/HHmm-{repo_name}
+  video_config.json                   # Agent 初始 → ScriptTimelineComposer 精细化覆盖
+  material_manifest.json              # MaterialCurator 产出
+  materials/                          # MaterialCurator 素材文件目录
+  timeline.json                       # ScriptTimelineComposer 产出
+  timeline.srt                        # ScriptTimelineComposer 产出字幕
+  timeline.bgm_curve.json             # ScriptTimelineComposer 产出 BGM 曲线
+  voiceover.mp3                       # MediaGenerator 产出
+  bgm.mp3                             # MediaGenerator 产出
+  video.mp4                           # VideoRenderer 产出
+  final.mp4                           # PostProducer 产出 ✅
   .pipeline_checkpoints.json          # 断点续跑状态
 ```
 
@@ -659,8 +687,8 @@ underline   → none
 
 | 层 | 类型 | 生成方式 | 渲染方式 |
 |---|------|---------|---------|
-| BGM | 背景音乐 | Phase 2.5 media_generation | `Audio` + volume curve |
-| Voiceover | 口播 | Phase 2.5 media_generation | 逐场景 `Audio` 段 |
+| BGM | 背景音乐 | MediaGenerator | `Audio` + volume curve |
+| Voiceover | 口播 | MediaGenerator | 逐场景 `Audio` 段 |
 | SFX | 音效 | sfxLibrary 模板匹配 | `SfxPlayer` 组件触发 |
 
 ### 9.2 SFX 绑定
@@ -683,12 +711,18 @@ blur-focus         → whoosh-soft.mp3   (0.6)
 
 ### 9.3 BGM 音量曲线
 
-`generateBgmCurve()` 根据场景类型和 voiceover 状态生成时间-音量曲线：
+BGM 音量曲线在 **ScriptTimelineComposer** 阶段预计算，写入 `video_config.json` 的 `audio.bgm.volumeCurve` 和独立文件 `bgm_volume_curve.json`。消除 bgmCurve.ts / audio_mixer.py 之间重复实现。
+
+规则（继承 bgmCurve.ts 语义）：
 
 - **hook 场景**：从 0 淡入到 0.5（如有 voiceover 则 0.15），1.5 秒
 - **有 voiceover 场景**：闪避到 0.15
 - **无 voiceover 场景**：保持在 0.5
 - **cta 场景**：最后 1.5 秒从 0.3 淡出到 0
+
+消费方：
+- **VideoComposer.tsx**：优先使用 `config.audio.bgm?.volumeCurve`，回退到运行时 `generateBgmCurve()`
+- **audio_mixer.py**：`--bgm-curve` 参数读取预计算曲线，`_curve_to_ffmpeg_expr()` 转换为 ffmpeg 表达式
 
 ### 9.4 Voiceover 对齐
 
@@ -737,28 +771,70 @@ blur-focus         → whoosh-soft.mp3   (0.6)
 
 ## 11. 文件索引
 
+### 数据契约层
+
+| 路径 | 用途 |
+|------|------|
+| `contracts/pipeline_contracts/__init__.py` | 包入口，导出所有模型 |
+| `contracts/pipeline_contracts/content.py` | ContentModel, RepoInfo, ContentInfo |
+| `contracts/pipeline_contracts/material.py` | MaterialManifest, Material |
+| `contracts/pipeline_contracts/timeline.py` | TimelineModel, TimelineSegment |
+| `contracts/pipeline_contracts/audio.py` | VoiceoverSegment, AudioConfig |
+| `contracts/pipeline_contracts/video_config.py` | VideoConfig (Python 版) |
+| `contracts/pipeline_contracts/enums.py` | JSON 枚举加载器 |
+| `contracts/pipeline_contracts/utils.py` | ffprobe 工具函数 |
+| `contracts/pipeline_contracts/pipeline.py` | PipelineDef, ProcessorDef |
+| `contracts/enums/layouts.json` | 布局 ID + 映射 |
+| `contracts/enums/motions.json` | 动效 ID + 映射 |
+| `contracts/enums/transitions.json` | 过渡类型 |
+| `contracts/enums/styles.json` | 样式主题 |
+| `contracts/enums/structures.json` | 结构模板 |
+| `contracts/enums/materials.json` | 素材类型 |
+| `contracts/enums/sfx.json` | 动效→音效映射 |
+
+### Pipeline 定义
+
+| 路径 | 用途 |
+|------|------|
+| `pipelines/github-promo.json` | 标准 GitHub 推广管线 DAG |
+| `pipelines/manual-production.json` | 手动素材输入管线 |
+| `pipelines/podcast-clip.json` | 纯文案音频管线 |
+
+### Processor 声明
+
+| 路径 | 用途 |
+|------|------|
+| `repo-analyzer/processor.json` | RepoAnalyzer 声明 |
+| `material-collector/processor.json` | MaterialCurator 声明 |
+| `timeline-composer/processor.json` | ScriptTimelineComposer 声明 |
+| `video-renderer/processor.json` | VideoRenderer 声明 |
+| `post-producer/processor.json` | PostProducer 声明 |
+| `media_generator/processor.json` | MediaGenerator 声明 |
+
 ### Pipeline 层
 
 | 路径 | 用途 |
 |------|------|
-| `content-generator/skill.md` | Layer 0 AI 操作指南 |
-| `content-generator/schema/models.py` | ContentModel Pydantic |
-| `content-generator/schema/dedup.py` | DedupDB 去重管理 |
-| `content-source-github-trending/skill.md` | 内容源入口 |
-| `material-collector/skill.md` | Layer 1 操作指南 |
-| `material-collector/schema/models.py` | MaterialManifest Pydantic |
+| `repo-analyzer/skill.md` | RepoAnalyzer AI 操作指南 |
+| `repo-analyzer/schema/models.py` | import 重定向到 pipeline_contracts |
+| `repo-analyzer/schema/dedup.py` | DedupDB 去重管理 |
+| `github-trending/skill.md` | 内容源入口 |
+| `material-collector/skill.md` | MaterialCurator 操作指南 |
+| `material-collector/schema/models.py` | import 重定向到 pipeline_contracts |
 | `material-collector/scripts/recorder.mjs` | Playwright 录制 |
 | `material-collector/scripts/allocate.py` | 素材验证编排 |
 | `material-collector/scripts/manifest_validator.py` | Manifest 校验 |
-| `timeline-composer/skill.md` | Layer 2 操作指南 |
-| `timeline-composer/scripts/timeline_composer.py` | 编排引擎（805 行） |
-| `video-renderer/skill.md` | Layer 3 操作指南 |
-| `post-producer/skill.md` | Layer 4 操作指南 |
-| `post-producer/schema/models.py` | 混音模型 |
-| `post-producer/scripts/audio_mixer.py` | 音频混音 |
+| `timeline-composer/skill.md` | ScriptTimelineComposer 操作指南 |
+| `timeline-composer/scripts/timeline_composer.py` | 编排引擎（~720 行） |
+| `video-renderer/skill.md` | VideoRenderer 操作指南 |
+| `post-producer/skill.md` | PostProducer 操作指南 |
+| `post-producer/schema/models.py` | import 重定向到 pipeline_contracts |
+| `post-producer/scripts/audio_mixer.py` | 音频混音（支持 --bgm-curve） |
 | `post-producer/scripts/verify_output.py` | 输出验证 |
 | `pipeline-orchestrator/skill.md` | 编排层操作指南 |
-| `media_generation/__main__.py` | 媒体生成 CLI |
+| `pipeline-orchestrator/scripts/proxy.sh` | 统一网络代理 |
+| `pipeline-orchestrator/scripts/proxy.json` | 代理配置（mac/WSL） |
+| `media_generator/__main__.py` | 媒体生成 CLI |
 
 ### Remotion 核心
 
@@ -775,7 +851,9 @@ blur-focus         → whoosh-soft.mp3   (0.6)
 | `video-renderer/remotion/src/layout.ts` | 排版常量 |
 | `video-renderer/remotion/src/tokens.ts` | 样式 token 解析 |
 | `video-renderer/remotion/src/fonts.ts` | Google Fonts 加载 |
-| `video-renderer/remotion/src/matching.ts` | 匹配引擎 |
+| `video-renderer/remotion/src/matching.ts` | 匹配引擎（数据源: src/enums/layouts.json） |
+| `video-renderer/remotion/src/enums/layouts.json` | 从 contracts/enums/ 同步的布局枚举 |
+| `video-renderer/remotion/scripts/sync-enums.sh` | 枚举同步脚本 |
 | `video-renderer/remotion/src/schemas/VideoConfig.schema.ts` | Zod schema |
 | `video-renderer/remotion/src/schemas/validate.ts` | 运行时验证 |
 
@@ -866,35 +944,35 @@ blur-focus         → whoosh-soft.mp3   (0.6)
 
 ## 附录 A: 去重系统
 
-`content-generator/schema/dedup.py` 的 `DedupDB` 类管理跨会话去重。
+`repo-analyzer/schema/dedup.py` 的 `DedupDB` 类管理跨会话去重。
 
-**数据文件**：`content-generator/content/YYYY-repos.md`
+**数据文件**：`repo-analyzer/content/YYYY-repos.md`
 
 每行存储 `- owner/repo`。
 
 **两个写入入口**：
 
-1. `content-source-github-trending` — 推荐前用 `is_duplicate()` 过滤
-2. `content-generator` — 生成后调用 `add(full_name).save()` 追加
+1. `github-trending` — 推荐前用 `is_duplicate()` 过滤
+2. `repo-analyzer` — 生成后调用 `add(full_name).save()` 追加
 
 ---
 
 ## 附录 B: checkpoint 机制
 
-各阶段状态保存在 `$OUTPUT_DIR/.pipeline_checkpoints.json`：
+各 Processor 状态保存在 `$OUTPUT_DIR/.pipeline_checkpoints.json`：
 
 ```json
 {
-  "phase0": true,
-  "phase1": false,
-  "phase2": false,
-  "phase2_5": false,
-  "phase3": false,
-  "phase4": false
+  "RepoAnalyzer": true,
+  "MaterialCurator": false,
+  "ScriptTimelineComposer": false,
+  "MediaGenerator": false,
+  "VideoRenderer": false,
+  "PostProducer": false
 }
 ```
 
-每阶段完成后更新。重跑时检查并跳过已完成阶段。
+每 Processor 完成后更新。重跑时检查并跳过已完成步骤。
 
 ---
 

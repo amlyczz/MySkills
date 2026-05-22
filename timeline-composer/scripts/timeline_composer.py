@@ -22,18 +22,16 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from pipeline_contracts import (
+    TimelineSegment,
+    AudioConfig,
+    VoiceoverSegment,
+    VoiceoverSplit,
+    SfxEntry,
+)
+from pipeline_contracts.enums import LAYOUTS, TRANSITIONS
+
 # ── seg.type → template mapping (from spec) ─────────────────
-
-# All 15 layout IDs matching Zod schema
-ALL_LAYOUTS = frozenset({
-    "hero-center", "split-left-text", "split-right-text", "full-screen-text",
-    "card-grid", "quote-style", "stat-highlight", "media-full", "code-display",
-    "center-focus-video", "kinetic-typography", "floating-grid", "fly-through",
-    "prompt-input", "sandwich-text",
-})
-
-# All 5 transition types matching Zod schema
-ALL_TRANSITIONS = frozenset({"none", "crossfade", "whip-pan", "slide-in", "slide-out"})
 
 SEG_TYPE_LAYOUT = {
     "hook":               {"layout_id": "hero-center",          "motion": {"headline": "bounce-in"}},
@@ -67,91 +65,6 @@ class Utterance(BaseModel):
     seg_idx: int            # which content.json.script.segments[] index
     keywords: list[str] = Field(default_factory=list)
     matched_material: Optional[str] = None
-
-
-class VoiceoverSplit(BaseModel):
-    """A single voiceover split within a segment."""
-    text: str
-    time_offset: float = 0.0
-
-
-class VoiceoverSegment(BaseModel):
-    """Voiceover data within a timeline segment."""
-    text: str = ""
-    duration_est: float = 0.0
-    splits: list[VoiceoverSplit] = Field(default_factory=list)
-
-
-class LayoutConfig(BaseModel):
-    """Layout and motion configuration for a segment."""
-    layout_id: str = "hero-center"
-    motion_map: dict[str, str] = Field(default_factory=dict)
-
-
-class StyleConfig(BaseModel):
-    """Visual style for a segment."""
-    theme_id: str = "dark-purple"
-    bg_type: str = "starfield"
-
-
-class SfxEntry(BaseModel):
-    """A sound effect trigger."""
-    id: str
-    time: float = 0.0
-    volume: float = 0.5
-    repeat_every: Optional[float] = None
-
-
-class AudioConfig(BaseModel):
-    """Audio orchestration for a segment."""
-    bgm_volume: float = 0.25
-    bgm_fade_in: Optional[float] = None
-    bgm_fade_out: Optional[float] = None
-    sfx: list[SfxEntry] = Field(default_factory=list)
-
-
-class CodeTemplate(BaseModel):
-    """Code rendering config for code_showcase / source_highlight."""
-    language: str = ""
-    highlight_lines: list[int] = Field(default_factory=list)
-    animation: str = "fade"
-    show_line_numbers: bool = False
-    max_visible_lines: Optional[int] = None
-
-
-class ChapterMarker(BaseModel):
-    """A chapter marker for the progress bar overlay."""
-    label: str
-    time: float = 0.0
-
-
-class SubtitleEntry(BaseModel):
-    """A single subtitle entry."""
-    text: str
-    time_start: float = 0.0
-    time_end: float = 0.0
-
-
-class TimelineSegment(BaseModel):
-    """A single segment in the timeline."""
-    model_config = {"frozen": False}
-
-    id: str = ""
-    type: str = ""
-    label: str = ""
-    time_start: float = 0.0
-    time_end: float = 0.0
-    duration: float = 0.0
-    voiceover: VoiceoverSegment = Field(default_factory=VoiceoverSegment)
-    primary_material: Optional[str] = None
-    material_refs: list[str] = Field(default_factory=list)
-    material_time_range: Optional[dict[str, float]] = None
-    code_template: Optional[CodeTemplate] = None
-    layout: LayoutConfig = Field(default_factory=LayoutConfig)
-    style: StyleConfig = Field(default_factory=StyleConfig)
-    audio: AudioConfig = Field(default_factory=AudioConfig)
-    transition_in: str = "crossfade"
-    transition_out: str = "crossfade"
 
 
 class TimelineComposer:
@@ -660,6 +573,10 @@ def to_video_config(timeline: dict,
     # Preserve BGM track from Agent's initial decision if not regenerating
     if existing_audio.get("bgm"):
         audio_config["bgm"] = existing_audio["bgm"]
+        # Attach pre-computed volume curve so both Remotion and post-producer
+        # consume the same curve, eliminating duplicate bgmCurve logic.
+        curve = _generate_bgm_curve(segments, timeline.get("global", {}).get("total_duration", 180))
+        audio_config["bgm"]["volumeCurve"] = curve
 
     result = {
         "generated_by": {
@@ -682,6 +599,58 @@ def to_video_config(timeline: dict,
         result["bgType"] = existing_config.get("bgType", bg_type)
 
     return result
+
+
+def _generate_bgm_curve(segments: list[dict],
+                        total_duration: float) -> list[dict]:
+    """Port of bgmCurve.ts generateBgmCurve() — per-segment BGM volume curve.
+
+    Rules (matching bgmCurve.ts semantics):
+      - hook segments: BGM fade in from 0.0 over 1.5s
+      - cta segments: BGM fade out to 0.0 over 1.5s
+      - segments with voiceover: ducked to min(seg.bgm_volume, 0.15)
+      - other segments: seg.bgm_volume (default 0.5)
+
+    Returns list of {time, volume} points sorted by time.
+    """
+    VOL_NORMAL = 0.5
+    VOL_DUCKED = 0.15
+    VOL_FADE_START = 0.0
+    FADE_SECONDS = 1.5
+
+    points: list[dict] = []
+
+    for seg in segments:
+        seg_type = seg.get("type", "showcase")
+        audio_cfg = seg.get("audio", {})
+        bgm_vol = audio_cfg.get("bgm_volume", VOL_NORMAL)
+        t0 = seg.get("time_start", 0)
+        t1 = seg.get("time_end", t0 + 5)
+        has_vo = bool(seg.get("voiceover", {}).get("text", ""))
+
+        if seg_type == "hook":
+            # Fade in
+            vol = bgm_vol if not has_vo else min(bgm_vol, VOL_DUCKED)
+            points.append({"time": max(0, t0), "volume": VOL_FADE_START})
+            points.append({"time": t0 + FADE_SECONDS, "volume": vol})
+        elif seg_type == "cta":
+            # Fade out
+            vol = bgm_vol if not has_vo else min(bgm_vol, VOL_DUCKED)
+            points.append({"time": t0, "volume": vol})
+            points.append({"time": max(t0, t1 - FADE_SECONDS), "volume": vol * 0.6})
+            points.append({"time": t1, "volume": VOL_FADE_START})
+        else:
+            vol = bgm_vol if not has_vo else min(bgm_vol, VOL_DUCKED)
+            points.append({"time": t0, "volume": vol})
+            points.append({"time": t1, "volume": vol})
+
+    # Sort by time, dedupe adjacent points within 10ms
+    points.sort(key=lambda p: p["time"])
+    deduped: list[dict] = []
+    for p in points:
+        if not deduped or abs(p["time"] - deduped[-1]["time"]) > 0.01:
+            deduped.append(p)
+    return deduped
 
 
 def _map_transition(timeline_transition: str) -> str:
@@ -748,6 +717,10 @@ def main():
     srt_path = os.path.splitext(args.output)[0] + ".srt"
     _write_srt(timeline["subtitles"], srt_path)
 
+    # Write BGM volume curve for post-producer consumption
+    # (eliminates duplicate curve logic in audio_mixer.py and bgmCurve.ts)
+    _write_bgm_curve(timeline, args.output)
+
     # Summary
     n_segs = len(timeline["segments"])
     n_chapters = len(timeline["chapters"])
@@ -798,6 +771,22 @@ def _write_srt(subtitles: list[dict], output_path: str) -> None:
 
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
+
+
+def _write_bgm_curve(timeline: dict, timeline_path: str) -> None:
+    """Generate and write bgm_volume_curve.json alongside timeline.json.
+
+    Consumed by audio_mixer.py to avoid duplicating curve logic.
+    """
+    segments = timeline.get("segments", [])
+    total_duration = timeline.get("global", {}).get("total_duration", 180)
+    curve = _generate_bgm_curve(segments, total_duration)
+    if not curve:
+        return
+    curve_path = os.path.splitext(timeline_path)[0] + ".bgm_curve.json"
+    with open(curve_path, "w") as f:
+        json.dump(curve, f, indent=2)
+    print(f"BGM curve: {curve_path} ({len(curve)} points)")
 
 
 if __name__ == "__main__":

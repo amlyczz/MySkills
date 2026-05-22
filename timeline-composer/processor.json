@@ -1,0 +1,33 @@
+{
+  "name": "ScriptTimelineComposer",
+  "description": "写口播脚本 + 语义素材匹配 + 编排时间线",
+  "version": "1.0",
+  "input": {
+    "contract": "pipeline-contracts/py/content#ContentModel",
+    "description": "内容分析产出"
+  },
+  "input_extras": [
+    {
+      "contract": "pipeline-contracts/py/material#MaterialManifest",
+      "description": "可用素材清单"
+    }
+  ],
+  "output": {
+    "contract": "pipeline-contracts/py/timeline#TimelineModel",
+    "description": "时间线 + 字幕"
+  },
+  "output_extras": [
+    {
+      "contract": "pipeline-contracts/py/content#ContentModel",
+      "description": "完整 content.json（含 script/covers/publish_copy）"
+    },
+    {
+      "contract": "pipeline-contracts/py/video_config#VideoConfig",
+      "description": "渲染配置（布局/动效/过渡等）"
+    }
+  ],
+  "exec": {
+    "type": "skill",
+    "skill": "timeline-composer"
+  }
+}

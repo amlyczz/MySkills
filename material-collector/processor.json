@@ -1,0 +1,22 @@
+{
+  "name": "MaterialCurator",
+  "description": "基于项目理解，目标化精选采集视觉素材",
+  "version": "1.0",
+  "input": {
+    "contract": "pipeline-contracts/py/content#ContentModel",
+    "description": "内容分析产出（不含 script）"
+  },
+  "output": {
+    "contract": "pipeline-contracts/py/material#MaterialManifest",
+    "description": "精选素材清单"
+  },
+  "config": {
+    "properties": {
+      "target_duration": { "type": "number", "description": "目标视频总时长（秒）" }
+    }
+  },
+  "exec": {
+    "type": "skill",
+    "skill": "material-collector"
+  }
+}

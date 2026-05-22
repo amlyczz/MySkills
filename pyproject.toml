@@ -5,6 +5,7 @@ description = "AI-powered GitHub video pipeline skills"
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",
+    "pipeline-contracts",
 ]
 
 [dependency-groups]

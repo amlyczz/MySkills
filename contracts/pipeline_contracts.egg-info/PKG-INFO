@@ -1,0 +1,6 @@
+Metadata-Version: 2.4
+Name: pipeline-contracts
+Version: 0.1.0
+Summary: Data contracts for pipeline processor communication — shared Pydantic models, Zod schemas, and cross-language enums
+Requires-Python: >=3.11
+Requires-Dist: pydantic>=2.0

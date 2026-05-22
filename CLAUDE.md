@@ -28,17 +28,50 @@
 - **依赖声明**：根目录 `pyproject.toml`，`dependency-groups.dev` 放开发依赖
 - **虚拟环境**：`.venv/` 由 `uv sync` 自动创建，不手动管理
 
-## 视频 Pipeline（5 层）
+## Processor 架构
 
-```
-content-generator/    Layer 0: 内容生成 → content.json
-material-collector/   Layer 1: 素材采集 → material_manifest.json
-timeline-composer/    Layer 2: 时间线编排 → timeline.json + .srt
-video-renderer/       Layer 3: Remotion 渲染 → video.mp4
-post-producer/        Layer 4: 音频混音 + 字幕 → final.mp4
-pipeline-orchestrator/ 编排层：AI 智能决策 + 脚本机械执行，串联 5 层
-media_generation/      横向切面：图片/语音/音乐/视频/文本生成
-```
+每个功能单元是一个 **Processor**：输入契约 + 处理逻辑 + 输出契约，不关心上下游。管线由 `pipelines/*.json` 的 DAG 定义描述连接关系。
+
+### Processor 一览
+
+| Processor | 输入 | 输出 |
+|-----------|------|------|
+| **RepoAnalyzer** | GitHub URL → `repo-analyzer/` | ContentModel |
+| **MaterialCurator** | ContentModel → `material-collector/` | MaterialManifest |
+| **ScriptTimelineComposer** | ContentModel + MaterialManifest → `timeline-composer/` | TimelineModel + VideoConfig |
+| **MediaGenerator** | Script → `media_generator/` | voiceover.mp3 + bgm.mp3 |
+| **VideoRenderer** | VideoConfig + Timeline → `video-renderer/remotion/` | video.mp4 |
+| **PostProducer** | video.mp4 + audio + timeline → `post-producer/` | final.mp4 |
+
+### 数据契约
+
+所有跨层数据使用 `contracts/pipeline_contracts/` 中的 Pydantic BaseModel（Python）和 Zod schema（TypeScript）。多语言共享枚举统一放在 `contracts/enums/*.json`：
+
+| 枚举文件 | 用途 |
+|---------|------|
+| `layouts.json` | 布局 ID + 场景→布局默认映射 |
+| `motions.json` | 动效 ID + 元素角色→动效默认映射 |
+| `transitions.json` | 过渡类型枚举 |
+| `styles.json` | 样式主题 ID |
+| `structures.json` | 结构模板 ID |
+| `materials.json` | 素材类型/来源/采集方式 |
+| `sfx.json` | 动效→音效文件映射 |
+
+### 编排
+
+`pipeline-orchestrator/` 读取 Pipeline 定义 → 拓扑排序 → 顺序执行各 Processor。支持断点续跑（checkpoint 文件）和全代理（proxy.sh 自动识别平台）。
+
+### 可用 Pipeline
+
+| Pipeline | Processor 序列 |
+|----------|---------------|
+| `pipelines/github-promo.json` | RepoAnalyzer → MaterialCurator → ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
+| `pipelines/manual-production.json` | ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
+| `pipelines/podcast-clip.json` | ScriptTimelineComposer → MediaGenerator → PostProducer |
+
+### 横向切面
+
+`media_generator/` 提供图片/语音/音乐/视频/文本生成能力，作为横向切面被多个 Processor 调用。
 
 ## Skill 目录规范
 

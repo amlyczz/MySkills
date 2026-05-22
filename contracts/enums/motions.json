@@ -1,0 +1,30 @@
+{
+  "motions": [
+    "spring-slide-up",
+    "spring-slide-left",
+    "arc-entrance",
+    "scale-fade",
+    "typewriter",
+    "reveal-mask",
+    "bounce-in",
+    "blur-focus",
+    "spring-elastic",
+    "smooth-scale-up",
+    "staggered-grow",
+    "fade-out",
+    "slide-out-left",
+    "scale-down-out",
+    "blur-out",
+    "subtle-float",
+    "glow-pulse",
+    "none"
+  ],
+  "element_role_default_motion": {
+    "title": "bounce-in",
+    "subtitle": "scale-fade",
+    "body": "fade-up",
+    "headline": "bounce-in",
+    "cards": "spring-slide-up",
+    "stats": "spring-elastic"
+  }
+}

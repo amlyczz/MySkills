@@ -82,7 +82,7 @@ python3 allocate.py \
   180 \
   --output-dir "<output>" \
   --repo-url "https://github.com/{owner}/{repo}" \
-  --content-dir "content-generator/content/YYYY-MM-DD/" \
+  --content-dir "repo-analyzer/content/YYYY-MM-DD/" \
   --bg-type starfield \
   --manual-image /path/to/extra.png \
   --manual-video /path/to/extra.mp4
