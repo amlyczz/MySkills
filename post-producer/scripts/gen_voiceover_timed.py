@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-gen_voiceover_timed.py — 分段 TTS 生成 + 带静默间隙拼接。
+gen_voiceover_timed.py — 分段 TTS 生成 + 可选静默间隙拼接。
 
-为 video_config.json 中每个 voiceover 段单独 TTS 生成，
-按场景视频位置插入静音间隙，最终拼接成 scene-aligned voiceover.mp3。
+为 video_config.json 中每个 voiceover 段单独 TTS 生成。
+默认连续拼接（无静音间隙），加 --scene-align 在段间插入
+静默间隙对齐场景视频位置。
 
 输出：
-  - voiceover.mp3（带间隙对齐场景）
+  - voiceover.mp3（连续或场景对齐）
   - voiceover_timing.json（每段的实际时间戳）
 
 Usage:
@@ -14,7 +15,8 @@ Usage:
         <video_config.json> \\
         --output-dir <output_dir> \\
         [--voice-id "Chinese (Mandarin)_Male_Announcer"] \\
-        [--pitch 3] [--speed 1.0]
+        [--pitch 3] [--speed 1.0] \\
+        [--scene-align]  # 插入静默对齐场景（默认连续无间隙）
 """
 import json
 import sys
@@ -67,6 +69,7 @@ def main():
     voice_id = "Chinese (Mandarin)_Male_Announcer"
     pitch = 3
     speed = 1.0
+    scene_align = False
 
     i = 2
     while i < len(sys.argv):
@@ -82,6 +85,9 @@ def main():
         elif sys.argv[i] == "--speed" and i + 1 < len(sys.argv):
             speed = float(sys.argv[i + 1])
             i += 2
+        elif sys.argv[i] == "--scene-align":
+            scene_align = True
+            i += 1
         else:
             i += 1
 
@@ -145,25 +151,26 @@ def main():
         shutil.rmtree(tmpdir)
         sys.exit(1)
 
-    # Step 2: Build concat file with silence gaps
+    # Step 2: Build concat file (with optional silence gaps)
     concat_lines = []
     current_offset = 0.0
     timing = []
 
     for seg in segments_meta:
-        # Insert silence to push to target start
-        gap = seg["target_start"] - current_offset
-        if gap > 0.01:
-            silence_file = os.path.join(tmpdir, f"silence_{len(timing):02d}.mp3")
-            _run([
-                "ffmpeg", "-y",
-                "-f", "lavfi", "-i", f"anullsrc=r=24000:cl=mono",
-                "-t", str(gap),
-                "-c:a", "libmp3lame",
-                silence_file,
-            ])
-            concat_lines.append(f"file '{silence_file}'")
-            current_offset += gap
+        # Optionally insert silence to push to target scene start position
+        if scene_align:
+            gap = seg["target_start"] - current_offset
+            if gap > 0.01:
+                silence_file = os.path.join(tmpdir, f"silence_{len(timing):02d}.mp3")
+                _run([
+                    "ffmpeg", "-y",
+                    "-f", "lavfi", "-i", f"anullsrc=r=24000:cl=mono",
+                    "-t", str(gap),
+                    "-c:a", "libmp3lame",
+                    silence_file,
+                ])
+                concat_lines.append(f"file '{silence_file}'")
+                current_offset += gap
 
         timing.append({
             "scene_id": seg["scene_id"],
