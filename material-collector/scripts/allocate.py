@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-allocate.py (v2) — 时间分配 + intro/outro 生成 + concat_list 生成
+allocate.py (v2) — 时间分配 + 素材编排 + VideoConfig 构建
 
-v2: 使用 Remotion 渲染 intro/outro（替代 v1 的 HTML + Playwright 截图方式）
-    支持 4 种动态背景 + Ken Burns 图片素材动效 + manifest schema 验证
+职责：素材清单加载与验证、按 structure 模板分配场景时长、
+      build_video_config() 构建 VideoConfig、调用 render.py 渲染。
 
 Usage:
-    python3 allocate.py <manifest_full.json> <total_duration> [--output-dir DIR]
+    python3 allocate.py <manifest> <total_duration> [--output-dir DIR]
                        [--content-dir DIR] [--bg-type TYPE] [--strict]
 """
 
@@ -17,13 +17,19 @@ import re
 import subprocess
 import argparse
 import random
-import shutil
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REMOTION_DIR = os.path.join(REPO_ROOT, "video-renderer", "remotion")
+
+# Load shared render module
+sys.path.insert(0, os.path.join(REPO_ROOT, "video-renderer", "scripts"))
+import render
+# Load post-producer subtitle module
+sys.path.insert(0, os.path.join(REPO_ROOT, "post-producer", "scripts"))
+from audio_mixer import burn_subtitles
 
 random.seed()
 
@@ -149,20 +155,6 @@ def validate_manifest(data, strict=False):
         return False, errors, valid_entries
     return True, [], valid_entries
 
-
-# ── Ken Burns motion modes ──────────────────────────────────
-KEN_BURNS_MODES = [
-    # slow-zoom-in: center→center, 1.0→1.3
-    {"panFromX": 0.5, "panFromY": 0.5, "panToX": 0.5, "panToY": 0.5, "zoomFrom": 1.0, "zoomTo": 1.3},
-    # pan-left: right→left, 1.2→1.2
-    {"panFromX": 0.7, "panFromY": 0.5, "panToX": 0.3, "panToY": 0.5, "zoomFrom": 1.2, "zoomTo": 1.2},
-    # pan-right: left→right, 1.15→1.15
-    {"panFromX": 0.3, "panFromY": 0.5, "panToX": 0.7, "panToY": 0.5, "zoomFrom": 1.15, "zoomTo": 1.15},
-    # diagonal: top-right→bottom-left, 1.0→1.25
-    {"panFromX": 0.7, "panFromY": 0.3, "panToX": 0.3, "panToY": 0.7, "zoomFrom": 1.0, "zoomTo": 1.25},
-    # slow-zoom-out: center→center, 1.3→1.0
-    {"panFromX": 0.5, "panFromY": 0.5, "panToX": 0.5, "panToY": 0.5, "zoomFrom": 1.3, "zoomTo": 1.0},
-]
 
 # ── Helper: strip markdown formatting ──────────────────────
 def strip_md(text):
@@ -304,30 +296,6 @@ def generate_simple_info(repo_url):
     }
 
 
-def remotion_render(composition_id, output_path, props, cwd=None):
-    """Render a Remotion composition with given props."""
-    props_path = output_path.replace('.mp4', '_props.json')
-    with open(props_path, 'w') as f:
-        json.dump(props, f, ensure_ascii=False)
-
-    cmd = [
-        'npx', 'remotion', 'render', composition_id,
-        output_path,
-        '--props', props_path,
-        '--codec', 'h264',
-        '--crf', '18',
-    ]
-    print(f"  Remotion render: {' '.join(cmd[:4])} ... --props ...")
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=180)
-    if result.returncode != 0:
-        print(f"  WARNING: Remotion render failed: {result.stderr.strip()}")
-        return False
-    # Clean up props file
-    if os.path.exists(props_path):
-        os.unlink(props_path)
-    return True
-
-
 def render_intro_outro_with_degradation(output_dir, info, repo_name, repo_url,
                                          theme_index, bg_type, intro_duration, outro_duration):
     """Render intro/outro with 4-tier degradation chain.
@@ -358,7 +326,7 @@ def render_intro_outro_with_degradation(output_dir, info, repo_name, repo_url,
         "bgType": bg_type,
     }
     print(f"\n  [L0] Rendering intro with full Remotion (theme: {theme_index}, bg: {bg_type})...")
-    if remotion_render('Intro', intro_mp4, intro_props_v0, cwd=REMOTION_DIR):
+    if render.remotion_render('Intro', intro_mp4, intro_props_v0, cwd=REMOTION_DIR):
         intro_result = {'level': 0, 'path': intro_mp4}
         print(f"  [L0] Intro done")
     else:
@@ -372,7 +340,7 @@ def render_intro_outro_with_degradation(output_dir, info, repo_name, repo_url,
             "bgType": bg_type,
         }
         print(f"  [L1] Rendering intro with simplified Remotion...")
-        if remotion_render('Intro', intro_mp4, intro_props_v1, cwd=REMOTION_DIR):
+        if render.remotion_render('Intro', intro_mp4, intro_props_v1, cwd=REMOTION_DIR):
             intro_result = {'level': 1, 'path': intro_mp4}
             print(f"  [L1] Intro done")
         else:
@@ -416,7 +384,7 @@ def render_intro_outro_with_degradation(output_dir, info, repo_name, repo_url,
     outro_summary = '\n'.join(outro_parts[:3])
 
     print(f"\n  [L0] Rendering outro with full Remotion...")
-    if remotion_render('Outro', outro_mp4, outro_props_v0, cwd=REMOTION_DIR):
+    if render.remotion_render('Outro', outro_mp4, outro_props_v0, cwd=REMOTION_DIR):
         outro_result = {'level': 0, 'path': outro_mp4}
         print(f"  [L0] Outro done")
     else:
@@ -429,7 +397,7 @@ def render_intro_outro_with_degradation(output_dir, info, repo_name, repo_url,
             "bgType": bg_type,
         }
         print(f"  [L1] Rendering outro with simplified Remotion...")
-        if remotion_render('Outro', outro_mp4, outro_props_v1, cwd=REMOTION_DIR):
+        if render.remotion_render('Outro', outro_mp4, outro_props_v1, cwd=REMOTION_DIR):
             outro_result = {'level': 1, 'path': outro_mp4}
             print(f"  [L1] Outro done")
         else:
@@ -626,216 +594,6 @@ def build_video_config(info, repo_url, bg_type='starfield', style_id=None, struc
     return config
 
 
-def render_video_composer(output_dir, config, total_duration_frames):
-    """Render VideoComposer composition with given config.
-
-    Returns True on success, False on failure.
-    """
-    config_path = os.path.join(output_dir, 'video_config.json')
-    with open(config_path, 'w') as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
-
-    props = {"config": config}
-    output_path = os.path.join(output_dir, 'video_composer.mp4')
-
-    # Write props file for Remotion
-    props_path = output_path.replace('.mp4', '_props.json')
-    with open(props_path, 'w') as f:
-        json.dump(props, f, ensure_ascii=False)
-
-    cmd = [
-        'npx', 'remotion', 'render', 'VideoComposer',
-        output_path,
-        '--props', props_path,
-        '--codec', 'h264',
-        '--crf', '18',
-    ]
-    print(f"\n  [VC] Rendering VideoComposer (style: {config.get('styleId')}, bg: {config.get('bgType')})...")
-    print(f"  [VC] cmd: {' '.join(cmd[:4])} ... --props ...")
-
-    result = subprocess.run(cmd, cwd=REMOTION_DIR, capture_output=True, text=True, timeout=300)
-    if result.returncode != 0:
-        print(f"  [VC] WARNING: VideoComposer render failed: {result.stderr.strip()}")
-        return False
-
-    # Clean up props file
-    if os.path.exists(props_path):
-        os.unlink(props_path)
-
-    print(f"  [VC] VideoComposer done: {output_path}")
-    return True
-
-
-def split_video_composer(output_dir, composer_path):
-    """Split video_composer.mp4 into intro.mp4 and outro.mp4.
-
-    Uses the funnel structure timings to extract hook+problem+solution as intro,
-    and cta as outro. The middle showcase+features part is kept as main content.
-    Returns (intro_path, outro_path, main_content_path).
-    """
-    # Funnel structure timings (hardcoded for now)
-    # hook(5) + problem(6) + solution(6) = 17s intro
-    intro_end = 17.0
-    # cta = last 6s
-    total_dur = get_video_duration(composer_path)
-
-    intro_path = os.path.join(output_dir, 'intro.mp4')
-    outro_path = os.path.join(output_dir, 'outro.mp4')
-    main_path = os.path.join(output_dir, 'main_content.mp4')
-
-    try:
-        # Extract intro (first 17s)
-        subprocess.run([
-            'ffmpeg', '-y', '-i', composer_path,
-            '-t', str(intro_end),
-            '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
-            intro_path
-        ], check=True, capture_output=True, timeout=60)
-        print(f"  Extracted intro: {intro_path} ({intro_end}s)")
-
-        # Extract outro (last 6s)
-        outro_start = max(0, total_dur - 6)
-        subprocess.run([
-            'ffmpeg', '-y', '-i', composer_path,
-            '-ss', str(outro_start),
-            '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
-            outro_path
-        ], check=True, capture_output=True, timeout=60)
-        print(f"  Extracted outro: {outro_path} ({total_dur - outro_start:.1f}s)")
-
-        # Extract main content (between intro and outro)
-        main_dur = max(0, total_dur - intro_end - 6)
-        if main_dur > 1:
-            subprocess.run([
-                'ffmpeg', '-y', '-i', composer_path,
-                '-ss', str(intro_end), '-t', str(main_dur),
-                '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
-                main_path
-            ], check=True, capture_output=True, timeout=60)
-            print(f"  Extracted main content: {main_path} ({main_dur:.1f}s)")
-        else:
-            main_path = None
-
-        return intro_path, outro_path, main_path
-    except Exception as e:
-        print(f"  WARNING: Split failed: {e}")
-        return None, None, None
-
-
-def image_to_video_clip(image_path, mp4_path, duration):
-    """Convert a single image to a video clip with Ken Burns effect via Remotion."""
-    orig_path = image_path
-
-    # Handle SVG conversion
-    if image_path.lower().endswith('.svg'):
-        png_path = mp4_path.replace('.mp4', '.png')
-        try:
-            if shutil.which('rsvg-convert'):
-                subprocess.run(['rsvg-convert', '-w', '1920', '-h', '1080',
-                                image_path, '-o', png_path], check=True, capture_output=True, timeout=30)
-                image_path = png_path
-            elif shutil.which('convert'):
-                subprocess.run(['convert', '-background', 'none',
-                                image_path, '-resize', '1920x1080', png_path],
-                               check=True, capture_output=True, timeout=30)
-                image_path = png_path
-            else:
-                print(f"    WARNING: cannot convert SVG (install librsvg or ImageMagick): {image_path}")
-                return
-        except subprocess.CalledProcessError:
-            print(f"    WARNING: SVG conversion failed: {image_path}")
-            return
-
-    # ── Try Remotion KenBurnsClip first ──
-    public_dir = os.path.join(REMOTION_DIR, 'public')
-    os.makedirs(public_dir, exist_ok=True)
-
-    ext = os.path.splitext(image_path)[1]
-    safe_name = os.path.basename(mp4_path).replace('.mp4', '').replace(' ', '_')
-    temp_name = f'kb_{safe_name}{ext}'
-    public_path = os.path.join(public_dir, temp_name)
-
-    try:
-        shutil.copy2(image_path, public_path)
-
-        mode = random.choice(KEN_BURNS_MODES)
-        props = {
-            "imageUrl": temp_name,
-            "durationInFrames": int(duration * 30),
-            **mode,
-        }
-
-        if remotion_render('KenBurnsClip', mp4_path, props, cwd=REMOTION_DIR):
-            os.unlink(public_path)
-            if image_path != orig_path and os.path.exists(image_path):
-                os.unlink(image_path)
-            return
-        else:
-            os.unlink(public_path)
-    except Exception as e:
-        print(f"    WARNING: KenBurnsClip failed ({e}), falling back to ffmpeg")
-        if os.path.exists(public_path):
-            os.unlink(public_path)
-
-    # ── Fallback: ffmpeg static image ──
-    subprocess.run([
-        'ffmpeg', '-y',
-        '-loop', '1', '-i', image_path,
-        '-t', str(duration),
-        '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
-        '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black',
-        mp4_path
-    ], check=True, capture_output=True)
-    if image_path != orig_path and os.path.exists(image_path):
-        os.unlink(image_path)
-
-
-def get_video_duration(mp4_path):
-    """Get video duration in seconds using ffprobe."""
-    try:
-        result = subprocess.run([
-            'ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', mp4_path
-        ], capture_output=True, text=True, timeout=30)
-        if result.returncode == 0:
-            data = json.loads(result.stdout)
-            return float(data['format']['duration'])
-    except Exception:
-        pass
-    return 0
-
-
-def trim_video(src_path, dst_path, target_duration):
-    """Trim a video to target duration using ffmpeg (fast seek)."""
-    src = os.path.abspath(src_path)
-    dst = os.path.abspath(dst_path)
-    subprocess.run([
-        'ffmpeg', '-y', '-ss', '0', '-i', src,
-        '-t', str(target_duration),
-        '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
-        dst
-    ], check=True, capture_output=True, timeout=300)
-    return dst_path
-
-
-def speed_remap(src_path, dst_path, speed):
-    """Speed up (>1.0) or slow down (<1.0) a video via ffmpeg setpts.
-
-    speed=2.0 → 2x faster; speed=0.5 → half speed (slow-mo).
-    Audio is tempo-adjusted to match.
-    """
-    src = os.path.abspath(src_path)
-    dst = os.path.abspath(dst_path)
-    pts = 1.0 / speed
-    subprocess.run([
-        'ffmpeg', '-y', '-i', src,
-        '-filter_complex', f'[0:v]setpts={pts}*PTS[v];[0:a]atempo={speed}[a]',
-        '-map', '[v]', '-map', '[a]',
-        '-c:v', 'libx264', '-preset', 'fast', '-pix_fmt', 'yuv420p',
-        dst
-    ], check=True, capture_output=True, timeout=300)
-    return dst_path
-
-
 # ── Time allocation ─────────────────────────────────────────
 
 def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=None, bg_type='starfield', strict=False, style=None, structure=None, manual_images=None, manual_videos=None, use_llm=False, llm_api_key=None, llm_provider='deepseek'):
@@ -948,37 +706,13 @@ def allocate(manifest_path, total_time, output_dir, content_dir=None, repo_url=N
                     config['sceneConfigs'][scene_key]['content']['visual'] = vid['path']
 
     print(f"\n  Rendering VideoComposer: {structure_id_used} ({vc_duration}s, {vc_frames}f)")
-    vc_success = render_video_composer(output_dir, config, vc_frames)
+    vc_success = render.render_video_composer(output_dir, config)
 
     if vc_success:
         print(f"  ✓ VideoComposer rendered: {os.path.join(output_dir, 'video_composer.mp4')}")
     else:
         print(f"  ✗ VideoComposer failed, falling back to intro/outro")
         generate_intro_outro(output_dir, content_dir, repo_url, bg_type)
-
-
-def burn_subtitles(video_path: str, srt_path: str, output_path: str = None) -> str:
-    """Burn SRT subtitles into a video using ffmpeg subtitles filter.
-
-    Returns path to the subtitled video.
-    """
-    if not os.path.exists(srt_path):
-        print(f"  WARNING: SRT file not found: {srt_path}, skipping subtitle burn")
-        return video_path
-
-    out = output_path or video_path.replace('.mp4', '_subtitled.mp4')
-    # Escape path for ffmpeg subtitles filter
-    srt_abs = os.path.abspath(srt_path)
-    print(f"  Burning subtitles: {os.path.basename(srt_path)} → {os.path.basename(out)}")
-    subprocess.run([
-        'ffmpeg', '-y',
-        '-i', video_path,
-        '-vf', f"subtitles={srt_abs}:force_style='FontSize=24,OutlineColour=&H80000000,BorderStyle=1'",
-        '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
-        '-c:a', 'copy',
-        out,
-    ], check=True, capture_output=True, timeout=300)
-    return out
 
 
 # ── CLI ─────────────────────────────────────────────────────

@@ -257,6 +257,29 @@ def mix_audio(video_path: str,
     return os.path.abspath(output_path)
 
 
+def burn_subtitles(video_path: str, srt_path: str, output_path: str | None = None) -> str:
+    """Burn SRT subtitles into a video using ffmpeg subtitles filter.
+
+    Returns path to the subtitled video.
+    """
+    if not os.path.exists(srt_path):
+        print(f"  WARNING: SRT file not found: {srt_path}, skipping subtitle burn")
+        return video_path
+
+    out = output_path or video_path.replace('.mp4', '_subtitled.mp4')
+    srt_abs = os.path.abspath(srt_path)
+    print(f"  Burning subtitles: {os.path.basename(srt_path)} \u2192 {os.path.basename(out)}")
+    _run([
+        'ffmpeg', '-y',
+        '-i', video_path,
+        '-vf', f"subtitles={srt_abs}:force_style='FontSize=24,OutlineColour=&H80000000,BorderStyle=1'",
+        '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+        '-c:a', 'copy',
+        out,
+    ])
+    return out
+
+
 # ── CLI ─────────────────────────────────────────────────────
 
 def main():
@@ -271,6 +294,8 @@ def main():
                         help="Silence before BGM starts (default: 0.5s)")
     parser.add_argument("--bgm-tail", type=float, default=1.0,
                         help="Silence after BGM fade-out (default: 1.0s)")
+    parser.add_argument("--srt", default=None,
+                        help="Path to SRT subtitle file to burn into final video")
     args = parser.parse_args()
 
     output = mix_audio(
@@ -283,6 +308,8 @@ def main():
         bgm_offset=args.bgm_offset,
         bgm_tail=args.bgm_tail,
     )
+    if args.srt:
+        output = burn_subtitles(output, args.srt)
     print(f"Final video: {output}")
 
 

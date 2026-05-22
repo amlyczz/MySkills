@@ -26,6 +26,7 @@ tools_allowed:
 ```
 video-renderer/
 ├── skill.md          ← 本文件
+├── scripts/          ← 渲染脚本（render.py）
 ├── search_lottie.py  ← Lottie 动画搜索
 └── remotion/         ← Remotion 项目
     ├── package.json

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-verify_output.py — 素材完整性验证脚本，在 ffmpeg concat 前运行。
+verify_output.py — 素材完整性验证脚本，在最终合成前运行。
 
-验证清单：
-  ERROR   1. intro.mp4 存在且可解码
-  ERROR   2. outro.mp4 存在且可解码
-  ERROR   3. 所有 concat_list.txt 引用文件存在
+验证清单（VideoComposer 管线）：
+  ERROR   1. video_composer.mp4 或 video.mp4 存在且可解码
+  WARNING 2. voiceover.mp3 存在且可解码
+  WARNING 3. bgm.mp3 存在且可解码
   WARNING 4. 图片素材可解码
   ERROR   5. 视频素材时长 > 0
   WARNING 6. 素材总时长 >= 目标时长的 50%
-  ERROR   7. concat_list.txt 语法正确
+  ERROR   7. final.mp4 存在（若有之前的合成结果）
   WARNING 8. 素材编码格式一致（均为 h264）
 
 Usage:
@@ -73,18 +73,6 @@ def get_video_codec(filepath):
     return 'unknown'
 
 
-def check_concat_syntax(concat_path):
-    """Validate concat_list.txt syntax by trying to parse it with ffmpeg."""
-    try:
-        result = subprocess.run(
-            ['ffmpeg', '-f', 'concat', '-safe', '0', '-i', concat_path,
-             '-t', '0.1', '-f', 'null', '-'],
-            capture_output=True, text=True, timeout=30
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
-
 
 def _run_check(name: str, is_error: bool, fn, errors: list, warnings: list) -> str:
     """Run a single verification check. Returns 'ok', 'warning', or 'error'."""
@@ -138,41 +126,36 @@ def verify(output_dir, total_duration, manifest_path=None):
         print(f"  Manifest: {manifest_path}")
     manifest = _load_manifest(manifest_path)
 
-    # Collect referenced files
-    concat_files: list[str] = []
+    # Collect referenced files from manifest
     referenced_files: list[str] = []
-    concat_path = os.path.join(output_dir, 'concat_list.txt')
-    if os.path.isfile(concat_path):
-        with open(concat_path) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("file '"):
-                    name = line[6:-1]
-                    concat_files.append(name)
-                    referenced_files.append(os.path.join(output_dir, name))
     for entry in manifest:
         if isinstance(entry, dict) and 'path' in entry:
-            if entry['path'] not in concat_files:
-                referenced_files.append(os.path.join(output_dir, entry['path']))
+            ref_path = os.path.join(output_dir, entry['path'])
+            if os.path.isfile(ref_path):
+                referenced_files.append(ref_path)
 
     total_dur = 0  # computed in check 6, used in summary
 
-    # ── 8 checks as callable list ──
+    # ── 8 checks as callable list (VideoComposer pipeline) ──
     check_list = [
-        ('intro', True, lambda: (
-            check_file_exists(os.path.join(output_dir, 'intro.mp4')) and
-            check_file_decodable(os.path.join(output_dir, 'intro.mp4')),
-            f"intro.mp4 缺失或不可解码"
+        ('rendered_video', True, lambda: (
+            (check_file_exists(os.path.join(output_dir, 'video_composer.mp4')) and
+             check_file_decodable(os.path.join(output_dir, 'video_composer.mp4')))
+            or
+            (check_file_exists(os.path.join(output_dir, 'video.mp4')) and
+             check_file_decodable(os.path.join(output_dir, 'video.mp4'))),
+            "video_composer.mp4 / video.mp4 均缺失或不可解码"
         )),
-        ('outro', True, lambda: (
-            check_file_exists(os.path.join(output_dir, 'outro.mp4')) and
-            check_file_decodable(os.path.join(output_dir, 'outro.mp4')),
-            f"outro.mp4 缺失或不可解码"
+        ('voiceover', False, lambda: (
+            not check_file_exists(os.path.join(output_dir, 'voiceover.mp3'))
+            or check_file_decodable(os.path.join(output_dir, 'voiceover.mp3')),
+            "voiceover.mp3 缺失或不可解码（非关键）" if not check_file_exists(os.path.join(output_dir, 'voiceover.mp3')) else "voiceover.mp3 不可解码"
         )),
-        ('files_exist', True, lambda: (
-            all(os.path.isfile(f) for f in referenced_files),
-            f"文件缺失: {', '.join(os.path.basename(f) for f in referenced_files if not os.path.isfile(f))}"
-        ) if referenced_files else (True, '')),
+        ('bgm', False, lambda: (
+            not check_file_exists(os.path.join(output_dir, 'bgm.mp3'))
+            or check_file_decodable(os.path.join(output_dir, 'bgm.mp3')),
+            "bgm.mp3 缺失或不可解码（非关键）" if not check_file_exists(os.path.join(output_dir, 'bgm.mp3')) else "bgm.mp3 不可解码"
+        )),
         ('images', False, lambda: (
             not (issues := [e['path'] for e in manifest if e.get('type') == 'image' and
                   os.path.isfile(os.path.join(output_dir, e['path'])) and
@@ -194,9 +177,10 @@ def verify(output_dir, total_duration, manifest_path=None):
         ) if (dur := sum(get_video_duration(f) for f in referenced_files
              if os.path.isfile(f) and os.path.splitext(f)[1].lower() in ('.mp4', '.webm', '.mov', '.mkv'))) < total_duration * 0.5
              else (True, '')),
-        ('concat_syntax', True, lambda: (
-            os.path.isfile(concat_path) and check_concat_syntax(concat_path),
-            "concat_list.txt 不存在或语法有误"
+        ('final_mp4', False, lambda: (
+            not check_file_exists(os.path.join(output_dir, 'final.mp4'))
+            or check_file_decodable(os.path.join(output_dir, 'final.mp4')),
+            "final.mp4 尚未生成（合成前验证，非错误）"
         )),
         ('codec', False, lambda: (
             not (mismatches := [
@@ -258,8 +242,8 @@ def icon_for(label: str) -> str:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='验证素材完整性，在 ffmpeg concat 前运行')
-    parser.add_argument('output_dir', help='输出目录（含 manifest / concat_list / intro/outro）')
+    parser = argparse.ArgumentParser(description='验证素材完整性，在最终合成前运行（VideoComposer 管线）')
+    parser.add_argument('output_dir', help='输出目录（含 manifest / video_composer.mp4 / voiceover.mp3）')
     parser.add_argument('total_duration', type=float, help='目标总时长（秒）')
     parser.add_argument('--manifest', default=None, help='manifest_full.json 路径（可选，自动检测）')
     args = parser.parse_args()

@@ -164,6 +164,33 @@ export const RemotionRoot: React.FC = () => {
         width={1920}
         height={1080}
         defaultProps={{ config: defaultVideoConfig }}
+        calculateMetadata={async ({ props }) => {
+          const p = props as { config: VideoConfig };
+          const config = p?.config;
+          if (!config?.structureId) return { durationInFrames: 9000 };
+          const structure = getStructure(config.structureId);
+          if (!structure) return { durationInFrames: 9000 };
+          // timeline-adaptive: 直接从 sceneConfigs 计算
+          if (config.structureId === "timeline-adaptive") {
+            let totalFrames = 0;
+            for (const sc of Object.values(config.sceneConfigs ?? {})) {
+              totalFrames += (sc.durationSeconds && sc.durationSeconds > 0 ? sc.durationSeconds : 10) * 30;
+            }
+            return { durationInFrames: Math.max(totalFrames, 30) };
+          }
+          let totalFrames = 0;
+          for (const scene of structure.scenes) {
+            const sceneCfg = config.sceneConfigs?.[scene.id];
+            const dur =
+              sceneCfg?.durationSeconds && sceneCfg.durationSeconds > 0
+                ? sceneCfg.durationSeconds
+                : scene.durationSeconds > 0
+                  ? scene.durationSeconds
+                  : 10;
+            totalFrames += dur * 30;
+          }
+          return { durationInFrames: Math.max(totalFrames, 30) };
+        }}
       />
     </>
   );

@@ -27,7 +27,8 @@ timeline-composer/
 ├── skill.md                  ← 本文件
 ├── schema/
 │   └── timeline.schema.json
-└── timeline_composer.py      ← 编排引擎
+└── scripts/
+    └── timeline_composer.py      ← 编排引擎
 ```
 
 ---
@@ -35,7 +36,7 @@ timeline-composer/
 ## 使用
 
 ```bash
-cd timeline-composer
+cd timeline-composer/scripts
 python3 timeline_composer.py content.json material_manifest.json \
   --output timeline.json \
   --total-duration 180 \

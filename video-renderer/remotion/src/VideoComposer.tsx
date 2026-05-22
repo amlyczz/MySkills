@@ -69,6 +69,16 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
 
   const style = styleTemplates.find((s) => s.id === config.styleId) ?? styleTemplates[0];
 
+  // timeline-adaptive: 场景列表从 sceneConfigs 动态派生
+  const scenes = structure.id === "timeline-adaptive"
+    ? Object.entries(config.sceneConfigs).map(([id, sc]) => ({
+        id,
+        type: sc.layoutId?.includes("hero") ? "hook" as const : "showcase" as const,
+        durationSeconds: sc.durationSeconds || 10,
+        contentSlots: [],
+      }))
+    : structure.scenes;
+
   // 计算章节（每个场景=一个章节）和时间轴
   const chapters: Chapter[] = [];
   const sceneFrameMap: Array<{
@@ -78,7 +88,7 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
   }> = [];
   let currentFrame = 0;
 
-  for (const sceneDef of structure.scenes) {
+  for (const sceneDef of scenes) {
     const sceneConfig = config.sceneConfigs[sceneDef.id];
     const configDur = sceneConfig?.durationSeconds;
     const durationFrames =
@@ -110,7 +120,7 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
 
   return (
     <AbsoluteFill>
-      {structure.scenes.map((sceneDef, idx) => {
+      {scenes.map((sceneDef, idx) => {
         const fm = sceneFrameMap[idx];
         const sceneConfig = config.sceneConfigs[sceneDef.id] ?? {
           layoutId: "hero-center" as const,

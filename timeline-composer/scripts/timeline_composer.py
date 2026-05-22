@@ -558,6 +558,57 @@ class TimelineComposer:
         return chunks
 
 
+# ── to_video_config: timeline → VideoConfig ────────────────
+
+def to_video_config(timeline: dict,
+                    style_id: str = "dark-purple",
+                    bg_type: str = "starfield",
+                    structure_id: str = "timeline-adaptive") -> dict:
+    """Convert timeline.json output to VideoConfig format for Remotion VideoComposer.
+
+    Maps each timeline segment to a SceneConfig with layoutId, motionMap,
+    content, and durationSeconds.
+    """
+    segments = timeline.get("segments", [])
+    scene_configs = {}
+
+    for seg in segments:
+        seg_id = seg.get("id", f"seg_{len(scene_configs) + 1:03d}")
+        seg_type = seg.get("type", "showcase")
+        layout_entry = SEG_TYPE_LAYOUT.get(seg_type, SEG_TYPE_LAYOUT["showcase"])
+
+        content = {}
+        vo_text = seg.get("voiceover", {}).get("text", "")
+        if vo_text:
+            # First 60 chars as headline, rest as body
+            content["headline"] = vo_text[:60]
+            if len(vo_text) > 60:
+                content["body"] = vo_text
+
+        mat_ref = seg.get("primary_material")
+        if mat_ref:
+            content["visual"] = mat_ref
+
+        scene_configs[seg_id] = {
+            "layoutId": layout_entry["layout_id"],
+            "motionMap": layout_entry.get("motion", {}),
+            "content": content,
+            "durationSeconds": max(seg.get("duration", 5), 2),
+        }
+
+    return {
+        "structureId": structure_id,
+        "styleId": style_id,
+        "bgType": bg_type,
+        "sceneConfigs": scene_configs,
+        "audio": {
+            "sfxEnabled": False,
+            "voiceover": [],
+            "voiceoverEnabled": False,
+        },
+    }
+
+
 # ── CLI ─────────────────────────────────────────────────────
 
 def main():
@@ -570,6 +621,12 @@ def main():
     parser.add_argument("--bgm-volume", type=float, default=0.2, help="Global BGM volume (0-1)")
     parser.add_argument("--progress-bar-style", default="labeled-bar",
                         choices=["minimal-dots", "labeled-bar", "gradient-fill", "segment-blocks", "timeline-ticks"])
+    parser.add_argument("--output-video-config", default=None,
+                        help="Also output VideoConfig JSON for Remotion VideoComposer render")
+    parser.add_argument("--style-id", default="dark-purple",
+                        help="Style template ID for VideoConfig (default: dark-purple)")
+    parser.add_argument("--bg-type", default="starfield",
+                        help="Background type for VideoConfig (default: starfield)")
     args = parser.parse_args()
 
     # Load inputs
@@ -603,6 +660,13 @@ def main():
     print(f"Timeline composed: {n_segs} segments, {n_chapters} chapters, {n_subs} subtitles")
     print(f"Output: {args.output}")
     print(f"SRT:     {srt_path}")
+
+    # Optional: write VideoConfig for Remotion VideoComposer
+    if args.output_video_config:
+        vc = to_video_config(timeline, style_id=args.style_id, bg_type=args.bg_type)
+        with open(args.output_video_config, "w") as f:
+            json.dump(vc, f, indent=2, ensure_ascii=False)
+        print(f"VideoConfig: {args.output_video_config}")
 
 
 def _write_srt(subtitles: list[dict], output_path: str) -> None:

@@ -263,12 +263,31 @@ export const performanceLaunchStructure: StructureTemplate = {
   ],
 };
 
+/**
+ * 时间线自适应型 — 场景由 timeline_composer 动态生成，不在结构模板中预定义。
+ *
+ * VideoComposer.tsx 遇到此 ID 时从 sceneConfigs 的动态键构建场景列表。
+ */
+export const timelineAdaptiveStructure: StructureTemplate = {
+  id: "timeline-adaptive",
+  name: "时间线自适应",
+  scenes: [
+    {
+      id: "dynamic",
+      type: "showcase",
+      durationSeconds: 0, // 完全动态
+      contentSlots: [],
+    },
+  ],
+};
+
 /** 所有预置结构模板 */
 export const structureTemplates: StructureTemplate[] = [
   funnelStructure,
   timelineStructure,
   productShowcaseStructure,
   performanceLaunchStructure,
+  timelineAdaptiveStructure,
 ];
 
 /** 按 ID 查找结构模板 */
