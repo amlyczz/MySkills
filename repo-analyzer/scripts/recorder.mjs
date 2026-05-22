@@ -35,7 +35,7 @@ function repoNameFromUrl(url) {
 // ── Path resolution ───────────────────────────────────────────────
 const __filename = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = path.dirname(__filename);
-const PROJECT_DIR = path.dirname(SCRIPT_DIR); // material-collector/
+const PROJECT_DIR = path.dirname(SCRIPT_DIR); // repo-analyzer/
 
 // ── Environment variables ─────────────────────────────────────────
 const REPO_URL = process.env.REPO_URL;

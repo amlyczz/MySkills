@@ -1,6 +1,6 @@
 {
   "name": "RepoAnalyzer",
-  "description": "分析 GitHub 仓库，提取项目理解、技术栈、源码洞察 — 不含口播脚本",
+  "description": "分析 GitHub 仓库：源码分析 + 素材发现与下载 + 口播脚本创作 + 封面/文案生成。输出 ContentModel（含完整字段）",
   "version": "1.0",
   "input": {
     "contract": "pipeline-contracts/py/content#RepoInfo",
@@ -8,8 +8,14 @@
   },
   "output": {
     "contract": "pipeline-contracts/py/content#ContentModel",
-    "description": "完整项目分析（不含 script/covers/publish_copy）"
+    "description": "完整 ContentModel（含 script/covers/publish_copy）+ material_discovery.json + materials/"
   },
+  "output_extras": [
+    {
+      "contract": "pipeline-contracts/py/material#MaterialManifest",
+      "description": "素材发现与评估清单"
+    }
+  ],
   "config": {
     "properties": {
       "repo_url": { "type": "string", "description": "GitHub 仓库 URL" },

@@ -60,10 +60,9 @@ pipelines/                ← Pipeline 定义文件
 └── podcast-clip.json
 
 各 Processor:
-  repo-analyzer/      → RepoAnalyzer
-  material-collector/     → MaterialCurator
+  repo-analyzer/      → RepoAnalyzer（分析 + 素材发现 + 脚本创作）
   timeline-composer/      → ScriptTimelineComposer
-  media_generator/       → MediaGenerator
+  media_generation/      → MediaGenerator
   video-renderer/         → VideoRenderer
   post-producer/          → PostProducer
 ```
@@ -76,9 +75,8 @@ pipelines/                ← Pipeline 定义文件
 
 | Processor | 输入 | 输出 | 执行方式 |
 |-----------|------|------|---------|
-| **RepoAnalyzer** | GitHub URL | ContentModel (无 script) | skill: repo-analyzer |
-| **MaterialCurator** | ContentModel | MaterialManifest | skill: material-collector |
-| **ScriptTimelineComposer** | ContentModel + MaterialManifest | TimelineModel + ContentModel(完整) + VideoConfig | skill: timeline-composer |
+| **RepoAnalyzer** | GitHub URL | ContentModel（含 script/covers/publish_copy）+ material_discovery.json + materials/ | skill: repo-analyzer |
+| **ScriptTimelineComposer** | ContentModel + material_discovery.json | TimelineModel + VideoConfig | skill: timeline-composer |
 | **MediaGenerator** | Script | voiceover.mp3 + bgm.mp3 | command: media_generator |
 | **VideoRenderer** | VideoConfig + TimelineModel | video.mp4 | command: remotion render |
 | **PostProducer** | video.mp4 + audio + timeline | final.mp4 | command: post-producer |
@@ -91,7 +89,7 @@ pipelines/                ← Pipeline 定义文件
 
 | 输入 | Pipeline | Processor 序列 |
 |------|----------|---------------|
-| GitHub 仓库 URL | `pipelines/github-promo.json` | RepoAnalyzer → MaterialCurator → ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
+| GitHub 仓库 URL | `pipelines/github-promo.json` | RepoAnalyzer → ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
 | 已有 content + material | `pipelines/manual-production.json` | ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
 | 纯文案 | `pipelines/podcast-clip.json` | ScriptTimelineComposer → MediaGenerator → PostProducer |
 
@@ -110,8 +108,7 @@ CONTENT_JSON="${OUTPUT_DIR}-content.json"
 
 | 文件 | 产出 Processor |
 |------|---------------|
-| `$OUTPUT_DIR/-content.json` | RepoAnalyzer |
-| `$OUTPUT_DIR/material_manifest.json` + `materials/` | MaterialCurator |
+| `$OUTPUT_DIR/-content.json` + `material_discovery.json` + `materials/` | RepoAnalyzer |
 | `$OUTPUT_DIR/timeline.json` + `.srt` | ScriptTimelineComposer |
 | `$OUTPUT_DIR/video_config.json` | ScriptTimelineComposer |
 | `$OUTPUT_DIR/voiceover.mp3` + `bgm.mp3` | MediaGenerator |
@@ -131,7 +128,7 @@ total_seconds = max(60, min(300, ceil(total_duration_est * 1.2 + 30)))
 ### Checkpoint
 
 ```json
-{"RepoAnalyzer": true, "MaterialCurator": false, "ScriptTimelineComposer": false, ...}
+{"RepoAnalyzer": true, "ScriptTimelineComposer": false, "MediaGenerator": false, ...}
 ```
 
 文件路径：`$OUTPUT_DIR/.pipeline_checkpoints.json`。每个 Processor 完成后更新。
@@ -146,51 +143,39 @@ source pipeline-orchestrator/scripts/proxy.sh
 
 ---
 
-## Processor：RepoAnalyzer（GitHub 仓库分析）
+## Processor：RepoAnalyzer（仓库分析 + 素材发现 + 内容创作）
 
 调用 `repo-analyzer` skill，输入 repo URL：
 
-1. 基础数据采集（gh api）
-2. 源码扫描 + Top-15 文件评分选取
-3. 4 维源码分析
-4. 生成 repo_insights（ContentModel，不含 script/covers/publish_copy）
-
-**输出**：`$OUTPUT_DIR-content.json`（不含 script 字段）
-
----
-
-## Processor：MaterialCurator（素材采集）
-
-调用 `material-collector` skill，agent 读 repo_insights → 策划素材需求 → 目标化采集 → 精选输出。
-
-1. 读 `$CONTENT_JSON`，理解项目核心卖点
-2. 策划素材需求清单（架构图、benchmark、截图、demo 等）
-3. 使用 Playwright 按优先级目标化采集
-4. URL 引用支持：远程图片可直接引用，无需下载本地
-5. 输出精选 `material_manifest.json`
-
-**输出**：`$OUTPUT_DIR/material_manifest.json` + `materials/`
-
----
-
-## Processor：ScriptTimelineComposer（脚本创作 + 时间线编排）
-
-Agent 在一个上下文窗口中同时完成脚本创作 + 素材匹配 + 时间线编排。
-
-同时读取 `$CONTENT_JSON`（项目理解）和 `material_manifest.json`（可用素材），基于两者交集创作。
-
-1. 理解项目 + 素材全景，设计叙事结构
-2. 为每个场景写口播脚本（预配对视觉呈现方案）
-3. 语义素材匹配（论证关系、时序关系、互补关系）
-4. 布局与动效设计
-5. 过渡设计（基于内容情绪）
-6. 章节划分 + 字幕生成
-7. 输出 3 个文件
+1. 基础数据采集（gh api 元信息 + README 全文）
+2. 源码扫描 + Top-15 文件评分选取 + 4 维分析
+3. README 素材发现与评估（架构图/benchmark/demo GIF/代码段等，分类型评分）
+4. 高价值素材自动下载（评分 ≥ 3 的素材 + 代码段）
+5. 内容创作（口播脚本/封面提示词/发布文案/源码洞察）
 
 **输出**：
-- `$OUTPUT_DIR-content.json`（覆盖写入，含 script/covers/publish_copy）
+- `$OUTPUT_DIR-content.json`（含 script/covers/publish_copy，完整 ContentModel）
+- `$OUTPUT_DIR/material_discovery.json` — 素材发现与评估清单
+- `$OUTPUT_DIR/materials/` — 下载的高价值素材文件
+
+---
+
+## Processor：ScriptTimelineComposer（脚本微调 + 时间线编排）
+
+Agent 基于 RepoAnalyzer 已产出的口播脚本初稿 + 素材评估清单，做编排式微调：
+
+1. 口播分句微调（基于已有 script segments，按需合并/拆分）
+2. 关键词提取 + 素材匹
+3. 场景类型分配 + 布局编排
+4. 过渡/动效/BGM 设计
+5. 章节划分 + 字幕生成
+6. 输出 timeline.json + video_config.json
+
+**产出 timeline.json 时覆盖写入 script**（脚本措辞微调，匹配实际可用素材）。
+
+**输出**：
 - `$OUTPUT_DIR/timeline.json` + `.srt`
-- `$OUTPUT_DIR/video_config.json`
+- `$OUTPUT_DIR/video_config.json`（含 BGM 音量曲线）
 
 ---
 
@@ -308,7 +293,7 @@ Agent 读 content.json + Remotion 源码 → 自行决策 → 写 video_config.j
 # 素材统计
 python3 -c "
 import json
-m = json.load(open('$OUTPUT_DIR/material_manifest.json'))
+m = json.load(open('$OUTPUT_DIR/material_discovery.json'))
 types = {}
 for item in m.get('materials', []):
     t = item.get('type', 'unknown')
@@ -349,4 +334,4 @@ for s in d.get('streams', []):
 repo-analyzer/content/YYYY-MM-DD/HHmm-{project}-content.json
 ```
 
-素材可来源任意组合：自动录制、用户手动、外部提供。不同的 Pipeline 模板可接受不同的输入类型（GitHub URL、视频文件路径、纯文本文案等）。
+ReproAnalyzer 同时产出 `material_discovery.json` + `materials/` 作为素材输入。

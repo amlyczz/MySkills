@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # proxy.sh — 设置代理环境变量
-# 从 material-collector/proxy.json 读取配置，自动识别 macOS/WSL
+# 从 pipeline-orchestrator/scripts/proxy.json 读取配置，自动识别 macOS/WSL
 # 用法: source "$(dirname "$0")/proxy.sh"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

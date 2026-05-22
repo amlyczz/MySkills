@@ -1,15 +1,15 @@
 {
   "name": "ScriptTimelineComposer",
-  "description": "写口播脚本 + 语义素材匹配 + 编排时间线",
+  "description": "微调口播脚本 + 语义素材匹配 + 编排时间线 + 生成 video_config",
   "version": "1.0",
   "input": {
     "contract": "pipeline-contracts/py/content#ContentModel",
-    "description": "内容分析产出"
+    "description": "RepoAnalyzer 产出的完整 ContentModel（含脚本初稿）"
   },
   "input_extras": [
     {
       "contract": "pipeline-contracts/py/material#MaterialManifest",
-      "description": "可用素材清单"
+      "description": "素材发现评估清单（material_discovery.json）"
     }
   ],
   "output": {
@@ -17,10 +17,6 @@
     "description": "时间线 + 字幕"
   },
   "output_extras": [
-    {
-      "contract": "pipeline-contracts/py/content#ContentModel",
-      "description": "完整 content.json（含 script/covers/publish_copy）"
-    },
     {
       "contract": "pipeline-contracts/py/video_config#VideoConfig",
       "description": "渲染配置（布局/动效/过渡等）"

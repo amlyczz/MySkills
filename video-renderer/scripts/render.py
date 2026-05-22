@@ -2,7 +2,7 @@
 """
 render.py — Remotion 渲染封装。
 
-提供 allocate.py 和 pipeline-runner 调用的渲染函数：
+提供 pipeline-orchestrator 和 allocate.py 调用的渲染函数：
   - remotion_render(): 渲染单个 Composition
   - render_video_composer(): 渲染 VideoComposer（含 sceneConfig 注入）
   - image_to_video_clip(): 图片 → 视频（Ken Burns / ffmpeg 降级）

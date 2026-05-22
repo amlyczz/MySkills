@@ -36,10 +36,9 @@
 
 | Processor | 输入 | 输出 |
 |-----------|------|------|
-| **RepoAnalyzer** | GitHub URL → `repo-analyzer/` | ContentModel |
-| **MaterialCurator** | ContentModel → `material-collector/` | MaterialManifest |
-| **ScriptTimelineComposer** | ContentModel + MaterialManifest → `timeline-composer/` | TimelineModel + VideoConfig |
-| **MediaGenerator** | Script → `media_generator/` | voiceover.mp3 + bgm.mp3 |
+| **RepoAnalyzer** | GitHub URL → `repo-analyzer/` | ContentModel + material_discovery.json + materials/ |
+| **ScriptTimelineComposer** | ContentModel + material_discovery.json → `timeline-composer/` | TimelineModel + VideoConfig |
+| **MediaGenerator** | Script → `media_generation/` | voiceover.mp3 + bgm.mp3 |
 | **VideoRenderer** | VideoConfig + Timeline → `video-renderer/remotion/` | video.mp4 |
 | **PostProducer** | video.mp4 + audio + timeline → `post-producer/` | final.mp4 |
 
@@ -65,7 +64,7 @@
 
 | Pipeline | Processor 序列 |
 |----------|---------------|
-| `pipelines/github-promo.json` | RepoAnalyzer → MaterialCurator → ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
+| `pipelines/github-promo.json` | RepoAnalyzer → ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
 | `pipelines/manual-production.json` | ScriptTimelineComposer → MediaGenerator → VideoRenderer → PostProducer |
 | `pipelines/podcast-clip.json` | ScriptTimelineComposer → MediaGenerator → PostProducer |
 

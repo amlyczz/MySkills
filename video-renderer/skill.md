@@ -18,7 +18,7 @@ tools_allowed:
 
 你是 Remotion 视频渲染引擎。接收 `video_config.json`，输出 `video.mp4`。
 
-**调用方**：pipeline-runner Phase 3（见 pipeline-runner/skill.md）
+**调用方**：pipeline-orchestrator（见 pipeline-orchestrator/skill.md）
 **上游**：timeline-composer Phase 2（生成 video_config.json）
 **下游**：post-producer Phase 4（音频混音 + 字幕烧录）
 

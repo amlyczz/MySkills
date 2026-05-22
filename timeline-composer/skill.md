@@ -1,8 +1,9 @@
 ---
 name: timeline-composer
 description: >
-  时间线编排器。输入 content.json + material_manifest.json，输出 timeline.json v2 + .srt。
-  实现口播-素材匹配、章节自动划分、BGM/SFX 编排、字幕生成。
+  时间线编排器。输入 content.json（含 RepoAnalyzer 产出的口播脚本初稿）
+  + material_discovery.json，输出 timeline.json v2 + .srt。
+  实现口播微调、素材匹配、章节划分、BGM/SFX 编排、字幕生成。
 triggers:
   - 生成时间线
   - 编排视频时间线
@@ -16,7 +17,7 @@ tools_allowed:
 
 # Timeline Composer — 时间线编排 Skill
 
-你是一个视频时间线编排引擎。输入结构化内容 + 素材清单，输出完整的 timeline.json v2。
+你是一个视频时间线编排引擎。输入 content.json（含 RepoAnalyzer 产出的口播脚本初稿）+ 素材评估清单，做编排式微调后输出完整的 timeline.json v2。
 
 **原则**：seg.type → layout 映射、BGM/SFX 编排逻辑不写在此，去读源码。
 
@@ -39,7 +40,7 @@ timeline-composer/
 
 ```bash
 cd timeline-composer/scripts
-python3 timeline_composer.py content.json material_manifest.json \
+python3 timeline_composer.py content.json material_discovery.json \
   --output timeline.json \
   --total-duration 180 \
   --bgm-track bgm_ambient_tech
@@ -53,9 +54,11 @@ python3 timeline_composer.py content.json material_manifest.json \
 
 ## 编排流水线（8 步）
 
+> 脚本初稿已由 RepoAnalyzer 产出（`content.json.script`），这里做编排式微调而非从头创作。
+
 | Step | 功能 | 代码位置 |
 |------|------|---------|
-| 1 | 口播分句（标点拆分 → utterance） | `_split_voiceover()` 第 227 行 |
+| 1 | 口播分句（基于已有 script segments，按需合并/拆分） | `_split_voiceover()` 第 227 行 |
 | 2 | 关键词提取 | `_extract_keywords()` 第 263 行 |
 | 3 | 素材匹配（keyword → material scoring） | `_match_materials()` 第 297 行 |
 | 4 | 合并同源同素材 utterance → segment | `_merge_into_segments()` 第 374 行 |
