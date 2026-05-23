@@ -1,21 +1,26 @@
 import React from "react";
 import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
 
-export const FluidBackground: React.FC = () => {
+export const FluidBackground: React.FC<{ intensity?: number }> = ({ intensity = 1 }) => {
   const frame = useCurrentFrame();
+  const t = frame / 60;
 
-  const x1 = interpolate(Math.sin(frame / 60), [-1, 1], [0, 40]);
-  const y1 = interpolate(Math.cos(frame / 80), [-1, 1], [0, 30]);
-  const x2 = interpolate(Math.cos(frame / 70), [-1, 1], [60, 100]);
-  const y2 = interpolate(Math.sin(frame / 50), [-1, 1], [60, 100]);
-  const x3 = interpolate(Math.sin(frame / 90), [-1, 1], [30, 70]);
-  const y3 = interpolate(Math.cos(frame / 60), [-1, 1], [20, 80]);
+  const orbs = [
+    { x: interpolate(Math.sin(t), [-1, 1], [20, 60]), y: interpolate(Math.cos(t * 0.7), [-1, 1], [10, 50]), color: "rgba(0,122,255,0.7)", size: "120%" },
+    { x: interpolate(Math.cos(t * 0.8), [-1, 1], [40, 80]), y: interpolate(Math.sin(t * 1.1), [-1, 1], [50, 90]), color: `rgba(255,204,0,${0.65 * intensity})`, size: "100%" },
+    { x: interpolate(Math.sin(t * 0.9), [-1, 1], [30, 70]), y: interpolate(Math.cos(t * 1.3), [-1, 1], [20, 80]), color: `rgba(255,59,48,${0.6 * intensity})`, size: "140%" },
+    { x: interpolate(Math.cos(t * 1.1), [-1, 1], [50, 90]), y: interpolate(Math.sin(t * 0.6), [-1, 1], [30, 70]), color: `rgba(50,173,230,${0.45 * intensity})`, size: "110%" },
+  ];
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#050510", overflow: "hidden", filter: "blur(80px)" }}>
-      <div style={{ position: "absolute", width: "120%", height: "120%", background: "radial-gradient(circle, rgba(16,84,234,0.8) 0%, rgba(0,0,0,0) 60%)", left: `${x1 - 20}%`, top: `${y1 - 20}%` }} />
-      <div style={{ position: "absolute", width: "100%", height: "100%", background: "radial-gradient(circle, rgba(255,214,0,0.7) 0%, rgba(0,0,0,0) 60%)", left: `${x2 - 50}%`, top: `${y2 - 50}%` }} />
-      <div style={{ position: "absolute", width: "150%", height: "150%", background: "radial-gradient(circle, rgba(255,69,0,0.65) 0%, rgba(0,0,0,0) 50%)", left: `${x3 - 50}%`, top: `${y3 - 50}%` }} />
+    <AbsoluteFill style={{ backgroundColor: "#040510", overflow: "hidden", filter: "blur(70px)" }}>
+      {orbs.map((o, i) => (
+        <div key={i} style={{
+          position: "absolute", width: o.size, height: o.size,
+          background: `radial-gradient(circle, ${o.color} 0%, rgba(0,0,0,0) 60%)`,
+          left: `${o.x - 30}%`, top: `${o.y - 30}%`,
+        }} />
+      ))}
     </AbsoluteFill>
   );
 };
