@@ -82,8 +82,8 @@ export const KineticText: React.FC<LayoutProps> = ({
           <span style={{ position: "relative", zIndex: 1, color: activeAction?.type === "highlight" ? String(textColor) : style.bodyColor }}>
             {displayedText}
           </span>
-          {/* Blinking cursor */}
-          {(activeAction?.type === "type" || !activeAction) && (
+          {/* Blinking cursor — only when actively typing actions */}
+          {activeAction?.type === "type" && (
             <span
               style={{
                 display: "inline-block", width: 3, height: "0.7em",

@@ -19,6 +19,8 @@ import { KineticText } from "./KineticText";
 import { ZAxisFlyThrough } from "./ZAxisFlyThrough";
 import { PromptInput } from "./PromptInput";
 import { FullScreenText } from "./FullScreenText";
+import { MediaGallery } from "./MediaGallery";
+import { CodeCarousel } from "./CodeCarousel";
 
 export type { LayoutType };
 export type { LayoutProps };
@@ -62,6 +64,10 @@ export const LayoutDispatcher: React.FC<LayoutDispatcherProps> = ({
       return <SplitLeftText direction="right" {...props} />;
     case "full-screen-text":
       return <FullScreenText {...props} />;
+    case "media-gallery":
+      return <MediaGallery {...props} />;
+    case "code-carousel":
+      return <CodeCarousel {...props} />;
     default:
       return assertNever(layoutId);
   }

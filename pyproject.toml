@@ -6,6 +6,8 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.0",
     "pipeline-contracts",
+    "playwright>=1.60.0",
+    "edge-tts>=7.2.8",
 ]
 
 [tool.uv.sources]

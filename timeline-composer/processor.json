@@ -1,29 +1,17 @@
 {
   "name": "ScriptTimelineComposer",
-  "description": "微调口播脚本 + 语义素材匹配 + 编排时间线 + 生成 video_config",
-  "version": "1.0",
+  "description": "AI Agent 场景编排。为每段口播逐一决策 13 个视觉维度，输出 timeline.json + video_config.json",
+  "version": "2.0",
   "input": {
-    "contract": "pipeline-contracts/py/content#ContentModel",
-    "description": "RepoAnalyzer 产出的完整 ContentModel（含脚本初稿）"
+    "contract": "pipeline_contracts.content#ContentModel",
+    "description": "ReproAnalyzer 产出的完整 ContentModel（含素材绑定的口播脚本）"
   },
-  "input_extras": [
-    {
-      "contract": "pipeline-contracts/py/material#MaterialManifest",
-      "description": "素材发现评估清单（material_discovery.json）"
-    }
-  ],
   "output": {
-    "contract": "pipeline-contracts/py/timeline#TimelineModel",
-    "description": "时间线 + 字幕"
+    "contract": "pipeline_contracts.timeline#TimelineModel",
+    "description": "timeline.json + video_config.json + timeline.srt + timeline.bgm_curve.json"
   },
-  "output_extras": [
-    {
-      "contract": "pipeline-contracts/py/video_config#VideoConfig",
-      "description": "渲染配置（布局/动效/过渡等）"
-    }
-  ],
   "exec": {
-    "type": "skill",
-    "skill": "timeline-composer"
+    "type": "agent",
+    "description": "AI Agent 主导语义推理，timeline_composer.py 作为确定性工具补充"
   }
 }

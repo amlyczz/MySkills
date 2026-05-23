@@ -78,7 +78,7 @@ export const TEXT_TRANSFORM_THEMES = ["minimal-bw", "matte-metal"];
 
 // ── 文本阴影 ──
 /** Neon 主题的 glow 效果阴影 */
-export const SHADOW_NEON = "0 0 20px rgba(100,100,255,0.8), 0 0 60px rgba(100,100,255,0.4)";
+export const SHADOW_NEON = "0 1px 4px rgba(100,100,255,0.3), 0 0 12px rgba(100,100,255,0.15)";
 /** Warm 主题的投影 */
 export const SHADOW_WARM = "0 2px 8px rgba(0,0,0,0.3)";
 /** 默认 text-shadow */

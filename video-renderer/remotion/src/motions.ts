@@ -9,6 +9,12 @@ import { sfxLibrary } from "./audio/sfxLibrary";
 
 export type { MotionType };
 
+/** 高弹性 UI 卡片弹出 — 用于 DeviceFrame 开盖、Pills 弹射 */
+export const SPRING_ELASTIC_UI = { mass: 0.6, damping: 12, stiffness: 120 } as const;
+
+/** 柔和数据生长 — 用于 AnimatedBarChart */
+export const SPRING_DATA_GROW = { mass: 0.8, damping: 14, stiffness: 100 } as const;
+
 export const motionPresets: Record<MotionType, MotionPreset> = {
   // ── 入场动效 ──
   "spring-slide-up": {
@@ -20,6 +26,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 40,
       enterFrom: { type: "translate", x: 0, y: 60 },
     },
+    idle: { type: "float", amplitude: 3, frequency: 0.015, phaseOffset: 0 },
+    exit: { type: "fade-out", durationFrames: 15 },
   },
   "spring-slide-left": {
     id: "spring-slide-left",
@@ -30,6 +38,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 40,
       enterFrom: { type: "translate", x: 60, y: 0 },
     },
+    idle: { type: "float", amplitude: 3, frequency: 0.015 },
+    exit: { type: "slide-out", direction: "left", durationFrames: 15 },
   },
   "arc-entrance": {
     id: "arc-entrance",
@@ -40,6 +50,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 55,
       enterFrom: { type: "arc", fromX: 40, fromY: 60 },
     },
+    idle: { type: "float", amplitude: 4, frequency: 0.012 },
+    exit: { type: "blur-out", durationFrames: 15 },
   },
   "scale-fade": {
     id: "scale-fade",
@@ -50,6 +62,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 30,
       enterFrom: { type: "scale", from: 0.85 },
     },
+    idle: { type: "breathe", amplitude: 2, frequency: 0.02 },
+    exit: { type: "scale-down", durationFrames: 12 },
   },
   typewriter: {
     id: "typewriter",
@@ -60,6 +74,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 60,
       enterFrom: { type: "translate", x: 0, y: 0 },
     },
+    idle: { type: "none" },
+    exit: { type: "fade-out", durationFrames: 10 },
   },
   "reveal-mask": {
     id: "reveal-mask",
@@ -70,6 +86,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 35,
       enterFrom: { type: "mask", direction: "left" },
     },
+    idle: { type: "none" },
+    exit: { type: "slide-out", direction: "right", durationFrames: 15 },
   },
   "bounce-in": {
     id: "bounce-in",
@@ -80,6 +98,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 45,
       enterFrom: { type: "translate", x: 0, y: 80 },
     },
+    idle: { type: "breathe", amplitude: 2, frequency: 0.02 },
+    exit: { type: "scale-down", durationFrames: 12 },
   },
   "blur-focus": {
     id: "blur-focus",
@@ -90,6 +110,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 30,
       enterFrom: { type: "scale", from: 1.05 },
     },
+    idle: { type: "glow", glowIntensity: 0.8, frequency: 0.015 },
+    exit: { type: "blur-out", durationFrames: 15 },
   },
 
   // ── 退场动效 ──
@@ -113,7 +135,7 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 1,
       enterFrom: { type: "translate", x: 0, y: 0 },
     },
-    exit: { type: "slide-out", durationFrames: 20 },
+    exit: { type: "slide-out", direction: "left", durationFrames: 20 },
   },
   "scale-down-out": {
     id: "scale-down-out",
@@ -159,7 +181,7 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 1,
       enterFrom: { type: "translate", x: 0, y: 0 },
     },
-    idle: { type: "glow", amplitude: 0.3, frequency: 0.03 },
+    idle: { type: "glow", glowIntensity: 0.3, frequency: 0.03 },
   },
   // ── 弹性动效 (v3) — 对标 Cohere 发布视频 ──
   "spring-elastic": {
@@ -171,6 +193,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 45,
       enterFrom: { type: "translate", x: 0, y: 60 },
     },
+    idle: { type: "float", amplitude: 5, frequency: 0.02 },
+    exit: { type: "whip-blur", durationFrames: 12 },
   },
   "smooth-scale-up": {
     id: "smooth-scale-up",
@@ -181,6 +205,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 40,
       enterFrom: { type: "scale", from: 0.85 },
     },
+    idle: { type: "breathe", amplitude: 2, frequency: 0.015 },
+    exit: { type: "scale-down", durationFrames: 15 },
   },
   "staggered-grow": {
     id: "staggered-grow",
@@ -191,6 +217,8 @@ export const motionPresets: Record<MotionType, MotionPreset> = {
       durationFrames: 50,
       enterFrom: { type: "translate", x: 0, y: 30 },
     },
+    idle: { type: "float", amplitude: 2, frequency: 0.02 },
+    exit: { type: "fade-out", durationFrames: 10 },
   },
   none: {
     id: "none",

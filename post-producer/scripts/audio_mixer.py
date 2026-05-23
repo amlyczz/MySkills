@@ -60,10 +60,12 @@ def _gen_bgm_volume_curve(segments: list[dict], total_duration: float,
 
     total = total_duration + offset + tail
     parts: list[str] = []
+    if_count = 0
 
     # Fade-in: 0 → first_seg_vol (linear over `offset` seconds)
     first_vol = segments[0].get("audio", {}).get("bgm_volume", 0.25)
     parts.append(f"if(lt(t,{offset}),{first_vol}*t/{offset}")
+    if_count += 1
 
     prev_vol = first_vol
     prev_end = offset
@@ -78,12 +80,14 @@ def _gen_bgm_volume_curve(segments: list[dict], total_duration: float,
         if t0 > prev_end:
             # Gap between segments: hold prev_vol
             parts.append(f",if(lt(t,{t0}),{prev_vol}")
+            if_count += 1
 
         if fade_in > 0 and t0 + fade_in < t1:
             parts.append(
                 f",if(lt(t,{t0 + fade_in}),"
                 f"{prev_vol}+({vol}-{prev_vol})*(t-{t0})/{fade_in}"
             )
+            if_count += 1
 
         if fade_out > 0 and t1 - fade_out > t0:
             fade_start = t1 - fade_out
@@ -91,8 +95,10 @@ def _gen_bgm_volume_curve(segments: list[dict], total_duration: float,
                 f",if(lt(t,{fade_start}),{vol}"
                 f",if(lt(t,{t1}),{vol}*(1-(t-{fade_start})/{fade_out})"
             )
+            if_count += 2
         else:
             parts.append(f",if(lt(t,{t1}),{vol}")
+            if_count += 1
 
         prev_vol = vol
         prev_end = t1
@@ -101,11 +107,13 @@ def _gen_bgm_volume_curve(segments: list[dict], total_duration: float,
     tail_start = total_duration + offset
     last_vol = segments[-1].get("audio", {}).get("bgm_volume", 0.25)
     parts.append(f",if(lt(t,{tail_start}),{last_vol}")
+    if_count += 1
     parts.append(f",if(lt(t,{total}),{last_vol}*(1-(t-{tail_start})/{tail})")
+    if_count += 1
 
     # Everything beyond total → 0, close all ifs
     parts.append(",0")
-    parts.append(")" * len(parts))
+    parts.append(")" * if_count)
 
     return "".join(parts)
 
@@ -201,13 +209,18 @@ def mix_audio(video_path: str,
     with open(timeline_path, "r") as f:
         timeline = json.load(f)
 
-    total_dur = timeline["global"]["total_duration"]
     segments = timeline.get("segments", [])
     global_bgm = timeline["global"].get("bgm_volume", 0.2)
 
     vo_dur = _probe_duration(voiceover_path)
     bgm_dur = _probe_duration(bgm_path)
-    print(f"Voiceover: {vo_dur:.1f}s  BGM: {bgm_dur:.1f}s  Target: {total_dur:.1f}s")
+    video_dur = _probe_duration(video_path)
+
+    # Use actual video duration, NOT timeline.json's total_duration.
+    # timeline.json may have a different total (e.g. 104s) than the
+    # actual rendered video. Using the real duration prevents over-padding.
+    total_dur = video_dur if video_dur > 0 else timeline["global"].get("total_duration", 180)
+    print(f"Voiceover: {vo_dur:.1f}s  BGM: {bgm_dur:.1f}s  Video: {video_dur:.1f}s  Target: {total_dur:.1f}s")
 
     total_bgm = total_dur + bgm_offset + bgm_tail
 
@@ -248,17 +261,21 @@ def mix_audio(video_path: str,
         f"volume='{vol_curve}':eval=frame,"
         f"volume={global_bgm}[bgm_vol]"
     )
+    # ── Split voiceover for sidechain and mix ──────────────────
+    filters.append(
+        f"[vo_norm]asplit=2[vo_sidechain][vo_mix]"
+    )
 
     # ── Sidechain ducking ────────────────────────────────────
     # BGM dips ~8dB when voiceover is above threshold
     filters.append(
-        f"[bgm_vol][vo_norm]sidechaincompress="
+        f"[bgm_vol][vo_sidechain]sidechaincompress="
         f"threshold=0.005:ratio=2:attack=10:release=100[bgm_ducked]"
     )
 
     # ── Mix voiceover + BGM ──────────────────────────────────
     filters.append(
-        f"[bgm_ducked][vo_norm]amix=inputs=2:duration=first:weights=1 1[mixed]"
+        f"[bgm_ducked][vo_mix]amix=inputs=2:duration=first:weights=1 1[mixed]"
     )
 
     # ── SFX overlay ──────────────────────────────────────────
@@ -349,7 +366,7 @@ def burn_subtitles(video_path: str, srt_path: str, output_path: str | None = Non
     _run([
         ffmpeg_bin, '-y',
         '-i', video_path,
-        '-vf', f"subtitles={srt_abs}:force_style='MarginV=50'",
+        '-vf', f"subtitles={srt_abs}:force_style='MarginV=24'",
         '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
         '-c:a', 'copy',
         out,

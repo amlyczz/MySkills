@@ -27,6 +27,8 @@ const zLayoutType = z.enum([
   "fly-through",
   "prompt-input",
   "sandwich-text",
+  "media-gallery",
+  "code-carousel",
 ]);
 
 const zMotionType = z.enum([
@@ -69,6 +71,8 @@ const zBgType = z.enum([
   "geometric",
   "pixel",
   "fluid-gradient",
+  "nebula-3d",
+  "aurora",
   "none",
 ]);
 
@@ -123,10 +127,11 @@ const zSceneConfig = z.object({
   layoutId: zLayoutType,
   motionMap: z.record(z.string(), zMotionType),
   content: zContent,
-  durationSeconds: z.number().int().min(1).max(300).optional(),
+  durationSeconds: z.number().min(1).max(300).optional(),
   chartData: z.array(zBarChartItem).optional(),
   cameraAction: zCameraAction.optional(),
   wrapperType: zWrapperType.optional(),
+  bgType: zBgType.optional(),
   transitionIn: zTransitionConfig.optional(),
   transitionOut: zTransitionConfig.optional(),
 });

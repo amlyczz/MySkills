@@ -178,7 +178,9 @@ export type LayoutType =
   | "floating-grid"        // 卡片群飞入
   | "fly-through"          // 3D Z 轴穿梭
   | "prompt-input"         // AI 对话模拟
-  | "sandwich-text";       // 景深夹心
+  | "sandwich-text"       // 景深夹心
+  | "media-gallery"       // 多媒体网格
+  | "code-carousel";      // 多代码块轮播
 
 /** 布局组件统一 props */
 export interface LayoutProps {
@@ -301,14 +303,18 @@ export interface MotionPreset {
   };
 
   idle?: {
-    type: "float" | "glow" | "none";
-    amplitude?: number;
-    frequency?: number;
+    type: "float" | "glow" | "breathe" | "none";
+    amplitude?: number;    // Y轴浮动幅度 (px)
+    frequency?: number;    // 周期频率 (frame^-1)
+    glowIntensity?: number; // 发光强度 0-1
+    phaseOffset?: number;   // 相位偏移（用于多元素错峰）
   };
 
   exit?: {
-    type: "fade-out" | "slide-out" | "scale-down" | "blur-out";
+    type: "fade-out" | "slide-out" | "scale-down" | "blur-out" | "whip-blur";
     durationFrames: number;
+    direction?: "left" | "right" | "up" | "down";  // slide-out 方向
+    motionBlur?: number;  // whip-blur 模糊量
   };
 
   /** 关联音效（预留槽位，Phase 3 实现） */
@@ -422,6 +428,8 @@ export interface SceneConfig {
   chartData?: BarChartItem[];
   cameraAction?: CameraAction;
   wrapperType?: "glow" | "device-frame";
+  /** Per-scene background override */
+  bgType?: BgType;
   /** Transition INTO this scene (from previous) */
   transitionIn?: TransitionConfig;
   /** Transition OUT of this scene (to next) */

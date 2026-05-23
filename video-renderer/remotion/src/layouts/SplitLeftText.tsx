@@ -1,20 +1,12 @@
-/**
- * SplitLeftText — 左右分栏布局。
- *
- * 左侧 1/3 文案 + 右侧 2/3 素材/留白。
- * 适合 solution / feature 等需要图文并排的场景。
- */
 import React from "react";
 import {
   AbsoluteFill,
   AnimatedImage,
   Img,
-  useCurrentFrame,
-  interpolate,
 } from "remotion";
-import { LayoutProps, MotionType, MotionPreset } from "../types";
-import { defaultMotionMap, getMotion } from "../motions";
-import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
+import { LayoutProps } from "../types";
+import { getMotion } from "../motions";
+import { useElementLifecycle } from "../hooks/useElementLifecycle";
 import { AnimatedBarChart } from "../components/AnimatedBarChart";
 import { SfxPlayer } from "../components/SfxPlayer";
 import {
@@ -22,7 +14,6 @@ import {
   FONT_SIZE_TITLE, FONT_SIZE_TAGLINE, FONT_SIZE_POINTS,
   FONT_WEIGHT_TITLE, FONT_WEIGHT_TAGLINE, FONT_WEIGHT_POINTS,
 } from "../layout";
-import { TIMING } from "../animations";
 
 export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right" }> = ({
   title,
@@ -35,23 +26,31 @@ export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right
   motionMap,
   showBullet = true,
   direction = "left",
+  sceneDurationFrames,
+  staggerOrder,
 }) => {
-  const frame = useCurrentFrame();
+  const getStaggerIndex = (key: string, defaultIndex: number) => {
+    if (!staggerOrder) return defaultIndex;
+    const idx = staggerOrder.indexOf(key);
+    return idx >= 0 ? idx : defaultIndex;
+  };
 
   // ── Title ──
-  const titleMotion = getMotion(motionMap, "title", "arc-entrance");
-  const titleEntrance = useEntrance(titleMotion, Math.max(0, frame - TIMING.TITLE_INTRO[0]));
+  const titleLifecycle = useElementLifecycle(getMotion(motionMap, "title", "arc-entrance"), {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("title", 0),
+  });
 
   // ── Subtitle ──
-  const subMotion = getMotion(motionMap, "subtitle", "scale-fade");
-  const subEntrance = useEntrance(subMotion, Math.max(0, frame - TIMING.TAGLINE_INTRO[0]));
+  const subLifecycle = useElementLifecycle(getMotion(motionMap, "subtitle", "scale-fade"), {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("subtitle", 1),
+  });
 
-  // ── Points ──
-  const pointMotion = getMotion(motionMap, "points", "spring-slide-up");
-  const pointElements = (points ?? []).slice(0, 5).map((point, i) => {
-    const startFrame = staggerStartFrame(TIMING.POINTS_START, i, TIMING.POINTS_STAGGER);
-    const entrance = useEntrance(pointMotion, Math.max(0, frame - startFrame));
-    return { point, i, opacity: entrance.opacity, transform: entrance.transform, clipPath: entrance.clipPath, filter: entrance.filter };
+  // ── Media/Chart ──
+  const mediaLifecycle = useElementLifecycle(getMotion(motionMap, "media", "scale-up"), {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("media", 2),
   });
 
   return (
@@ -69,10 +68,7 @@ export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right
         {title && (
           <div
             style={{
-              opacity: titleEntrance.opacity,
-              transform: titleEntrance.transform,
-              clipPath: titleEntrance.clipPath,
-              filter: titleEntrance.filter,
+              ...titleLifecycle.style,
               fontSize: FONT_SIZE_TITLE * 0.75,
               fontWeight: FONT_WEIGHT_TITLE,
               letterSpacing: theme.typography.titleLetterSpacing,
@@ -90,10 +86,7 @@ export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right
         {subtitle && (
           <div
             style={{
-              opacity: subEntrance.opacity,
-              transform: subEntrance.transform,
-              clipPath: subEntrance.clipPath,
-              filter: subEntrance.filter,
+              ...subLifecycle.style,
               fontSize: FONT_SIZE_TAGLINE,
               fontWeight: FONT_WEIGHT_TAGLINE,
               color: style.mutedColor,
@@ -106,48 +99,53 @@ export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right
           </div>
         )}
 
-        {pointElements.length > 0 && (
+        {(points ?? []).length > 0 && (
           <div
             style={{ display: "flex", flexDirection: "column", gap: GAP_POINTS }}
           >
-            {pointElements.map(({ point, i, opacity, transform, clipPath, filter }) => (
-              <div
-                key={i}
-                style={{
-                  opacity,
-                  transform,
-                  clipPath,
-                  filter,
-                  fontSize: FONT_SIZE_POINTS,
-                  fontWeight: FONT_WEIGHT_POINTS,
-                  lineHeight: 1.5,
-                  color: style.mutedColor,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: GAP_POINTS,
-                }}
-              >
-                {showBullet && (
-                  <span
-                    style={{
-                      display: "inline-block",
-                      width: DOT_SIZE,
-                      height: DOT_SIZE,
-                      borderRadius: "50%",
-                      backgroundColor: style.bulletColor,
-                      flexShrink: 0,
-                    }}
-                  />
-                )}
-                {point}
-              </div>
-            ))}
+            {(points ?? []).slice(0, 5).map((point, i) => {
+              const pointLifecycle = useElementLifecycle(getMotion(motionMap, "points", "spring-slide-up"), {
+                sceneDurationFrames,
+                staggerIndex: getStaggerIndex("points", 3) + i,
+                staggerInterval: 8,
+              });
+
+              return (
+                <div
+                  key={i}
+                  style={{
+                    ...pointLifecycle.style,
+                    fontSize: FONT_SIZE_POINTS,
+                    fontWeight: FONT_WEIGHT_POINTS,
+                    lineHeight: 1.5,
+                    color: style.mutedColor,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: GAP_POINTS,
+                  }}
+                >
+                  {showBullet && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: DOT_SIZE,
+                        height: DOT_SIZE,
+                        borderRadius: "50%",
+                        backgroundColor: style.bulletColor,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  {point}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* 右侧 2/3 素材/图表/留白 */}
-      <div style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ flex: 2, display: "flex", alignItems: "center", justifyContent: "center", ...mediaLifecycle.style }}>
         {chartData && chartData.length > 0 ? (
           <AnimatedBarChart data={chartData} accentColor={theme.colors.accent} />
         ) : mediaUrl ? (
@@ -160,10 +158,10 @@ export const SplitLeftText: React.FC<LayoutProps & { direction?: "left" | "right
       </div>
 
       {/* SFX */}
-      {title && <SfxPlayer motion={titleMotion} staggerIndex={0} />}
-      {subtitle && <SfxPlayer motion={subMotion} staggerIndex={0} />}
+      {title && <SfxPlayer motion={getMotion(motionMap, "title", "arc-entrance")} staggerIndex={getStaggerIndex("title", 0)} />}
+      {subtitle && <SfxPlayer motion={getMotion(motionMap, "subtitle", "scale-fade")} staggerIndex={getStaggerIndex("subtitle", 1)} />}
       {(points ?? []).map((_, i) => (
-        <SfxPlayer key={i} motion={pointMotion} staggerIndex={i} />
+        <SfxPlayer key={i} motion={getMotion(motionMap, "points", "spring-slide-up")} staggerIndex={getStaggerIndex("points", 3) + i} />
       ))}
     </AbsoluteFill>
   );

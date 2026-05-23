@@ -318,7 +318,16 @@ function SegmentBlocks({
   );
 }
 
-/** water-flow: 底部全宽水流式进度条 */
+/** water-flow: 多层 sin 波叠加模拟真实水流动效
+ *
+ * 使用 3 层正弦波叠加生成波浪表面曲线，通过 clip-path 裁剪填充区域。
+ * 替代旧版 CSS translateX 渐变条纹方案。
+ *
+ * 物理参数：
+ *   主波 A1=4px, k1=0.025, w1=0.045 — 低频高幅，基础波浪
+ *   次波 A2=2px, k2=0.04,  w2=0.07  — 中频中幅，叠加波纹
+ *   涟漪 A3=1px, k3=0.06,  w3=0.12  — 高频低幅，表面细节
+ */
 function WaterFlowBar({
   chapters,
   currentIndex,
@@ -331,10 +340,55 @@ function WaterFlowBar({
   totalDuration: number;
 }) {
   const frame = useCurrentFrame();
+  const { width } = useVideoConfig();
   const progress = totalDuration > 0 ? Math.min(1, Math.max(0, currentTime / totalDuration)) : 0;
 
-  // Continuous left-to-right shimmer across entire bar (not oscillating)
-  const shimmerPos = ((frame * 0.6) % 150) - 25;
+  // Bar dimensions
+  const barMarginX = 10;
+  const barWidth = width - barMarginX * 2;
+  const fillWidth = barWidth * progress;
+  const barWidthPct = barWidth > 0 ? (fillWidth / barWidth) * 100 : 0;
+
+  // Wave parameters
+  const A1 = 4, k1 = 0.025, w1 = 0.045, phi1 = 0;
+  const A2 = 2, k2 = 0.04,  w2 = 0.07,  phi2 = 1.8;
+  const A3 = 1, k3 = 0.06,  w3 = 0.12,  phi3 = 3.2;
+
+  // Generate wave surface points along the filled width
+  // 20 sampling points for smooth curve
+  const numPoints = 20;
+  const surfaceY = 10; // water surface sits 10px below bar top
+
+  const wavePoints: { x: number; y: number }[] = [];
+  for (let i = 0; i <= numPoints; i++) {
+    const x = (i / numPoints) * fillWidth;
+    const t = frame;
+    const y = A1 * Math.sin(k1 * x - w1 * t + phi1)
+            + A2 * Math.sin(k2 * x - w2 * t + phi2)
+            + A3 * Math.sin(k3 * x - w3 * t + phi3);
+    wavePoints.push({ x, y });
+  }
+
+  // Build clip-path polygon for the filled water region
+  // Left edge: go up from bottom-left to water surface at x=0
+  // Top edge: follow wave points
+  // Right edge: from last wave point down to bottom-right
+  // Bottom edge: along the bottom of the bar
+  const waterBodyClip = [
+    `0 ${surfaceY + wavePoints[0].y}px`,
+    ...wavePoints.map((p) => `${p.x}px ${surfaceY + p.y}px`),
+    `${fillWidth}px ${surfaceY + wavePoints[numPoints].y}px`,
+    `${fillWidth}px 100%`,
+    `0 100%`,
+  ].join(",");
+
+  // Surface highlight line — a thin bright stroke along the wave crest
+  const surfaceLine = wavePoints
+    .map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${surfaceY + p.y}`)
+    .join(" ");
+
+  // Leading edge glow position (playhead)
+  const edgeGlowX = fillWidth;
 
   return (
     <div
@@ -343,105 +397,121 @@ function WaterFlowBar({
         bottom: 0,
         left: 0,
         right: 0,
-        height: 48,
-        background: "rgba(0,0,0,0.6)",
+        height: 52,
+        background: "rgba(0,0,0,0.65)",
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",
       }}
     >
-      {/* 背景条 */}
       <div
         style={{
           position: "relative",
-          height: 40,
-          margin: "4px 8px",
-          background: "rgba(255,255,255,0.08)",
-          borderRadius: 6,
+          height: 42,
+          margin: "5px 10px",
+          borderRadius: 8,
           overflow: "hidden",
         }}
       >
-        {/* 水流填充层 — 从左向右连续推进 */}
+        {/* Bar track background */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: 8,
+          }}
+        />
+
+        {/* Water body — clipped by wave polygon */}
         <div
           style={{
             position: "absolute",
             left: 0,
             top: 0,
             bottom: 0,
-            width: `${progress * 100}%`,
-            background: "linear-gradient(90deg, #2563eb, #06b6d4)",
-            borderRadius: 6,
-            transition: "none",
+            width: `${barWidthPct}%`,
+            background: "linear-gradient(180deg, #0ea5e9 0%, #0284c7 40%, #0369a1 100%)",
+            clipPath: `polygon(${waterBodyClip})`,
+          }}
+        />
+
+        {/* Surface highlight — SVG-like thin bright line along wave crest */}
+        <svg
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: `${barWidthPct}%`,
+            height: "100%",
+            overflow: "visible",
+            pointerEvents: "none",
           }}
         >
-          {/* 光泽滑动效果 — 单向连续流动 */}
+          <path
+            d={surfaceLine}
+            fill="none"
+            stroke="rgba(255,255,255,0.45)"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
+        </svg>
+
+        {/* Leading edge glow — playhead */}
+        {progress > 0 && progress < 1 && (
           <div
             style={{
               position: "absolute",
-              left: 0,
+              left: `${barWidthPct}%`,
               top: 0,
               bottom: 0,
-              width: "40%",
-              background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-              transform: `translateX(${shimmerPos}%)`,
+              width: 3,
+              background: "linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.2))",
+              boxShadow: "0 0 6px rgba(14,165,233,0.6)",
+              transform: "translateX(-50%)",
+              borderRadius: 2,
             }}
           />
-        </div>
+        )}
 
-        {/* 垂直分割线 + 章节标签 (标签在填充层上方,避免叠加) */}
+        {/* Chapter labels — positioned across the bar, not clipped */}
         {chapters.map((ch, i) => {
           const chStart = ch.time;
           const chEnd =
-            i < chapters.length - 1
-              ? chapters[i + 1].time
-              : totalDuration;
+            i < chapters.length - 1 ? chapters[i + 1].time : totalDuration;
           const centerPct =
             totalDuration > 0
               ? ((chStart + chEnd) / 2 / totalDuration) * 100
               : ((i + 0.5) / chapters.length) * 100;
-          const dividerPct =
-            i > 0 && totalDuration > 0
-              ? (chStart / totalDuration) * 100
-              : 0;
           const isCurrent = i === currentIndex;
           const isPast = i < currentIndex;
 
           return (
-            <React.Fragment key={i}>
-              {/* 分割线 */}
-              {i > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: `${dividerPct}%`,
-                    top: 0,
-                    bottom: 0,
-                    width: 2,
-                    background: "rgba(255,255,255,0.2)",
-                  }}
-                />
-              )}
-              {/* 章节标签 —— 添加文字阴影穿透背景 */}
-              <span
-                style={{
-                  position: "absolute",
-                  left: `${centerPct}%`,
-                  top: "50%",
-                  transform: "translate(-50%, -50%)",
-                  fontSize: 11,
-                  fontWeight: isCurrent ? 600 : 400,
-                  color: isCurrent ? "#e0f2fe" : "rgba(255,255,255,0.5)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  maxWidth: "18%",
-                  zIndex: 2,
-                  textShadow: "0 0 6px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7)",
-                }}
-              >
-                {ch.label}
-              </span>
-            </React.Fragment>
+            <span
+              key={i}
+              style={{
+                position: "absolute",
+                left: `${centerPct}%`,
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                fontSize: 13,
+                fontWeight: isCurrent ? 700 : 500,
+                color: isCurrent
+                  ? "#ffffff"
+                  : isPast
+                  ? "rgba(255,255,255,0.65)"
+                  : "rgba(255,255,255,0.35)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: "20%",
+                zIndex: 2,
+                textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+                letterSpacing: 0.5,
+              }}
+            >
+              {ch.label}
+            </span>
           );
         })}
       </div>

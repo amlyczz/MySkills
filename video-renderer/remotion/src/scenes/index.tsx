@@ -63,11 +63,12 @@ export interface SpecificSceneProps {
   motionMap?: Record<string, MotionType>;
   transitionIn?: TransitionConfig;
   transitionOut?: TransitionConfig;
+  sceneDurationFrames?: number;
 }
 
 /** 黄金三秒 */
 export const HookScene: React.FC<SpecificSceneProps> = ({
-  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut, wrapperType, cameraAction, sceneDurationFrames,
 }) => (
   <SceneBase
     content={content}
@@ -79,12 +80,15 @@ export const HookScene: React.FC<SpecificSceneProps> = ({
     transitionOut={transitionOut}
     showUnderline={false}
     showBullet={false}
+    wrapperType={wrapperType}
+    cameraAction={cameraAction}
+    sceneDurationFrames={sceneDurationFrames}
   />
 );
 
 /** 痛点共鸣 */
 export const ProblemScene: React.FC<SpecificSceneProps> = ({
-  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut, wrapperType, cameraAction, sceneDurationFrames,
 }) => (
   <SceneBase
     content={content}
@@ -94,12 +98,15 @@ export const ProblemScene: React.FC<SpecificSceneProps> = ({
     motionMap={motionMap ?? problemDefaults.motionMap}
     transitionIn={transitionIn}
     transitionOut={transitionOut}
+    wrapperType={wrapperType}
+    cameraAction={cameraAction}
+    sceneDurationFrames={sceneDurationFrames}
   />
 );
 
 /** 方案亮相 */
 export const SolutionScene: React.FC<SpecificSceneProps> = ({
-  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut, wrapperType, cameraAction, sceneDurationFrames,
 }) => (
   <SceneBase
     content={content}
@@ -109,12 +116,15 @@ export const SolutionScene: React.FC<SpecificSceneProps> = ({
     motionMap={motionMap ?? solutionDefaults.motionMap}
     transitionIn={transitionIn}
     transitionOut={transitionOut}
+    wrapperType={wrapperType}
+    cameraAction={cameraAction}
+    sceneDurationFrames={sceneDurationFrames}
   />
 );
 
 /** 功能亮点 */
 export const FeatureScene: React.FC<SpecificSceneProps> = ({
-  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut, wrapperType, cameraAction, sceneDurationFrames,
 }) => (
   <SceneBase
     content={content}
@@ -124,12 +134,15 @@ export const FeatureScene: React.FC<SpecificSceneProps> = ({
     motionMap={motionMap ?? featureDefaults.motionMap}
     transitionIn={transitionIn}
     transitionOut={transitionOut}
+    wrapperType={wrapperType}
+    cameraAction={cameraAction}
+    sceneDurationFrames={sceneDurationFrames}
   />
 );
 
 /** 素材展示 */
 export const ShowcaseScene: React.FC<SpecificSceneProps> = ({
-  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut, wrapperType, cameraAction, sceneDurationFrames,
 }) => (
   <SceneBase
     content={content}
@@ -141,12 +154,15 @@ export const ShowcaseScene: React.FC<SpecificSceneProps> = ({
     transitionOut={transitionOut}
     showUnderline={false}
     showBullet={false}
+    wrapperType={wrapperType}
+    cameraAction={cameraAction}
+    sceneDurationFrames={sceneDurationFrames}
   />
 );
 
 /** 行动呼吁 */
 export const CtaScene: React.FC<SpecificSceneProps> = ({
-  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut, wrapperType, cameraAction, sceneDurationFrames,
 }) => (
   <SceneBase
     content={content}
@@ -158,12 +174,15 @@ export const CtaScene: React.FC<SpecificSceneProps> = ({
     transitionOut={transitionOut}
     showUnderline={true}
     showBullet={false}
+    wrapperType={wrapperType}
+    cameraAction={cameraAction}
+    sceneDurationFrames={sceneDurationFrames}
   />
 );
 
 /** 数据证明 */
 export const ProofScene: React.FC<SpecificSceneProps> = ({
-  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut,
+  content, style, bgType, layoutId, motionMap, transitionIn, transitionOut, wrapperType, cameraAction, sceneDurationFrames,
 }) => (
   <SceneBase
     content={content}
@@ -175,6 +194,9 @@ export const ProofScene: React.FC<SpecificSceneProps> = ({
     transitionOut={transitionOut}
     showUnderline={true}
     showBullet={true}
+    wrapperType={wrapperType}
+    cameraAction={cameraAction}
+    sceneDurationFrames={sceneDurationFrames}
   />
 );
 

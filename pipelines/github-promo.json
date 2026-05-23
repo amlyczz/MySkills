@@ -1,7 +1,8 @@
 {
   "name": "github-promo",
-  "description": "从 GitHub 仓库到推广视频的全流程 — 当前管线的标准模板",
-  "version": "1.0",
+  "video_type": "promo",
+  "description": "从 GitHub 仓库到推广视频的全流程 — 唯一管线",
+  "version": "3.0",
   "processors": [
     { "id": "analyze",      "type": "RepoAnalyzer" },
     { "id": "compose",      "type": "ScriptTimelineComposer" },

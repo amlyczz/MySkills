@@ -214,12 +214,13 @@ export const CodeDisplay: React.FC<LayoutProps> = ({
                   display: "flex",
                   height: CODE_LINE_HEIGHT,
                   lineHeight: `${CODE_LINE_HEIGHT}px`,
-                  opacity: fadeIn,
+                  opacity: highlightLines.length > 0 && !isHighlighted ? fadeIn * 0.3 : fadeIn,
                   background: isHighlighted
                     ? `rgba(${hexToRgb(colors.accent)}, 0.15)`
                     : "transparent",
                   borderRadius: isHighlighted ? 4 : 0,
                   marginBottom: isHighlighted ? 2 : 0,
+                  transition: "opacity 0.3s ease, background 0.3s ease",
                 }}
               >
                 {/* Line Number */}

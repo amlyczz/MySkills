@@ -4,10 +4,12 @@ import { BokehCircles } from "./BokehCircles";
 import { GeometricPatterns } from "./GeometricPatterns";
 import { PixelTransition } from "./PixelTransition";
 import { FluidGradient } from "./FluidGradient";
+import { Nebula3D } from "./Nebula3D";
+import { Aurora } from "./Aurora";
 
 export type { BackgroundProps } from "./Starfield";
 
-export type BgType = "starfield" | "bokeh" | "geometric" | "pixel" | "fluid-gradient";
+export type BgType = "starfield" | "bokeh" | "geometric" | "pixel" | "fluid-gradient" | "nebula-3d" | "aurora";
 
 interface BackgroundLayerProps extends BackgroundProps {
   bgType: BgType;
@@ -28,7 +30,11 @@ export const BackgroundLayer: React.FC<BackgroundLayerProps> = ({
       return <PixelTransition {...props} />;
     case "fluid-gradient":
       return <FluidGradient />;
+    case "nebula-3d":
+      return <Nebula3D {...props} />;
+    case "aurora":
+      return <Aurora {...props} />;
     default:
-      return <Starfield {...props} />;
+      return <FluidGradient />;
   }
 };

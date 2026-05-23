@@ -1,19 +1,8 @@
-/**
- * CardGrid — 卡片网格布局。
- *
- * 将 points 数组渲染为多列卡片。每张卡片展示一条文本。
- * 卡片依次 stagger 入场。适合 feature / 功能亮点场景。
- */
 import React from "react";
-import {
-  AbsoluteFill,
-  useCurrentFrame,
-  useVideoConfig,
-  interpolate,
-} from "remotion";
-import { LayoutProps, MotionType, MotionPreset } from "../types";
+import { AbsoluteFill } from "remotion";
+import { LayoutProps } from "../types";
 import { getMotion } from "../motions";
-import { useEntrance, staggerStartFrame } from "../hooks/useEntrance";
+import { useElementLifecycle } from "../hooks/useElementLifecycle";
 import { hexToRgba } from "../tokens";
 import { SfxPlayer } from "../components/SfxPlayer";
 import {
@@ -24,7 +13,6 @@ import {
   FONT_SIZE_TITLE, FONT_WEIGHT_TITLE, FONT_SIZE_TAGLINE,
   FONT_WEIGHT_TAGLINE, GAP_UNDERLINE_TAGLINE,
 } from "../layout";
-import { TIMING } from "../animations";
 
 export const CardGrid: React.FC<LayoutProps> = ({
   title,
@@ -34,62 +22,35 @@ export const CardGrid: React.FC<LayoutProps> = ({
   theme,
   motionMap,
   showUnderline = true,
+  sceneDurationFrames,
+  staggerOrder,
 }) => {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const getStaggerIndex = (key: string, defaultIndex: number) => {
+    if (!staggerOrder) return defaultIndex;
+    const idx = staggerOrder.indexOf(key);
+    return idx >= 0 ? idx : defaultIndex;
+  };
 
   // ── Title ──
-  const titleMotion = getMotion(motionMap, "title", "arc-entrance");
-  const titleLocalFrame = Math.max(0, frame - TIMING.TITLE_INTRO[0]);
-  const titleEntrance = useEntrance(titleMotion, titleLocalFrame);
-  const titleOpacity = interpolate(
-    titleLocalFrame,
-    [0, 10],
-    [0, 1],
-    { extrapolateRight: "clamp" },
-  );
-
-  // ── Underline ──
-  const underlineProgress = interpolate(
-    frame,
-    TIMING.UNDERLINE_GROW,
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-  );
-  const underlineWidth = interpolate(
-    underlineProgress,
-    [0, 1],
-    [0, UNDERLINE_MAX_WIDTH],
-  );
-
-  // ── Subtitle ──
-  const subMotion = getMotion(motionMap, "subtitle", "scale-fade");
-  const subLocalFrame = Math.max(0, frame - TIMING.TAGLINE_INTRO[0]);
-  const subEntrance = useEntrance(subMotion, subLocalFrame);
-  const subOpacity = interpolate(
-    subLocalFrame,
-    [0, 12],
-    [0, 1],
-    { extrapolateRight: "clamp" },
-  );
-
-  // ── Cards stagger ──
-  const cardMotion = getMotion(motionMap, "points", "spring-slide-up");
-  const cards = (points ?? []).slice(0, 6).map((text: string, i: number) => {
-    const startFrame = staggerStartFrame(TIMING.POINTS_START, i, TIMING.POINTS_STAGGER);
-    const localFrame = Math.max(0, frame - startFrame);
-    const entrance = useEntrance(cardMotion, localFrame);
-    return { text, i, opacity: entrance.opacity, transform: entrance.transform };
+  const titleLifecycle = useElementLifecycle(getMotion(motionMap, "title", "arc-entrance"), {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("title", 0),
   });
 
-  // 卡片网格：最多 3 列
-  const columns = Math.min(cards.length, 3);
+  // ── Underline ──
+  const underlineLifecycle = useElementLifecycle("scale-x", {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("underline", 1),
+    delayFrames: 5,
+  });
 
-  // 卡片背景色：从主题 surface 色 + alpha
-  const cardBg = hexToRgba(
-    theme.colors.surface,
-    CARD_BG_ALPHA,
-  );
+  // ── Subtitle ──
+  const subLifecycle = useElementLifecycle(getMotion(motionMap, "subtitle", "scale-fade"), {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("subtitle", 2),
+  });
+
+  const cardBg = hexToRgba(theme.colors.surface, CARD_BG_ALPHA);
 
   return (
     <AbsoluteFill
@@ -112,10 +73,7 @@ export const CardGrid: React.FC<LayoutProps> = ({
         {title && (
           <div
             style={{
-              opacity: titleOpacity,
-              transform: titleEntrance.transform,
-              clipPath: titleEntrance.clipPath,
-              filter: titleEntrance.filter,
+              ...titleLifecycle.style,
               fontSize: FONT_SIZE_TITLE,
               fontWeight: FONT_WEIGHT_TITLE,
               letterSpacing: theme.typography.titleLetterSpacing,
@@ -135,11 +93,13 @@ export const CardGrid: React.FC<LayoutProps> = ({
         {showUnderline && (
           <div
             style={{
-              width: underlineWidth,
+              ...underlineLifecycle.style,
+              width: UNDERLINE_MAX_WIDTH,
               height: UNDERLINE_HEIGHT,
               background: style.underlineBg,
               borderRadius: UNDERLINE_BORDER_RADIUS,
               marginBottom: GAP_UNDERLINE_TAGLINE,
+              transformOrigin: "center left",
             }}
           />
         )}
@@ -148,10 +108,7 @@ export const CardGrid: React.FC<LayoutProps> = ({
         {subtitle && (
           <div
             style={{
-              opacity: subOpacity,
-              transform: subEntrance.transform,
-              clipPath: subEntrance.clipPath,
-              filter: subEntrance.filter,
+              ...subLifecycle.style,
               fontSize: FONT_SIZE_TAGLINE,
               fontWeight: FONT_WEIGHT_TAGLINE,
               color: style.mutedColor,
@@ -167,7 +124,7 @@ export const CardGrid: React.FC<LayoutProps> = ({
         )}
 
         {/* Card Grid */}
-        {cards.length > 0 && (
+        {(points ?? []).length > 0 && (
           <div
             style={{
               display: "flex",
@@ -176,36 +133,43 @@ export const CardGrid: React.FC<LayoutProps> = ({
               gap: CARD_GAP,
             }}
           >
-            {cards.map(({ text, i, opacity, transform }) => (
-              <div
-                key={i}
-                style={{
-                  opacity,
-                  transform,
-                  width: CARD_MAX_WIDTH,
-                  padding: CARD_PADDING,
-                  background: cardBg,
-                  borderRadius: CARD_BORDER_RADIUS,
-                  borderLeft: `3px solid ${theme.colors.accent}`,
-                  fontSize: FONT_SIZE_CARD,
-                  fontWeight: FONT_WEIGHT_CARD,
-                  lineHeight: 1.5,
-                  color: style.bodyColor,
-                  boxShadow: `0 4px 24px rgba(0,0,0,0.2)`,
-                }}
-              >
-                {text}
-              </div>
-            ))}
+            {(points ?? []).slice(0, 6).map((text, i) => {
+              const cardLifecycle = useElementLifecycle(getMotion(motionMap, "points", "spring-slide-up"), {
+                sceneDurationFrames,
+                staggerIndex: getStaggerIndex("points", 3) + i,
+                staggerInterval: 8,
+              });
+
+              return (
+                <div
+                  key={i}
+                  style={{
+                    ...cardLifecycle.style,
+                    width: CARD_MAX_WIDTH,
+                    padding: CARD_PADDING,
+                    background: cardBg,
+                    borderRadius: CARD_BORDER_RADIUS,
+                    borderLeft: `3px solid ${theme.colors.accent}`,
+                    fontSize: FONT_SIZE_CARD,
+                    fontWeight: FONT_WEIGHT_CARD,
+                    lineHeight: 1.5,
+                    color: style.bodyColor,
+                    boxShadow: `0 4px 24px rgba(0,0,0,0.2)`,
+                  }}
+                >
+                  {text}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* SFX */}
-      {title && <SfxPlayer motion={titleMotion} staggerIndex={0} />}
-      {subtitle && <SfxPlayer motion={subMotion} staggerIndex={0} />}
-      {cards.map((_, i) => (
-        <SfxPlayer key={i} motion={cardMotion} staggerIndex={i} />
+      {title && <SfxPlayer motion={getMotion(motionMap, "title", "arc-entrance")} staggerIndex={getStaggerIndex("title", 0)} />}
+      {subtitle && <SfxPlayer motion={getMotion(motionMap, "subtitle", "scale-fade")} staggerIndex={getStaggerIndex("subtitle", 2)} />}
+      {(points ?? []).slice(0, 6).map((_, i) => (
+        <SfxPlayer key={i} motion={getMotion(motionMap, "points", "spring-slide-up")} staggerIndex={getStaggerIndex("points", 3) + i} />
       ))}
     </AbsoluteFill>
   );

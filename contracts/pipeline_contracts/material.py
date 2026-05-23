@@ -1,7 +1,7 @@
 """
 MaterialManifest — 素材采集清单的数据契约。
 
-从 repo-analyzer 迁移而来，作为 pipeline 各层共享的单一来源。
+从 content-ingester 迁移而来，作为 pipeline 各层共享的单一来源。
 """
 
 from pydantic import BaseModel, Field, field_validator

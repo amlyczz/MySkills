@@ -177,11 +177,12 @@ export const VideoComposer: React.FC<VideoComposerProps> = ({ config }) => {
           cameraAction={sd.config.cameraAction}
           wrapperType={sd.config.wrapperType}
           style={style}
-          bgType={config.bgType}
+          bgType={sd.config.bgType || config.bgType}
           layoutId={sd.config.layoutId}
           motionMap={sd.config.motionMap}
           transitionIn={sd.config.transitionIn}
           transitionOut={sd.config.transitionOut}
+          sceneDurationFrames={sd.durationFrames}
         />
       </TransitionSeries.Sequence>,
     );
@@ -313,8 +314,9 @@ function oppositeDirection(dir?: TransitionDirection): TransitionDirection {
 function layoutTypeToSceneType(layoutId: string): "hook" | "solution" | "feature" | "proof" | "showcase" {
   const hookLayouts = new Set(["hero-center", "kinetic-typography", "full-screen-text"]);
   const solutionLayouts = new Set(["split-left-text", "split-right-text"]);
-  const featureLayouts = new Set(["card-grid", "floating-grid"]);
+  const featureLayouts = new Set(["card-grid", "floating-grid", "code-carousel"]);
   const proofLayouts = new Set(["stat-highlight"]);
+  const showcaseLayouts = new Set(["media-full", "media-gallery", "center-focus-video"]);
 
   if (hookLayouts.has(layoutId)) return "hook";
   if (solutionLayouts.has(layoutId)) return "solution";

@@ -67,13 +67,13 @@ npx remotion render VideoComposer out/video.mp4 --props='{"config":{...}}' --cod
 
 ### 输出目录约定
 
-所有管线产物按信息源分类输出：
+所有管线产物按信息源分类统一输出：
 
 ```
-output/{source_category}/{date}/{repo_name}/
-  ├── video_config.json      ← Agent 决策（读取 timeline/json/content 后按场景配置）
-  ├── voiceover.mp3           ← media_generator
-  ├── bgm.mp3                 ← media_generator
+output/{source_category}/{YYYY-MM-DD-HHMM}/{repo_name}/
+  ├── video_config.json      ← Agent 决策
+  ├── voiceover.mp3           ← media-generator
+  ├── bgm.mp3                 ← media-generator
   ├── video.mp4               ← 本层渲染产物
   └── ...（下游 post-producer 产物）
 ```
@@ -186,10 +186,10 @@ Agent 在写 `video_config.json` 时，必须遵守以下素材分配规则：
 | 素材类型 | 推荐 Layout | 说明 |
 |----------|-------------|------|
 | `logo` | `hero-center` 或 `split-left-text` | 首屏展示 logo + 标题 |
-| `demo_gif` | `media-full` 或 `split-left-text` | GIF 动画展示功能（media-full 纯素材 / split-left-text 配文案） |
+| `demo_gif` | `media-gallery` 或 `media-full` | 多个GIF用 `media-gallery` 网格展示，单个用 `media-full`（支持 DeviceFrame/Glow 包装）|
 | `screenshot` | `split-left-text` | 截图配文字说明 |
-| `code_snippet` / `source_code` | `code-display` | 代码高亮展示（必须设 `language`） |
-| `scroll_video` / `link_video` | `media-full` | 视频素材全屏播放 |
+| `code_snippet` / `source_code` | `code-carousel` 或 `code-display` | 多代码块用 `code-carousel`（DeviceFrame 内Tab轮播），单代码块用 `code-display` |
+| `scroll_video` / `link_video` | `media-full`（wrapperType: `device-frame`）| 视频素材在 DeviceFrame 内展示，更高端 |
 | `benchmark_chart` | `split-left-text` | 基准图配文字说明 |
 | `image` | `split-left-text` | 图片配左侧文案 |
 | `social_proof` | `split-left-text` 或 `stat-highlight` | 数据或评价展示 |
@@ -206,11 +206,13 @@ Agent 在写 `video_config.json` 时，必须遵守以下素材分配规则：
 
 写入 `video_config.json` 前自查：
 - [ ] seg_001 的 `content.visual` 是 logo 文件
-- [ ] 至少一个 scene 使用 `layoutId: "code-display"` 且有 `content.code`
+- [ ] 至少一个 scene 使用 `layoutId: "code-carousel"` 或 `"code-display"` 且有 `content.code`
 - [ ] 至少一个 scene 使用 GitHub screenshot 作为 `content.visual`
 - [ ] 检查 `material_manifest.json.materials`，每种 `type` 至少在一个 scene 中出现
 - [ ] 每个 scene 的 `content.visual` 或 `content.code` 不为空
 - [ ] 所有 `content.visual` 文件路径在 `staticFile()` 可达（已复制到 `public/` 或通过 `staticFile()` 路径引用）
+- [ ] voiceover 文本包含至少一个"你"或"用户"视角的收益描述
+- [ ] 视频总 duration 不超过 voiceover.mp3 时长（约 +15% 呼吸空间）
 
 ---
 

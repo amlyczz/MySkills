@@ -1,18 +1,9 @@
-/**
- * HeroCenter — 居中单列布局。
- *
- * Title → Underline → Subtitle → Points
- * 动画逻辑已提取到 hooks/useHero{Title,Underline,Tagline,Points}.ts
- */
 import React from "react";
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill, Img, staticFile } from "remotion";
 import { LayoutProps } from "../types";
 import { getMotion } from "../motions";
 import { SfxPlayer } from "../components/SfxPlayer";
-import { useHeroTitle } from "../hooks/useHeroTitle";
-import { useHeroUnderline } from "../hooks/useHeroUnderline";
-import { useHeroTagline } from "../hooks/useHeroTagline";
-import { useHeroPoints } from "../hooks/useHeroPoints";
+import { useElementLifecycle } from "../hooks/useElementLifecycle";
 import {
   CONTENT_PAD, CONTENT_MAX_WIDTH, TEXT_MAX_WIDTH,
   UNDERLINE_HEIGHT, UNDERLINE_BORDER_RADIUS,
@@ -22,13 +13,31 @@ import {
 } from "../layout";
 
 export const HeroCenter: React.FC<LayoutProps> = ({
-  title, subtitle, points, style, theme, motionMap,
+  title, subtitle, points, style, theme, motionMap, mediaUrl,
   showUnderline = true, showBullet = true,
+  sceneDurationFrames, staggerOrder,
 }) => {
-  const titleAnim = useHeroTitle(motionMap);
-  const underlineAnim = useHeroUnderline();
-  const taglineAnim = useHeroTagline(motionMap);
-  const pointElements = useHeroPoints(motionMap, points ?? []);
+  const getStaggerIndex = (key: string, defaultIndex: number) => {
+    if (!staggerOrder) return defaultIndex;
+    const idx = staggerOrder.indexOf(key);
+    return idx >= 0 ? idx : defaultIndex;
+  };
+
+  const titleLifecycle = useElementLifecycle(getMotion(motionMap, "title", "arc-entrance"), {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("title", 0),
+  });
+
+  const underlineLifecycle = useElementLifecycle("scale-x", {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("underline", 1),
+    delayFrames: 5,
+  });
+
+  const taglineLifecycle = useElementLifecycle(getMotion(motionMap, "subtitle", "scale-fade"), {
+    sceneDurationFrames,
+    staggerIndex: getStaggerIndex("subtitle", 2),
+  });
 
   return (
     <AbsoluteFill
@@ -38,10 +47,19 @@ export const HeroCenter: React.FC<LayoutProps> = ({
       }}
     >
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", maxWidth: CONTENT_MAX_WIDTH }}>
+        {/* Media/Logo — 标题上方 */}
+        {mediaUrl && (
+          <div style={{ marginBottom: 24 }}>
+            <Img
+              src={mediaUrl}
+              style={{ height: 80, objectFit: "contain", borderRadius: 16, filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.4))" }}
+            />
+          </div>
+        )}
+
         {title && (
           <div style={{
-            opacity: titleAnim.opacity, transform: titleAnim.transform,
-            clipPath: titleAnim.clipPath, filter: titleAnim.filter,
+            ...titleLifecycle.style,
             fontSize: FONT_SIZE_TITLE, fontWeight: FONT_WEIGHT_TITLE,
             letterSpacing: theme.typography.titleLetterSpacing,
             textTransform: style.titleTransform, color: style.bodyColor,
@@ -52,16 +70,17 @@ export const HeroCenter: React.FC<LayoutProps> = ({
 
         {showUnderline && (
           <div style={{
-            width: underlineAnim.width, height: UNDERLINE_HEIGHT,
+            ...underlineLifecycle.style,
+            width: 200, height: UNDERLINE_HEIGHT,
             background: style.underlineBg, borderRadius: UNDERLINE_BORDER_RADIUS,
             marginBottom: GAP_UNDERLINE_TAGLINE,
+            transformOrigin: "center left",
           }} />
         )}
 
         {subtitle && (
           <div style={{
-            opacity: taglineAnim.opacity, transform: taglineAnim.transform,
-            clipPath: taglineAnim.clipPath, filter: taglineAnim.filter,
+            ...taglineLifecycle.style,
             fontSize: FONT_SIZE_TAGLINE, fontWeight: FONT_WEIGHT_TAGLINE,
             fontStyle: theme.effects?.italicForSubtitle ? "italic" : undefined,
             color: style.mutedColor, letterSpacing: 1,
@@ -70,30 +89,38 @@ export const HeroCenter: React.FC<LayoutProps> = ({
           }}>{subtitle}</div>
         )}
 
-        {pointElements.length > 0 && (
+        {(points ?? []).length > 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: GAP_POINTS }}>
-            {pointElements.map(({ point, i, opacity, transform, clipPath, filter }) => (
-              <div key={i} style={{
-                opacity, transform, clipPath, filter,
-                fontSize: FONT_SIZE_POINTS, fontWeight: FONT_WEIGHT_POINTS,
-                lineHeight: 1.6, color: style.mutedColor,
-                display: "flex", alignItems: "center", gap: GAP_POINTS,
-              }}>
-                {showBullet && (
-                  <span style={{ display: "inline-block", width: DOT_SIZE, height: DOT_SIZE, borderRadius: "50%", backgroundColor: style.bulletColor, flexShrink: 0 }} />
-                )}
-                {point}
-              </div>
-            ))}
+            {(points ?? []).map((point, i) => {
+              const pointLifecycle = useElementLifecycle(getMotion(motionMap, "points", "spring-slide-up"), {
+                sceneDurationFrames,
+                staggerIndex: getStaggerIndex("points", 3) + i,
+                staggerInterval: 5,
+              });
+
+              return (
+                <div key={i} style={{
+                  ...pointLifecycle.style,
+                  fontSize: FONT_SIZE_POINTS, fontWeight: FONT_WEIGHT_POINTS,
+                  lineHeight: 1.6, color: style.mutedColor,
+                  display: "flex", alignItems: "center", gap: GAP_POINTS,
+                }}>
+                  {showBullet && (
+                    <span style={{ display: "inline-block", width: DOT_SIZE, height: DOT_SIZE, borderRadius: "50%", backgroundColor: style.bulletColor, flexShrink: 0 }} />
+                  )}
+                  {point}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* SFX — frame-accurate via wired MotionPreset.sfx */}
-      {title && <SfxPlayer motion={getMotion(motionMap, "title", "arc-entrance")} staggerIndex={0} />}
-      {subtitle && <SfxPlayer motion={getMotion(motionMap, "subtitle", "scale-fade")} staggerIndex={0} />}
+      {title && <SfxPlayer motion={getMotion(motionMap, "title", "arc-entrance")} staggerIndex={getStaggerIndex("title", 0)} />}
+      {subtitle && <SfxPlayer motion={getMotion(motionMap, "subtitle", "scale-fade")} staggerIndex={getStaggerIndex("subtitle", 2)} />}
       {(points ?? []).map((_, i) => (
-        <SfxPlayer key={i} motion={getMotion(motionMap, "points", "spring-slide-up")} staggerIndex={i} />
+        <SfxPlayer key={i} motion={getMotion(motionMap, "points", "spring-slide-up")} staggerIndex={getStaggerIndex("points", 3) + i} />
       ))}
     </AbsoluteFill>
   );

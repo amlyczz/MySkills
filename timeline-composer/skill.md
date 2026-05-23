@@ -1,118 +1,87 @@
 ---
-name: timeline-composer
+name: script-timeline-composer
 description: >
-  时间线编排器。输入 content.json（含 RepoAnalyzer 产出的口播脚本初稿）
-  + material_discovery.json，输出 timeline.json v2 + .srt。
-  实现口播微调、素材匹配、章节划分、BGM/SFX 编排、字幕生成。
+  AI Agent 主导的场景编排。读取 content.json（含素材绑定），
+  为每段口播逐一决策 13 个视觉维度，输出 timeline.json + video_config.json。
 triggers:
+  - 编排视频
   - 生成时间线
-  - 编排视频时间线
-  - 匹配口播和素材
-  - 生成字幕文件
+  - 决策场景布局
+  - 生成 video_config
+  - 生成渲染配置
+  - 场景编排
 tools_allowed:
   - run_terminal_cmd
   - write_file
   - read_file
 ---
 
-# Timeline Composer — 时间线编排 Skill
+# Script Timeline Composer — AI Agent 场景编排
 
-你是一个视频时间线编排引擎。输入 content.json（含 RepoAnalyzer 产出的口播脚本初稿）+ 素材评估清单，做编排式微调后输出完整的 timeline.json v2。
+你是 **ScriptTimelineComposer**。输入 content.json（RepoAnalyzer 已产出 8-15 段口播，每段已绑定 primary_material + material_refs），你对每段 scene 做 13 维视觉决策，输出 timeline.json + video_config.json。
 
-**原则**：seg.type → layout 映射、BGM/SFX 编排逻辑不写在此，去读源码。
-
----
-
-## 目录结构
-
-```
-timeline-composer/
-├── skill.md                  ← 本文件
-├── schema/
-│   └── timeline.schema.json
-└── scripts/
-    └── timeline_composer.py      ← 编排引擎
-```
+**原则**：所有可选值不写在此，去读源码/配置文件获取最新列表。
 
 ---
 
-## 使用
+## 工作流
+
+### Step 1-5：Agent 语义推理（核心）
+
+读取 content.json 后，对每个 segment 逐一决策以下 13 维：
+
+| # | 维度 | 数据来源 | 决策要点 |
+|---|------|----------|----------|
+| 1 | **seg_type** | `contracts/enums/layouts.json` | 首段→hook，末段→cta；中间→口播内容决定 |
+| 2 | **layoutId** | `src/layouts/index.ts` 注册的布局 | seg_type + 素材 + 内容长度 |
+| 3 | **motionMap** | Zod MotionType + `contracts/enums/motions.json` | 元素角色 + 节奏 |
+| 4 | **bgType** | Zod BgType | seg_type + 前后段不重复 |
+| 5 | **wrapperType** | `src/wrappers/` 下容器组件 | 代码→device-frame，截图→glow |
+| 6 | **transitionIn** | Zod TransitionType + `contracts/enums/transitions.json` | 与上一场景关系 |
+| 7 | **transitionOut** | 同上 | 与下一场景关系 |
+| 8 | **content** | content.json segment 字段 | 按布局映射字段 |
+| 9 | **staggerOrder** | 元素角色顺序 | 标题先入→主体后入 |
+| 10 | **styleId** | `contracts/enums/styles.json` | 整视频 1-3 种 |
+| 11 | **durationSeconds** | voiceover 时长 × 1.15~1.3 | 口播 + 呼吸空间 |
+| 12 | **bgm_volume** | 0-1 | seg_type + 口播闪避 |
+| 13 | **sfx** | `contracts/enums/sfx.json` | seg_type 默认 |
+
+### Step 6-8：确定性工具（调用 timeline_composer.py）
+
+Agent 写入 timeline.json + video_config.json 后，调用工具补充：
 
 ```bash
-cd timeline-composer/scripts
-python3 timeline_composer.py content.json material_discovery.json \
-  --output timeline.json \
-  --total-duration 180 \
-  --bgm-track bgm_ambient_tech
-```
+# BGM 音量曲线
+python3 timeline_composer.py bgm-curve <timeline.json>
 
-**输出**：
-- `timeline.json` — 时间线（segments + audio + chapters + subtitles）
-- `timeline.srt` — 字幕文件
+# SRT 字幕
+python3 timeline_composer.py subtitles <timeline.json>
+
+# 章节标记
+python3 timeline_composer.py chapters <timeline.json>
+```
 
 ---
 
-## 编排流水线（8 步）
+## 视觉品质参考
 
-> 脚本初稿已由 RepoAnalyzer 产出（`content.json.script`），这里做编排式微调而非从头创作。
+优先选 4-5 星选项（详见 spec §3.3.1）：
 
-| Step | 功能 | 代码位置 |
-|------|------|---------|
-| 1 | 口播分句（基于已有 script segments，按需合并/拆分） | `_split_voiceover()` |
-| 2 | 关键词提取 | `_extract_keywords()` |
-| 3 | 素材匹配（keyword → material scoring） | `_match_materials()` |
-| 4 | 合并同源同素材 utterance → segment | `_merge_into_segments()` |
-| 5 | 类型分配（hook/problem/solution/...） | `_assign_seg_types()` |
-| 6 | 音频编排（BGM/SFX，不含布局） | `_build_layout_and_audio()` |
-| 7 | 章节划分 | `_divide_chapters()` |
-| 8 | 字幕生成 | `_generate_subtitles()` |
-
-### seg.type → Layout 映射 → Agent 决策
-
-`SEG_TYPE_LAYOUT` 已移除。Agent 负责按场景逐一决策 layoutId / motionMap / 内容 / 素材 / 过渡。
-
-### BGM/SFX 编排 → 读 `_build_layout_and_audio()`
-
-`_build_layout_and_audio()` 按 seg type 分配音频参数（bgm_volume, sfx 等），不再分配布局。
-
-### timeline → VideoConfig → Agent 写入
-
-`to_video_config()` 已移除。Agent 读取 timeline.json + content.json + material_manifest.json 后，自行按场景决策布局/动效/过渡/内容/素材，写入 video_config.json。
+| 维度 | S 级（5星） | A 级（4星） |
+|------|-------------|-------------|
+| layoutId | kinetic-typography, fly-through, media-gallery | code-carousel, hero-center, split-left-text 等 |
+| motionMap | spring-elastic, arc-entrance, reveal-mask | staggered-grow, blur-focus, bounce-in |
+| bgType | nebula-3d, aurora | particle-field, geometric |
+| wrapperType | device-frame(macbook) | perspective-frame |
+| transition | whip-pan | slide-in(from-right/left) |
+| styleId | gold-luxury, midnight-indigo, sunset-red | dark-purple, tech-cyan, ocean-teal |
 
 ---
 
-## 输出目录
+## 输出
 
-所有管线产物按信息源分类输出到 `output/{source_category}/{date}/{repo_name}/`：
-
-```
-output/{source_category}/{date}/{repo_name}/
-  ├── timeline.json              ← 本层输出
-  ├── timeline.srt               ← 本层输出
-  ├── timeline.bgm_curve.json    ← 本层输出
-  ├── video_config.json          ← Agent 后续写入
-  ├── voiceover.mp3              ← media_generator 后续产物
-  ├── bgm.mp3                    ← media_generator 后续产物
-  └── ...（下游视频/混音产物）
-```
-
-`source_category` 为信息来源分类（如 `github`），`date` 为日期（`YYYY-MM-DD`），`repo_name` 为项目标识（如 `1050-byteDance-Lance`）。
-
----
-
-## 数据输出
-
-### timeline.json v2 结构
-
-```json
-{
-  "version": "2",
-  "global": { "title", "total_duration", "resolution", "fps", "bgm_track" },
-  "segments": [{ "id", "type", "label", "time_start", "time_end", "duration",
-                  "voiceover", "layout", "style", "audio", "transition_in", "transition_out" }],
-  "chapters": [{ "label", "time" }],
-  "subtitles": [{ "text", "time_start", "time_end" }]
-}
-```
-
-完整 schema 见 `schema/timeline.schema.json`。
+写入统一 `$OUTPUT_DIR/`：
+- `timeline.json` → PostProducer (audio_mixer.py)
+- `timeline.srt` → PostProducer (burn_subtitles)
+- `timeline.bgm_curve.json` → PostProducer (--bgm-curve)
+- `video_config.json` → VideoRenderer (Remotion)

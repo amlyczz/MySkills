@@ -40,17 +40,17 @@ post-producer/
 
 ## 输出目录约定
 
-所有管线产物按信息源分类统一输出：
+所有管线产物按信息源分类统一输出到带分钟精度的目录：
 
 ```
-output/{source_category}/{YYYY-MM-DD}/{repo_name}/
+output/{source_category}/{YYYY-MM-DD-HHMM}/{repo_name}/
   ├── video.mp4             ← 上游 video-renderer 产物
-  ├── voiceover.mp3          ← 上游 media_generator 产物
-  ├── bgm.mp3                ← 上游 media_generator 产物
+  ├── voiceover.mp3          ← 上游 media-generator 产物
+  ├── bgm.mp3                ← 上游 media-generator 产物
   ├── timeline.json          ← 上游 timeline-composer 产物
-  ├── timeline.srt           ← 本层 gen_srt.py 从 video_config.json 生成（不是 timeline_composer 产物！）
-  ├── timeline.bgm_curve.json ← 上游 timeline-composer 产物
-  ├── video_config.json      ← Agent 决策
+  ├── timeline.srt           ← 上游 timeline-composer 产物
+  ├── timeline.bgm_curve.json← 上游 timeline-composer 产物
+  ├── video_config.json      ← 上游 timeline-composer 产物
   ├── final.mp4              ← 本层混音输出
   └── final_subtitled.mp4    ← 本层字幕烧录输出
 ```

@@ -49,13 +49,65 @@ export function matchStyle(
 const defaultLayoutBySceneType: Record<string, LayoutType> =
   layoutsConfig.scene_type_default_layout as Record<string, LayoutType>;
 
-export function matchLayout(sceneType: string): LayoutType {
+export function matchLayout(sceneType: string, input: MatchingInput, sceneIndex: number): LayoutType {
+  const hasVideos = (input.extractedVideos?.length ?? 0) > 0;
+  const isDemoHeavy = (input.extractedVideos?.length ?? 0) >= 3;
+  const hasManyPoints = (input.points?.length ?? 0) >= 4;
+
+  if (sceneType === "hook") {
+    if (input.title?.length > 40) return "kinetic-typography";
+    if (hasVideos && isDemoHeavy) return "center-focus-video";
+    return "hero-center";
+  }
+  
+  if (sceneType === "problem") {
+    return hasManyPoints ? "split-left-text" : "quote-style";
+  }
+
+  if (sceneType === "solution") {
+    if (hasVideos && !isDemoHeavy) return "split-left-text";
+    return "sandwich-text";
+  }
+
+  if (sceneType === "feature") {
+    return hasManyPoints ? "card-grid" : "floating-grid";
+  }
+
+  if (sceneType === "showcase" || sceneType === "demo") {
+    return isDemoHeavy ? "media-gallery" : "media-full";
+  }
+
+  if (sceneType === "proof") {
+    return input.stats ? "stat-highlight" : "card-grid";
+  }
+
+  if (sceneType === "cta") {
+    return "prompt-input";
+  }
+
   return defaultLayoutBySceneType[sceneType] ?? "hero-center";
 }
 
 // ── 4. 动效匹配 ──
 
-export function matchMotion(elementRole: string): MotionType {
+export function matchMotion(elementRole: string, layout: LayoutType, input: MatchingInput): MotionType {
+  if (elementRole === "title" || elementRole === "headline") {
+    if (layout === "kinetic-typography") return "typewriter";
+    if (layout === "prompt-input") return "typewriter";
+    // For aggressive/tech topics, use bounce-in
+    const isTech = ["rust", "go", "c++", "c", "python"].includes(input.language?.toLowerCase() || "");
+    return isTech ? "bounce-in" : "arc-entrance";
+  }
+
+  if (elementRole === "points") {
+    if (layout === "card-grid") return "staggered-grow";
+    return "spring-slide-up";
+  }
+
+  if (elementRole === "stats") {
+    return "scale-fade";
+  }
+
   return defaultMotionMap[elementRole] ?? "scale-fade";
 }
 
@@ -88,13 +140,14 @@ export function generateVideoConfig(input: MatchingInput): VideoConfig {
 
   // 每个场景的配置
   const sceneConfigs: Record<string, SceneConfig> = {};
-  for (const scene of structure.scenes) {
-    const layoutId = matchLayout(scene.type);
+  for (let i = 0; i < structure.scenes.length; i++) {
+    const scene = structure.scenes[i];
+    const layoutId = matchLayout(scene.type, input, i);
 
     // 为场景中的每个内容槽位分配动效
     const motionMap: Record<string, MotionType> = {};
     for (const slot of scene.contentSlots) {
-      motionMap[slot.name] = matchMotion(slot.name);
+      motionMap[slot.name] = matchMotion(slot.name, layoutId, input);
     }
 
     // 填充内容（从 input 中提取）

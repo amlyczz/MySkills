@@ -1,23 +1,17 @@
 {
   "name": "PostProducer",
-  "description": "后期合成：音频混音 + 字幕烧录 → final.mp4",
-  "version": "1.0",
+  "description": "后期合成：音频混音（voiceover + BGM sidechain ducking + SFX）+ 字幕烧录 → final.mp4",
+  "version": "2.0",
   "input": {
     "contract": "file",
-    "description": "video.mp4 + voiceover.mp3 + bgm.mp3"
+    "description": "video.mp4 + voiceover.mp3 + bgm.mp3 + timeline.json + timeline.srt + timeline.bgm_curve.json"
   },
-  "input_extras": [
-    {
-      "contract": "pipeline-contracts/py/timeline#TimelineModel",
-      "description": "时间线（含字幕和音频配置）"
-    }
-  ],
   "output": {
     "contract": "file",
-    "description": "final.mp4"
+    "description": "final.mp4 + final_subtitled.mp4"
   },
   "exec": {
     "type": "command",
-    "command": "cd post-producer/scripts && python3 verify_output.py <output_dir> <total_duration> && python3 audio_mixer.py <output_dir>/video.mp4 <output_dir>/voiceover.mp3 <output_dir>/bgm.mp3 <timeline> --output <output_dir>/final.mp4 --srt <output_dir>/timeline.srt"
+    "description": "cd post-producer/scripts && python3 verify_output.py <output_dir> <total_duration> && python3 audio_mixer.py <output_dir>/video.mp4 <output_dir>/voiceover.mp3 <output_dir>/bgm.mp3 <timeline> --output <output_dir>/final.mp4 --bgm-curve <output_dir>/timeline.bgm_curve.json --srt <output_dir>/timeline.srt"
   }
 }

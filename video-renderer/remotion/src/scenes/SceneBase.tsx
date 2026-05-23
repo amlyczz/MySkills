@@ -12,7 +12,7 @@ import {
   interpolate,
 } from "remotion";
 import { Video } from "@remotion/media";
-import { StyleTemplate, StyleTokens, LayoutType, MotionType, TransitionConfig } from "../types";
+import { StyleTemplate, StyleTokens, LayoutType, MotionType, TransitionConfig, CameraAction } from "../types";
 import { resolveStyleTokens, extractBaseColor } from "../tokens";
 import { BackgroundLayer, BgType } from "../backgrounds";
 import { LayoutDispatcher } from "../layouts";
@@ -37,6 +37,14 @@ export interface SceneProps {
   transitionIn?: TransitionConfig;
   /** Transition OUT of this scene */
   transitionOut?: TransitionConfig;
+  /** Media wrapper type */
+  wrapperType?: "glow" | "device-frame";
+  /** Camera action for pan-and-zoom */
+  cameraAction?: CameraAction;
+  /** 场景总帧数（由 VideoComposer 传入） */
+  sceneDurationFrames?: number;
+  /** 错峰顺序，例如 ["title", "subtitle", "points", "url"] */
+  staggerOrder?: string[];
 }
 
 export const SceneBase: React.FC<SceneProps> = ({
@@ -49,6 +57,10 @@ export const SceneBase: React.FC<SceneProps> = ({
   showBullet = true,
   transitionIn: _transitionIn,
   transitionOut: _transitionOut,
+  wrapperType,
+  cameraAction,
+  sceneDurationFrames,
+  staggerOrder,
 }) => {
   const frame = useCurrentFrame();
   const tokens = resolveStyleTokens(style);
@@ -119,6 +131,10 @@ export const SceneBase: React.FC<SceneProps> = ({
         motionMap={motionMap}
         showUnderline={showUnderline}
         showBullet={showBullet}
+        wrapperType={wrapperType}
+        cameraAction={cameraAction}
+        sceneDurationFrames={sceneDurationFrames}
+        staggerOrder={staggerOrder}
       />
     </AbsoluteFill>
   );

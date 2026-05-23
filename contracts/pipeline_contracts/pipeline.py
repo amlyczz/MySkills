@@ -43,6 +43,7 @@ class Edge(BaseModel):
 class PipelineDef(BaseModel):
     """Pipeline 定义"""
     name: str
+    video_type: str = "promo"
     description: str = ""
     version: str = "1.0"
     processors: list[dict] = Field(default_factory=list)

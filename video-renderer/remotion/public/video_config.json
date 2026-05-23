@@ -1,0 +1,143 @@
+{
+  "structureId": "timeline-adaptive",
+  "styleId": "neon-blue",
+  "bgType": "fluid-gradient",
+  "sceneConfigs": {
+    "seg_001": {
+      "layoutId": "hero-center",
+      "motionMap": { "title": "bounce-in", "subtitle": "scale-fade" },
+      "content": {
+        "title": "Lance",
+        "subtitle": "字节跳动 · 统一多模态模型 · All-in-One",
+        "visual": "lance-logo.webp"
+      },
+      "durationSeconds": 7.5,
+      "transitionIn": { "type": "crossfade", "durationFrames": 1 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    },
+    "seg_002": {
+      "layoutId": "split-left-text",
+      "motionMap": { "headline": "spring-elastic", "body": "reveal-mask" },
+      "content": {
+        "headline": "一个模型 · 搞定一切",
+        "body": "理解、生成、编辑 — 六大视觉任务，一个框架全搞定。无需为每个任务分别部署和维护不同模型。",
+        "visual": "benchmark-overview.png"
+      },
+      "durationSeconds": 10.5,
+      "wrapperType": "device-frame",
+      "transitionIn": { "type": "slide-in", "direction": "left", "durationFrames": 20 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    },
+    "seg_003": {
+      "layoutId": "split-left-text",
+      "motionMap": { "headline": "spring-elastic", "body": "reveal-mask" },
+      "content": {
+        "headline": "3B 参数 · 7B 性能",
+        "body": "128张A100即可从零训练，小预算团队也能玩转多模态。多任务协同训练让不同任务互相增强。",
+        "visual": "benchmark-overview.png"
+      },
+      "durationSeconds": 10.5,
+      "transitionIn": { "type": "slide-in", "direction": "right", "durationFrames": 20 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    },
+    "seg_004": {
+      "layoutId": "media-gallery",
+      "motionMap": { "headline": "smooth-scale-up" },
+      "content": {
+        "headline": "视频生成 · 理解 · 编辑",
+        "points": [
+          "text-to-video-demo-01.gif",
+          "video-editing-demo-01.gif",
+          "intelligent-video-demo-01.gif",
+          "multi-turn-editing-demo-01.gif"
+        ]
+      },
+      "durationSeconds": 12.0,
+      "transitionIn": { "type": "slide-in", "direction": "left", "durationFrames": 20 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    },
+    "seg_005": {
+      "layoutId": "split-left-text",
+      "motionMap": { "headline": "spring-elastic", "body": "reveal-mask" },
+      "content": {
+        "headline": "完全开源 · 即开即用",
+        "body": "代码和模型权重在 Apache-2.0 许可下开源，中英双语文档完善，在线 Demo 无需安装直接体验。",
+        "visual": "lance-logo.webp"
+      },
+      "durationSeconds": 7.5,
+      "transitionIn": { "type": "crossfade", "durationFrames": 18 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    },
+    "seg_006": {
+      "layoutId": "media-gallery",
+      "motionMap": { "headline": "smooth-scale-up" },
+      "content": {
+        "headline": "图像生成 · 精确编辑",
+        "points": [
+          "text-to-video-demo-02.gif",
+          "video-editing-demo-02.gif"
+        ]
+      },
+      "durationSeconds": 9.0,
+      "transitionIn": { "type": "slide-in", "direction": "right", "durationFrames": 20 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    },
+    "seg_007": {
+      "layoutId": "code-display",
+      "motionMap": { "headline": "glow-pulse" },
+      "content": {
+        "headline": "快速上手",
+        "code": "pip install lance-multimodal",
+        "language": "bash"
+      },
+      "durationSeconds": 9.0,
+      "wrapperType": "device-frame",
+      "transitionIn": { "type": "crossfade", "durationFrames": 20 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    },
+    "seg_008": {
+      "layoutId": "hero-center",
+      "motionMap": { "title": "bounce-in", "subtitle": "scale-fade" },
+      "content": {
+        "title": "bytedance / Lance",
+        "subtitle": "Star · Fork · Clone · Build",
+        "visual": "lance-logo.webp"
+      },
+      "durationSeconds": 9.0,
+      "transitionIn": { "type": "whip-pan", "direction": "left", "durationFrames": 20 },
+      "transitionOut": { "type": "crossfade", "durationFrames": 15 }
+    }
+  },
+  "audio": {
+    "voiceoverEnabled": true,
+    "voiceover": [
+      { "sceneId": "seg_001", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "字节跳动最新开源的全能多模态模型，一个框架搞定图像和视频的理解、生成与编辑", "durationSeconds": 5.0, "startOffsetSeconds": 0 },
+      { "sceneId": "seg_002", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "你不需要为每个任务部署不同的模型。Lance 一个模型就能看懂图像、生成视频、编辑内容，真正的 All-in-One", "durationSeconds": 7.0, "startOffsetSeconds": 0 },
+      { "sceneId": "seg_003", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "只需3B参数就能达到7B模型的性能，128张A100即可从零训练。小预算团队也能玩转多模态", "durationSeconds": 7.0, "startOffsetSeconds": 0 },
+      { "sceneId": "seg_004", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "输入文字就能编辑视频——改变物体外观、调整场景风格、多轮一致编辑。像编辑文档一样编辑视频", "durationSeconds": 8.0, "startOffsetSeconds": 0 },
+      { "sceneId": "seg_005", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "代码和模型权重完全开源，双语文档清晰完善，在线 Demo 即开即用", "durationSeconds": 5.0, "startOffsetSeconds": 0 },
+      { "sceneId": "seg_006", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "图像生成能力同样惊艳，3B参数媲美7B模型，文本引导编辑精确到像素级别", "durationSeconds": 6.0, "startOffsetSeconds": 0 },
+      { "sceneId": "seg_007", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "只需三行命令就能跑推理。安装、配置、运行，附完整的 Gradio Demo 让你快速上手", "durationSeconds": 6.0, "startOffsetSeconds": 0 },
+      { "sceneId": "seg_008", "elementRole": "voiceover", "src": "voiceover.mp3", "text": "无论你是研究者还是开发者，Lance 都值得一试。Star 它、Clone 它、开始构建你的多模态应用", "durationSeconds": 6.0, "startOffsetSeconds": 0 }
+    ],
+    "bgm": {
+      "id": "bgm_ambient_tech",
+      "src": "bgm.mp3",
+      "mood": "tech",
+      "volumeCurve": [
+        {"time": 0, "volume": 0},
+        {"time": 1.5, "volume": 0.15},
+        {"time": 10, "volume": 0.15},
+        {"time": 20, "volume": 0.15},
+        {"time": 30, "volume": 0.15},
+        {"time": 40, "volume": 0.15},
+        {"time": 50, "volume": 0.15},
+        {"time": 60, "volume": 0.15},
+        {"time": 65, "volume": 0.12},
+        {"time": 70, "volume": 0.05},
+        {"time": 75, "volume": 0}
+      ]
+    },
+    "sfxEnabled": true
+  }
+}

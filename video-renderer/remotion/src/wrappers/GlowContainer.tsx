@@ -10,6 +10,7 @@
  *   glowIntensity: 光晕强度 0-1
  */
 import React from "react";
+import { useCurrentFrame } from "remotion";
 
 interface Props {
   children: React.ReactNode;
@@ -24,7 +25,13 @@ export const GlowContainer: React.FC<Props> = ({
   borderRadius = 24,
   glowIntensity = 0.6,
 }) => {
-  const gradient = `linear-gradient(135deg, ${colors.join(", ")})`;
+  const frame = useCurrentFrame();
+  const pulse = Math.sin(frame * 0.06) * 0.12;
+  const effectiveIntensity = glowIntensity + pulse;
+  const gradAngle = (frame * 0.5) % 360;
+  const tiltY = Math.sin(frame * 0.02) * 1.2;
+
+  const gradient = `linear-gradient(${gradAngle}deg, ${colors.join(", ")})`;
 
   return (
     <div
@@ -32,8 +39,10 @@ export const GlowContainer: React.FC<Props> = ({
         position: "relative",
         borderRadius,
         overflow: "hidden",
-        boxShadow: `0 0 ${30 * glowIntensity}px rgba(255,255,255,${0.15 * glowIntensity}),
-                     inset 0 0 ${20 * glowIntensity}px rgba(255,255,255,${0.1 * glowIntensity})`,
+        perspective: "1000px",
+        transform: `rotateY(${tiltY}deg)`,
+        boxShadow: `0 0 ${30 * effectiveIntensity}px rgba(255,255,255,${0.15 * effectiveIntensity}),
+                     inset 0 0 ${20 * effectiveIntensity}px rgba(255,255,255,${0.1 * effectiveIntensity})`,
       }}
     >
       {/* Glow border ring */}
@@ -43,8 +52,8 @@ export const GlowContainer: React.FC<Props> = ({
           inset: -2,
           borderRadius: borderRadius + 2,
           background: gradient,
-          opacity: glowIntensity,
-          filter: `blur(${4 * glowIntensity}px)`,
+          opacity: effectiveIntensity,
+          filter: `blur(${4 * effectiveIntensity}px)`,
           zIndex: 0,
         }}
       />

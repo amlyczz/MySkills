@@ -1,29 +1,26 @@
-/**
- * DeviceFrame — 3D 设备外壳包装器。
- *
- * 将视频/截图嵌入带有透视感的设备模型中。
- * 支持 laptop 和 phone 两种模式。
- *
- * Props:
- *   device: "macbook" | "iphone"
- *   children: 屏幕内容（视频/图片）
- */
 import React from "react";
+import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 
 interface Props {
-  device?: "macbook" | "iphone";
+  device?: "macbook" | "iphone" | "browser";
   children: React.ReactNode;
 }
 
-export const DeviceFrame: React.FC<Props> = ({ device = "macbook", children }) => {
+export const DeviceFrame: React.FC<Props> = ({ device = "browser", children }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  
+  // Smooth floating motion
+  const floatY = Math.sin(frame * 0.02) * 5;
+
   if (device === "iphone") {
     return (
-      <div style={{ perspective: "800px", display: "flex", justifyContent: "center", alignItems: "center" }}>
+      <div style={{ perspective: "800px", display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>
         <div style={{
           position: "relative", width: 340, height: 680,
           borderRadius: 48, background: "#1a1a1a",
           border: "3px solid #333", boxShadow: "0 20px 60px rgba(0,0,0,0.5), inset 0 0 2px rgba(255,255,255,0.1)",
-          padding: 12, transform: "rotateY(-5deg) rotateX(5deg)", transformStyle: "preserve-3d",
+          padding: 12, transform: `translateY(${floatY}px)`, transformStyle: "preserve-3d",
         }}>
           {/* Notch */}
           <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", width: 120, height: 28, background: "#111", borderRadius: "0 0 16px 16px", zIndex: 2 }} />
@@ -38,29 +35,69 @@ export const DeviceFrame: React.FC<Props> = ({ device = "macbook", children }) =
     );
   }
 
-  // macbook
+  // Modern Browser Window (Glassmorphism) default for "macbook" and "browser"
+  const windowSpring = spring({ frame, fps, config: { damping: 14, mass: 0.8 } });
+  const scale = interpolate(windowSpring, [0, 1], [0.9, 1]);
+  const opacity = interpolate(windowSpring, [0, 1], [0, 1]);
+  const rotateX = interpolate(windowSpring, [0, 1], [5, 0]);
+
   return (
-    <div style={{ perspective: "1000px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      {/* Lid */}
+    <div style={{
+      perspective: "1200px",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      width: "100%",
+      height: "100%",
+    }}>
       <div style={{
-        position: "relative", width: 780, height: 490,
-        borderRadius: "12px 12px 0 0", background: "#1a1a1a",
-        border: "2px solid #333", borderBottom: "none",
-        boxShadow: "0 10px 40px rgba(0,0,0,0.4)", padding: "24px 48px 16px",
-        transform: "rotateX(5deg)", transformStyle: "preserve-3d",
+        position: "relative",
+        width: "80%",
+        maxWidth: 1200,
+        aspectRatio: "16/9",
+        background: "rgba(30, 30, 30, 0.6)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        borderRadius: 16,
+        border: "1px solid rgba(255, 255, 255, 0.15)",
+        boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05) inset",
+        display: "flex",
+        flexDirection: "column",
+        transform: `translateY(${floatY}px) scale(${scale}) rotateX(${rotateX}deg)`,
+        opacity,
+        overflow: "hidden",
       }}>
-        {/* Camera notch */}
-        <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", width: 8, height: 8, borderRadius: "50%", background: "#222" }} />
-        {/* Screen */}
-        <div style={{ width: "100%", height: "100%", borderRadius: 4, overflow: "hidden", background: "#000" }}>
+        {/* Browser Top Bar */}
+        <div style={{
+          height: 40,
+          background: "rgba(0, 0, 0, 0.4)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+          display: "flex",
+          alignItems: "center",
+          padding: "0 16px",
+          gap: 8,
+        }}>
+          {/* Mac window dots */}
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f56" }} />
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#ffbd2e" }} />
+          <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#27c93f" }} />
+          {/* URL bar skeleton */}
+          <div style={{ flex: 1, margin: "0 24px", height: 24, background: "rgba(255,255,255,0.05)", borderRadius: 6 }} />
+        </div>
+        
+        {/* Screen Content */}
+        <div style={{ flex: 1, position: "relative", background: "#000", overflow: "hidden" }}>
           {children}
         </div>
-        {/* Glossy */}
-        <div style={{ position: "absolute", inset: 0, borderRadius: "12px 12px 0 0", background: "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 40%)", pointerEvents: "none" }} />
+        
+        {/* Subtle Gloss overlay */}
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 40%)",
+          pointerEvents: "none",
+        }} />
       </div>
-      {/* Base */}
-      <div style={{ width: 840, height: 12, background: "#1a1a1a", borderRadius: "0 0 6px 6px", border: "2px solid #333", borderTop: "none" }} />
-      <div style={{ width: 200, height: 8, background: "#222", borderRadius: "0 0 4px 4px" }} />
     </div>
   );
 };

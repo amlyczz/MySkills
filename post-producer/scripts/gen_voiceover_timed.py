@@ -58,8 +58,10 @@ def _get_scene_timeline(scene_configs: dict) -> dict[str, float]:
         if i < len(scene_ids) - 1:
             next_cfg = scene_configs[scene_ids[i + 1]]
             next_trans = next_cfg.get("transitionIn", {})
+            trans_type = next_trans.get("type", "none")
             trans_frames = next_trans.get("durationFrames", 0)
-            adjusted_frame -= trans_frames
+            if trans_type != "none" and trans_frames > 0:
+                adjusted_frame -= trans_frames
     return starts
 
 
@@ -117,15 +119,12 @@ def main():
         print(f"  [{i + 1}/{len(voiceover_entries)}] TTS: scene={scene_id} text='{text[:30]}...'")
 
         cmd = [
-            "mmx", "speech", "synthesize",
+            "/home/zand/.local/bin/edge-tts",
             "--text", text,
-            "--voice", voice_id,
-            "--speed", str(speed),
-            "--out", seg_output,
-            "--quiet",
+            "--voice", "zh-CN-YunxiNeural",
+            "--rate", f"{int((speed-1.0)*100):+d}%",
+            "--write-media", seg_output,
         ]
-        if pitch != 0:
-            cmd.extend(["--pitch", str(pitch)])
 
         result = subprocess.run(cmd, capture_output=True, timeout=120)
         if result.returncode != 0:

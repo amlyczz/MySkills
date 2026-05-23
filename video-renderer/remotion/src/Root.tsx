@@ -1,20 +1,8 @@
 import React from "react";
 import { Composition } from "remotion";
-import { KenBurnsClip, KenBurnsClipProps } from "./KenBurnsClip";
 import { VideoComposer, VideoComposerProps } from "./VideoComposer";
 import { getStructure } from "./structures";
 import { VideoConfig } from "./types";
-
-const defaultKenBurnsProps: KenBurnsClipProps = {
-  imageUrl: "example.jpg",
-  durationInFrames: 150,
-  panFromX: 0.5,
-  panFromY: 0.5,
-  panToX: 0.5,
-  panToY: 0.5,
-  zoomFrom: 1.0,
-  zoomTo: 1.3,
-};
 
 /** VideoComposer 默认配置 — 漏斗型示例 */
 const defaultVideoConfig: VideoConfig = {
@@ -86,28 +74,11 @@ const defaultVideoConfig: VideoConfig = {
   },
 };
 
-const KenBurnsComp = KenBurnsClip as unknown as React.FC<Record<string, unknown>>;
 const VideoComposerComp = VideoComposer as unknown as React.FC<Record<string, unknown>>;
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
-      <Composition
-        id="KenBurnsClip"
-        component={KenBurnsComp}
-        durationInFrames={150}
-        fps={30}
-        width={1920}
-        height={1080}
-        defaultProps={defaultKenBurnsProps}
-        calculateMetadata={async ({ props }) => {
-          const p = props as unknown as KenBurnsClipProps;
-          return {
-            durationInFrames: p.durationInFrames,
-          };
-        }}
-      />
-
       <Composition
         id="VideoComposer"
         component={VideoComposerComp}
@@ -136,7 +107,7 @@ export const RemotionRoot: React.FC = () => {
                 if (ti && ti.type !== "none") totalFrames -= ti.durationFrames;
               }
             }
-            return { durationInFrames: Math.max(totalFrames, 30) };
+            return { durationInFrames: Math.max(1, Math.round(totalFrames)) };
           }
           let totalFrames = 0;
           for (let i = 0; i < structure.scenes.length; i++) {

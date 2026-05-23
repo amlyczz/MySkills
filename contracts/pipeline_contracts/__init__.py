@@ -15,8 +15,8 @@ pipeline-contracts — 通用 Pipeline Processor 数据契约。
 
 from pipeline_contracts.content import (
     ContentModel,
-    ContentInfo,
-    RepoInfo,
+    NormalizedContent,
+    AnySourceMeta,
     Script,
     ScriptSegment,
     Covers,
@@ -72,7 +72,7 @@ from pipeline_contracts.utils import (
 
 __all__ = [
     # content
-    "ContentModel", "ContentInfo", "RepoInfo", "Script", "ScriptSegment",
+    "ContentModel", "NormalizedContent", "AnySourceMeta", "Script", "ScriptSegment",
     "Covers", "CoverVariant", "PublishCopy", "PublishTitle",
     "SourceCodeInsight", "Meta",
     # material

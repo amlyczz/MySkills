@@ -1,36 +1,59 @@
 """
 ContentModel — 内容分析与项目理解的数据契约。
 
-从 repo-analyzer/schema/models.py 迁移而来，作为 pipeline 各层共享的单一来源。
+从 content-ingester/schema/models.py 迁移而来，作为 pipeline 各层共享的单一来源。
 """
 
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Literal, Union
 
 
-class RepoInfo(BaseModel):
-    """GitHub 仓库元信息"""
-    full_name: str
-    url: str
+class SourceMeta(BaseModel):
+    """数据源元信息 — 多态基类"""
+    source_type: str
+    source_url: str
+    source_name: str
+
+
+class GitHubSourceMeta(SourceMeta):
+    """GitHub 特有元信息"""
+    source_type: Literal["github"] = "github"
     language: Optional[str] = None
     stars: Optional[int] = 0
     forks: Optional[int] = 0
-    topics: Optional[list[str]] = None
+    topics: Optional[list[str]] = Field(default_factory=list)
     license: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     homepage: Optional[str] = None
 
 
-class ContentInfo(BaseModel):
-    """内容提炼（标题/定位/要点/统计等）"""
-    title: str = Field(..., description="Repo short name")
+class PodcastSourceMeta(SourceMeta):
+    """Podcast 特有元信息"""
+    source_type: Literal["podcast"] = "podcast"
+    host: Optional[str] = None
+    episode_number: Optional[int] = None
+
+
+class ProductSourceMeta(SourceMeta):
+    """Product 特有元信息"""
+    source_type: Literal["product"] = "product"
+    version: Optional[str] = None
+    category: Optional[str] = None
+
+
+AnySourceMeta = Union[GitHubSourceMeta, PodcastSourceMeta, ProductSourceMeta]
+
+
+class NormalizedContent(BaseModel):
+    """规范化内容 — 所有下游 Processor 的统一输入"""
+    title: str = Field(..., description="Short name or title")
     tagline: str = Field(..., description="One-sentence positioning")
     points: list[str] = Field(..., min_length=1, description="3-5 key features")
     summary: Optional[str] = Field(None, description="Closing reflection or outro hook")
     stats_text: Optional[str] = Field(None, description="Human-readable growth stats")
     target_users: Optional[str] = None
-    domains: Optional[str] = Field(None, description="Chinese classification tags, separated by 、")
+    domains: Optional[str] = Field(None, description="Classification tags, separated by 、")
     chartData: Optional[list[dict]] = Field(None, description="Optional benchmark/comparison data for animated bar charts")
 
 
@@ -94,8 +117,8 @@ class Meta(BaseModel):
 
 class ContentModel(BaseModel):
     """content.json 顶层模型"""
-    repo: RepoInfo
-    content: ContentInfo
+    source: AnySourceMeta = Field(..., discriminator="source_type")
+    content: NormalizedContent
     script: Script
     covers: Covers
     publish_copy: PublishCopy
