@@ -1,0 +1,62 @@
+<!doctype html>
+<template id="scene5-template">
+<div data-composition-id="scene5" data-start="0" data-duration="10" data-width="1920" data-height="1080">
+<style>
+  .grain-scene { position:absolute; inset:0; mix-blend-mode:multiply; opacity:0.03; pointer-events:none; z-index:100; }
+  .orb-metallic { width:200px; height:200px; border-radius:100px; background:radial-gradient(circle at 35% 30%,#FFFFFF 0%,#F5F5F5 8%,#D4D4D8 20%,#A1A1AA 40%,#52525B 65%,#27272A 85%,#18181B 100%); box-shadow:inset -14px -14px 30px rgba(0,0,0,0.55),0px 24px 48px rgba(0,0,0,0.18); }
+</style>
+
+<div style="position:absolute;inset:0;background:#F4F4F5;z-index:0" class="clip" data-start="0" data-duration="10" data-track-index="0"></div>
+<div class="grain-scene clip" data-start="0" data-duration="10" data-track-index="99">
+  <svg width="100%" height="100%"><filter id="g5"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#g5)"/></svg>
+</div>
+
+<div id="s5-shield" class="clip" data-start="0" data-duration="3.5" data-track-index="10" style="position:absolute;top:50%;left:50%;translate:-50% -50%;width:500px;height:500px;border:1.5px solid #A1A1AA;border-radius:100px;opacity:0;scale:0.5;z-index:10"></div>
+
+<div class="clip" data-start="0" data-duration="3" data-track-index="18" id="s5-n1" style="position:absolute;width:8px;height:8px;border-radius:4px;background:#FFF;box-shadow:0 0 8px rgba(0,0,0,0.1);z-index:15"></div>
+<div class="clip" data-start="0" data-duration="3" data-track-index="19" id="s5-n2" style="position:absolute;width:8px;height:8px;border-radius:4px;background:#FFF;box-shadow:0 0 8px rgba(0,0,0,0.1);z-index:15"></div>
+<div class="clip" data-start="0" data-duration="3" data-track-index="17" id="s5-n3" style="position:absolute;width:8px;height:8px;border-radius:4px;background:#FFF;box-shadow:0 0 8px rgba(0,0,0,0.1);z-index:15"></div>
+
+<div id="s5-orb-w" class="clip" data-start="0" data-duration="10" data-track-index="20" style="position:absolute;top:50%;left:50%;translate:-50% -50%;z-index:20"><div class="orb-metallic"></div></div>
+
+<div id="s5-secured" class="clip" data-start="0.5" data-duration="3" data-track-index="30" style="position:absolute;top:50%;left:50%;translate:-50% -50%;font-size:48px;font-weight:500;color:#FFF;z-index:30;opacity:0;font-family:Inter,sans-serif">Secured</div>
+<div id="s5-logo" class="clip" data-start="3.8" data-duration="6.2" data-track-index="30" style="position:absolute;top:50%;left:50%;translate:-50% -50%;font-size:42px;font-weight:600;color:#18181B;z-index:30;opacity:0;font-family:Inter,sans-serif">ElevenLabs</div>
+<div id="s5-cta" class="clip" data-start="7" data-duration="2.4" data-track-index="33" style="position:absolute;bottom:60px;left:0;right:0;text-align:center;font-size:20px;font-weight:400;color:#71717A;z-index:30;opacity:0;font-family:Inter,sans-serif">elevenlabs.io/speech-engine</div>
+
+<div class="clip" data-start="9" data-duration="1" data-track-index="200" style="position:absolute;inset:0;background:#FFF;opacity:0" id="s5-curtain"></div>
+
+<script>
+(function(){
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+  var fps = 24, f2s = function(f){ return f / fps; };
+
+  tl.fromTo("#s5-shield", { opacity:0, scale:0.5, borderRadius:"100px" }, { opacity:0.8, scale:1.2, borderRadius:"40px", duration:f2s(12), ease:"expo.out" }, 0);
+  tl.to("#s5-shield", { opacity:0.8, scale:1.5, duration:f2s(48), ease:"none" }, f2s(12));
+  tl.to("#s5-shield", { opacity:0, scale:1.8, duration:f2s(24), ease:"power2.in" }, f2s(60));
+  var nodes = ["#s5-n1","#s5-n2","#s5-n3"];
+  for(var ff=0;ff<=48;ff+=4){
+    var rot = (ff/48)*Math.PI/2;
+    nodes.forEach(function(n,i){
+      var ang = (i*120*Math.PI/180)+rot, r=120;
+      tl.set(n, { x:Math.cos(ang)*r, y:Math.sin(ang)*r }, f2s(ff));
+    });
+  }
+  nodes.forEach(function(n){ tl.to(n, { opacity:0, duration:f2s(8) }, f2s(64)); });
+  tl.to("#s5-orb-w", { scale:0.12, x:180, y:0, duration:f2s(36), ease:"power3.inOut" }, f2s(60));
+  tl.fromTo("#s5-secured", { opacity:0 }, { opacity:1, duration:f2s(12), ease:"back.out(1.2)" }, f2s(12));
+  tl.to("#s5-secured", { opacity:0, duration:f2s(12), ease:"power2.in" }, f2s(60));
+  tl.set("#s5-logo", { textContent:"Eleven API" }, f2s(90));
+  tl.fromTo("#s5-logo", { opacity:0 }, { opacity:1, duration:f2s(15), ease:"power3.out" }, f2s(90));
+  tl.to("#s5-logo", { opacity:0, duration:f2s(5), ease:"power1.in" }, f2s(140));
+  tl.call(function(){ document.getElementById("s5-logo").textContent = "ElevenLabs"; }, [], f2s(145));
+  tl.fromTo("#s5-logo", { opacity:0 }, { opacity:1, duration:f2s(10), ease:"back.out(1.2)" }, f2s(145));
+  tl.fromTo("#s5-cta", { opacity:0, y:20 }, { opacity:1, y:0, duration:f2s(16), ease:"expo.out" }, f2s(168));
+  tl.fromTo("#s5-curtain", { opacity:0 }, { opacity:1, duration:f2s(24), ease:"power1.in" }, f2s(216));
+  tl.set({}, {}, 10);
+  window.__timelines["scene5"] = tl;
+})();
+</script>
+</div>
+</template>
+</html>

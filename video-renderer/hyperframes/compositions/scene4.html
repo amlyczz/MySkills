@@ -1,0 +1,68 @@
+<!doctype html>
+<template id="scene4-template">
+<div data-composition-id="scene4" data-start="0" data-duration="11" data-width="1920" data-height="1080">
+<style>
+  .grain-scene { position:absolute; inset:0; mix-blend-mode:multiply; opacity:0.03; pointer-events:none; z-index:100; }
+  .orb-metallic { width:200px; height:200px; border-radius:100px; background:radial-gradient(circle at 35% 30%,#FFFFFF 0%,#F5F5F5 8%,#D4D4D8 20%,#A1A1AA 40%,#52525B 65%,#27272A 85%,#18181B 100%); box-shadow:inset -14px -14px 30px rgba(0,0,0,0.55),0px 24px 48px rgba(0,0,0,0.18); }
+</style>
+
+<div style="position:absolute;inset:0;background:#F4F4F5;z-index:0" class="clip" data-start="0" data-duration="11" data-track-index="0"></div>
+<div class="grain-scene clip" data-start="0" data-duration="11" data-track-index="99">
+  <svg width="100%" height="100%"><filter id="g4"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#g4)"/></svg>
+</div>
+
+<div class="clip" data-start="0" data-duration="3.5" data-track-index="10" style="position:absolute;top:35%;left:10%;background:#FFF;border-radius:14px;padding:14px 22px;box-shadow:0 2px 16px rgba(0,0,0,0.05);font-size:18px;font-weight:500;color:#18181B;opacity:0;font-family:Inter,sans-serif" id="s4-b1">Thanks for reaching out.</div>
+<div class="clip" data-start="0" data-duration="3.5" data-track-index="11" style="position:absolute;top:15%;left:40%;background:#FFF;border-radius:14px;padding:14px 22px;box-shadow:0 2px 16px rgba(0,0,0,0.05);font-size:18px;font-weight:500;color:#18181B;opacity:0;font-family:Inter,sans-serif" id="s4-b2">Certo, sono felice di aiutarti.</div>
+<div class="clip" data-start="0" data-duration="3.5" data-track-index="12" style="position:absolute;top:25%;right:15%;background:#FFF;border-radius:14px;padding:14px 22px;box-shadow:0 2px 16px rgba(0,0,0,0.05);font-size:18px;font-weight:500;color:#18181B;opacity:0;font-family:Inter,sans-serif" id="s4-b3">이메일 주소가 어떻게 되세요?</div>
+<div class="clip" data-start="0" data-duration="3.5" data-track-index="13" style="position:absolute;top:45%;right:30%;background:#FFF;border-radius:14px;padding:14px 22px;box-shadow:0 2px 16px rgba(0,0,0,0.05);font-size:18px;font-weight:500;color:#18181B;opacity:0;font-family:Inter,sans-serif" id="s4-b4">ما هو عنوان بريدك الإلكتروني؟</div>
+<div class="clip" data-start="0" data-duration="3.5" data-track-index="14" style="position:absolute;top:55%;left:30%;background:#FFF;border-radius:14px;padding:14px 22px;box-shadow:0 2px 16px rgba(0,0,0,0.05);font-size:18px;font-weight:500;color:#18181B;opacity:0;font-family:Inter,sans-serif" id="s4-b5">您的邮箱地址是什么？</div>
+
+<div id="s4-sine" class="clip" data-start="4" data-duration="2" data-track-index="20" style="position:absolute;top:50%;left:50%;translate:-50% -50%;z-index:20;opacity:0">
+  <svg width="400" height="120" viewBox="0 0 400 120">
+    <path d="M0,60 Q50,20 100,60 Q150,100 200,60 Q250,20 300,60 Q350,100 400,60" stroke="#A1A1AA" stroke-width="1.5" fill="none"/>
+    <path d="M0,40 Q50,0 100,40 Q150,80 200,40 Q250,0 300,40 Q350,80 400,40" stroke="#D4D4D8" stroke-width="1" fill="none"/>
+    <path d="M0,80 Q50,40 100,80 Q150,120 200,80 Q250,40 300,80 Q350,120 400,80" stroke="#D4D4D8" stroke-width="1" fill="none"/>
+  </svg>
+</div>
+
+<div id="s4-trans" class="clip" data-start="4" data-duration="2" data-track-index="30" style="position:absolute;top:30%;left:0;right:0;text-align:center;font-size:36px;font-weight:600;color:#18181B;z-index:30;opacity:0;font-family:Inter,sans-serif">Industry-leading transcription</div>
+
+<div id="s4-orb-w" class="clip" data-start="6" data-duration="5" data-track-index="40" style="position:absolute;top:50%;left:50%;translate:-50% -50%;z-index:40;opacity:0;scale:0"><div class="orb-metallic"></div></div>
+
+<div id="s4-r1" class="clip" data-start="7" data-duration="3" data-track-index="15" style="position:absolute;width:250px;height:250px;border-radius:50%;border:1px solid #D4D4D8;top:50%;left:50%;translate:-50% -50%;opacity:0;z-index:15"></div>
+<div id="s4-r2" class="clip" data-start="8" data-duration="3" data-track-index="16" style="position:absolute;width:350px;height:350px;border-radius:50%;border:1px solid #D4D4D8;top:50%;left:50%;translate:-50% -50%;opacity:0;z-index:15"></div>
+<div id="s4-r3" class="clip" data-start="9" data-duration="2" data-track-index="17" style="position:absolute;width:450px;height:450px;border-radius:50%;border:1px solid #D4D4D8;top:50%;left:50%;translate:-50% -50%;opacity:0;z-index:15"></div>
+
+<div id="s4-c1" class="clip" data-start="7.5" data-duration="3.5" data-track-index="50" style="position:absolute;top:32%;left:22%;font-size:18px;font-weight:500;color:#18181B;background:#FFF;border-radius:10px;padding:10px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.06);opacity:0;font-family:Inter,sans-serif">Natural turn-taking</div>
+<div id="s4-c2" class="clip" data-start="8.5" data-duration="2.5" data-track-index="51" style="position:absolute;top:58%;right:25%;font-size:18px;font-weight:500;color:#18181B;background:#FFF;border-radius:10px;padding:10px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.06);opacity:0;font-family:Inter,sans-serif">Voice detection</div>
+<div id="s4-c3" class="clip" data-start="9.5" data-duration="1.5" data-track-index="52" style="position:absolute;top:52%;left:18%;font-size:18px;font-weight:500;color:#18181B;background:#FFF;border-radius:10px;padding:10px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.06);opacity:0;font-family:Inter,sans-serif">Interruption handling</div>
+
+<script>
+(function(){
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+  var fps = 24, f2s = function(f){ return f / fps; };
+  var bubs = ["#s4-b1","#s4-b2","#s4-b3","#s4-b4","#s4-b5"];
+  bubs.forEach(function(b,i){
+    tl.fromTo(b, { opacity:0, scale:0.8 }, { opacity:1, scale:1, duration:f2s(24), ease:"back.out(1.2)" }, i*f2s(3));
+    tl.to(b, { opacity:0, scale:0.9, duration:f2s(12), ease:"power2.in" }, f2s(72));
+  });
+  tl.fromTo("#s4-sine", { opacity:0 }, { opacity:1, duration:f2s(12), ease:"expo.out" }, f2s(96));
+  tl.to("#s4-sine", { opacity:0, duration:f2s(12), ease:"power2.in" }, f2s(132));
+  tl.fromTo("#s4-trans", { opacity:0, y:10 }, { opacity:1, y:0, duration:f2s(12), ease:"power3.out" }, f2s(96));
+  tl.to("#s4-trans", { opacity:0, duration:f2s(12), ease:"power2.in" }, f2s(132));
+  tl.fromTo("#s4-orb-w", { opacity:0, scale:0, x:800, y:500 }, { opacity:1, scale:1, x:0, y:0, duration:f2s(24), ease:"power3.out" }, f2s(144));
+  tl.fromTo("#s4-r1", { opacity:0, scale:1 }, { opacity:0.6, scale:2.5, duration:f2s(72), ease:"expo.out" }, f2s(168));
+  tl.fromTo("#s4-r2", { opacity:0, scale:1 }, { opacity:0.5, scale:3.5, duration:f2s(72), ease:"expo.out" }, f2s(192));
+  tl.fromTo("#s4-r3", { opacity:0, scale:1 }, { opacity:0.4, scale:4.5, duration:f2s(48), ease:"expo.out" }, f2s(216));
+  var caps = ["#s4-c1","#s4-c2","#s4-c3"], capSt = [180,204,228];
+  caps.forEach(function(c,i){
+    tl.fromTo(c, { opacity:0, y:10, scale:0.9 }, { opacity:1, y:0, scale:1, duration:f2s(10), ease:"back.out(1.2)" }, f2s(capSt[i]));
+  });
+  tl.set({}, {}, 11);
+  window.__timelines["scene4"] = tl;
+})();
+</script>
+</div>
+</template>
+</html>

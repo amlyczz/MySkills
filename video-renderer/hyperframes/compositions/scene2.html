@@ -1,0 +1,51 @@
+<!doctype html>
+<template id="scene2-template">
+<div data-composition-id="scene2" data-start="0" data-duration="8.1" data-width="1920" data-height="1080">
+<style>
+  .grain-scene { position:absolute; inset:0; mix-blend-mode:multiply; opacity:0.04; pointer-events:none; z-index:100; }
+  .orb-metallic { width:200px; height:200px; border-radius:100px; background:radial-gradient(circle at 35% 30%,#FFFFFF 0%,#F5F5F5 8%,#D4D4D8 20%,#A1A1AA 40%,#52525B 65%,#27272A 85%,#18181B 100%); box-shadow:inset -14px -14px 30px rgba(0,0,0,0.55),0px 24px 48px rgba(0,0,0,0.18),0 0 60px rgba(228,228,231,0.12); }
+  #s2-glow { position:absolute; width:260px; height:260px; border-radius:130px; background:radial-gradient(circle,rgba(228,228,231,0.25) 0%,transparent 70%); filter:blur(20px); opacity:0.6; }
+</style>
+
+<div style="position:absolute;inset:0;background:#18181B;z-index:0"></div>
+<div class="grain-scene clip" data-start="0" data-duration="8.1" data-track-index="99">
+  <svg width="100%" height="100%"><filter id="g2"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#g2)"/></svg>
+</div>
+
+<div class="clip" data-start="0" data-duration="8.1" data-track-index="10" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+  <div id="s2-glow"></div>
+  <div class="orb-metallic" id="s2-orb"></div>
+</div>
+
+<div class="clip" data-start="0" data-duration="8.1" data-track-index="30" style="position:absolute;bottom:150px;left:0;right:0;display:flex;align-items:center;justify-content:center">
+  <span id="s2-sub-user" style="font-size:24px;font-weight:400;color:#A1A1AA;position:absolute;opacity:0;text-align:center;font-family:Inter,sans-serif">I need to reschedule my delivery &mdash; can you move it to Thursday?</span>
+  <span id="s2-sub-agent" style="font-size:24px;font-weight:500;color:#FFF;position:absolute;opacity:0;text-align:center;font-family:Inter,sans-serif">Done &mdash; I've moved it to Thursday between 2 and 4pm. You'll get a confirmation...</span>
+</div>
+
+<div class="clip" data-start="7.6" data-duration="0.5" data-track-index="200" style="position:absolute;inset:0;background:#000;opacity:0" id="s2-curtain"></div>
+
+<script>
+(function(){
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+  var fps = 24, f2s = function(f){ return f / fps; };
+
+  tl.to("#s2-orb", { scale:1.05, duration:f2s(24), ease:"power3.out" }, 0);
+  tl.to("#s2-glow", { opacity:0.9, scale:1.1, duration:f2s(24), ease:"power3.out" }, 0);
+  tl.to("#s2-orb", { scale:1.0, duration:f2s(24), ease:"power3.out" }, f2s(24));
+  tl.to("#s2-glow", { opacity:0.6, scale:1.0, duration:f2s(24), ease:"power3.out" }, f2s(24));
+  tl.to("#s2-orb", { scale:1.08, duration:f2s(20), ease:"power2.inOut" }, f2s(100));
+  tl.to("#s2-glow", { opacity:1.0, scale:1.15, duration:f2s(20), ease:"power2.inOut" }, f2s(100));
+  tl.to("#s2-orb", { scale:1.0, duration:f2s(24), ease:"power3.out" }, f2s(120));
+  tl.to("#s2-glow", { opacity:0.6, scale:1.0, duration:f2s(24), ease:"power3.out" }, f2s(120));
+  tl.fromTo("#s2-sub-user", { opacity:0 }, { opacity:1, duration:f2s(12), ease:"power3.out" }, 0);
+  tl.to("#s2-sub-user", { opacity:0, duration:f2s(12), ease:"power2.in" }, f2s(90));
+  tl.fromTo("#s2-sub-agent", { opacity:0 }, { opacity:1, duration:f2s(12), ease:"power3.out" }, f2s(102));
+  tl.fromTo("#s2-curtain", { opacity:0 }, { opacity:1, duration:f2s(12), ease:"power1.in" }, f2s(182));
+  tl.set({}, {}, 8.1);
+  window.__timelines["scene2"] = tl;
+})();
+</script>
+</div>
+</template>
+</html>

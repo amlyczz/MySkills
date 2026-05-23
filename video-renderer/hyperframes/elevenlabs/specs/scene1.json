@@ -1,0 +1,121 @@
+{
+  "schema_version": "hf-exec-ir-1.0",
+  "shot_id": "S01_SH01",
+  "scene_id": "ElevenLabs_SpeechEngine_Intro",
+  "time_control": {
+    "start_sec": 0.0,
+    "end_sec": 7.0,
+    "duration_sec": 7.0,
+    "total_frames": 168,
+    "fps": 24,
+    "frame_ref": "shot_start"
+  },
+  "render_target": {
+    "type": "frame_sequence",
+    "output_dir": "output/shots/ElevenLabs_S01/",
+    "capture": true
+  },
+  "asset_bindings": {
+    "icon_pause": "vec_pause_bars",
+    "logo_text": "txt_elevenlabs",
+    "chat_ui": "ui_chat_bubble_light",
+    "toggle_switch": "ui_toggle_component",
+    "voice_orb": "mdl_voice_indicator_sphere"
+  },
+  "semantic_role": {
+    "narrative_function": "feature_reveal",
+    "attention_target": "ui_state_transition",
+    "emotional_intent": "innovative_tech"
+  },
+  "camera": {
+    "shot_size": "MCU",
+    "angle": "front_orthographic",
+    "focal_length_equiv": 50,
+    "fov_deg": 35.0,
+    "dof": { "enabled": false },
+    "keyframes": [
+      { "frame": 0, "position": [0.0, 0.0, -10.0], "look_at": [0.0, 0.0, 0.0] }
+    ]
+  },
+  "layers": [
+    {
+      "layer_id": "bg_adaptive",
+      "type": "solid",
+      "z_index": 0,
+      "color": "#F4F4F5",
+      "keyframes": [
+        { "frame": 0, "color": "#F4F4F5" },
+        { "frame": 120, "color": "#18181B", "easing": [0.65, 0.0, 0.35, 1.0] }
+      ]
+    },
+    {
+      "layer_id": "text_dynamic_morph",
+      "type": "text",
+      "z_index": 10,
+      "content": "Speech Engine",
+      "font": "Inter",
+      "font_weight": 600,
+      "keyframes": [
+        { "frame": 0, "opacity": 0.0 },
+        { "frame": 12, "opacity": 1.0, "content": "ElevenLabs" },
+        { "frame": 36, "opacity": 1.0, "content": "Speech Engine" },
+        { "frame": 72, "opacity": 0.0 }
+      ]
+    },
+    {
+      "layer_id": "ui_chat_bubble",
+      "type": "ui_element",
+      "asset_ref": "chat_ui",
+      "z_index": 20,
+      "keyframes": [
+        { "frame": 90, "opacity": 0.0, "scale": 0.95, "position": [0.0, -0.5, 0.0] },
+        { "frame": 105, "opacity": 1.0, "scale": 1.0, "position": [0.0, 0.0, 0.0], "easing": [0.2, 0.8, 0.2, 1.0] }
+      ]
+    },
+    {
+      "layer_id": "ui_toggle_control",
+      "type": "ui_element",
+      "asset_ref": "toggle_switch",
+      "z_index": 30,
+      "keyframes": [
+        { "frame": 120, "opacity": 0.0, "state": "off" },
+        { "frame": 135, "opacity": 1.0, "state": "off" },
+        { "frame": 145, "state": "on", "easing": [0.4, 0.0, 0.2, 1.0] }
+      ]
+    },
+    {
+      "layer_id": "voice_indicator_orb",
+      "type": "3d_model",
+      "asset_ref": "voice_orb",
+      "z_index": 40,
+      "keyframes": [
+        { "frame": 145, "opacity": 0.0, "scale": 0.0 },
+        { "frame": 155, "opacity": 1.0, "scale": 1.0, "easing": [0.3, 1.2, 0.4, 1.0] }
+      ]
+    }
+  ],
+  "post_fx": [
+    { "effect": "motion_blur", "order": 1, "params": { "shutter_angle": 180, "samples": 4 } },
+    { "effect": "color_grade", "order": 2, "params": { "contrast": 1.05, "saturation": 1.0 } }
+  ],
+  "audio": {
+    "sfx": [
+      { "asset_ref": "sfx_typewriter", "sync_frame": 96, "volume": 0.4 },
+      { "asset_ref": "sfx_ui_pop", "sync_frame": 105, "volume": 0.5 },
+      { "asset_ref": "sfx_switch_click", "sync_frame": 145, "volume": 0.8 },
+      { "asset_ref": "sfx_orb_hum", "sync_frame": 155, "volume": 0.6 }
+    ],
+    "voiceover": null
+  },
+  "continuity": {
+    "prev_shot": "null",
+    "next_shot": "null",
+    "inherit_from_prev": [],
+    "state_transfer": { "ui_mode": "voice_active" }
+  },
+  "transition_out": {
+    "type": "fade_to_black",
+    "duration_frames": 12,
+    "easing": [0.5, 0.0, 1.0, 1.0]
+  }
+}

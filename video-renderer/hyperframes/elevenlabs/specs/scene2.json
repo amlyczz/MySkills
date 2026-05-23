@@ -1,0 +1,154 @@
+{
+  "schema_version": "hf-exec-ir-1.0",
+  "shot_id": "S02_SH01",
+  "scene_id": "S02_Live_Interactive_Demo",
+  "time_control": {
+    "start_sec": 0.0,
+    "end_sec": 8.1,
+    "duration_sec": 8.1,
+    "total_frames": 194,
+    "fps": 24,
+    "frame_ref": "shot_start"
+  },
+  "render_target": {
+    "type": "frame_sequence",
+    "output_dir": "output/shots/S02_SH01/",
+    "capture": true
+  },
+  "asset_bindings": {
+    "voice_orb": "mdl_ai_voice_sphere",
+    "ui_font": "font_inter_regular",
+    "sfx_ambient": "sfx_room_tone",
+    "vo_user": "vo_user_reschedule",
+    "vo_agent": "vo_agent_confirmed"
+  },
+  "semantic_role": {
+    "narrative_function": "interactive_demonstration",
+    "attention_target": "voice_orb_and_subtitles",
+    "emotional_intent": "seamless_utility"
+  },
+  "camera": {
+    "shot_size": "MCU",
+    "angle": "front_orthographic",
+    "focal_length_equiv": 50,
+    "fov_deg": 35.0,
+    "dof": {
+      "enabled": true,
+      "focus_target_layer": "voice_orb_mesh",
+      "aperture_fstop": 2.8,
+      "blur_strength": 0.4
+    },
+    "keyframes": [
+      { "frame": 0, "position": [0.0, 0.0, -8.0], "look_at": [0.0, 0.0, 0.0] }
+    ]
+  },
+  "layers": [
+    {
+      "layer_id": "bg_void",
+      "type": "solid",
+      "z_index": 0,
+      "color": "#18181B",
+      "opacity": 1.0
+    },
+    {
+      "layer_id": "voice_orb_mesh",
+      "type": "3d_model",
+      "asset_ref": "voice_orb",
+      "z_index": 10,
+      "initial_transform": {
+        "position": [0.0, 1.0, 0.0],
+        "rotation_deg": [0.0, 0.0, 0.0],
+        "scale": 1.0
+      },
+      "material_override": {
+        "type": "matte_metallic",
+        "base_color": "#E4E4E7",
+        "roughness": 0.6
+      },
+      "keyframes": [
+        { "frame": 0, "scale": 1.0 },
+        { "frame": 24, "scale": 1.05, "easing": [0.4, 0.0, 0.2, 1.0] },
+        { "frame": 48, "scale": 1.0, "easing": [0.4, 0.0, 0.2, 1.0] },
+        { "frame": 100, "scale": 1.0 },
+        { "frame": 120, "scale": 1.08, "easing": [0.3, 0.8, 0.4, 1.0] },
+        { "frame": 144, "scale": 1.0, "easing": [0.4, 0.0, 0.2, 1.0] }
+      ]
+    },
+    {
+      "layer_id": "orb_key_light",
+      "type": "light",
+      "parent_layer": "voice_orb_mesh",
+      "z_index": 20,
+      "light_type": "point",
+      "color": "#FFFFFF",
+      "position": [0.0, 2.0, -2.0],
+      "keyframes": [
+        { "frame": 0, "intensity": 1.5 },
+        { "frame": 24, "intensity": 2.2, "easing": [0.4, 0.0, 0.2, 1.0] },
+        { "frame": 48, "intensity": 1.5, "easing": [0.4, 0.0, 0.2, 1.0] },
+        { "frame": 100, "intensity": 1.5 },
+        { "frame": 120, "intensity": 2.5, "easing": [0.3, 0.8, 0.4, 1.0] },
+        { "frame": 144, "intensity": 1.5, "easing": [0.4, 0.0, 0.2, 1.0] }
+      ]
+    },
+    {
+      "layer_id": "subtitle_user",
+      "type": "text",
+      "z_index": 30,
+      "content": "I need to reschedule my delivery - can you move it to Thursday?",
+      "font": "font_inter_regular",
+      "font_weight": 400,
+      "font_size_px": 24,
+      "color": "#A1A1AA",
+      "position": "bottom-center",
+      "offset_y_px": -150,
+      "keyframes": [
+        { "frame": 0, "opacity": 0.0 },
+        { "frame": 12, "opacity": 1.0, "easing": [0.25, 1.0, 0.5, 1.0] },
+        { "frame": 90, "opacity": 1.0 },
+        { "frame": 102, "opacity": 0.0, "easing": [0.25, 0.0, 0.5, 1.0] }
+      ]
+    },
+    {
+      "layer_id": "subtitle_agent",
+      "type": "text",
+      "z_index": 30,
+      "content": "Done - I've moved it to Thursday between 2 and 4pm. You'll get a confirmation...",
+      "font": "font_inter_regular",
+      "font_weight": 500,
+      "font_size_px": 24,
+      "color": "#FFFFFF",
+      "position": "bottom-center",
+      "offset_y_px": -150,
+      "keyframes": [
+        { "frame": 0, "opacity": 0.0 },
+        { "frame": 102, "opacity": 0.0 },
+        { "frame": 114, "opacity": 1.0, "easing": [0.25, 1.0, 0.5, 1.0] }
+      ]
+    }
+  ],
+  "post_fx": [
+    { "effect": "soft_glow", "order": 1, "params": { "threshold": 0.8, "intensity": 0.2, "radius": 40 } },
+    { "effect": "film_grain", "order": 2, "params": { "intensity": 0.04, "size": 1.2 } }
+  ],
+  "audio": {
+    "sfx": [
+      { "asset_ref": "sfx_ambient", "sync_frame": 0, "volume": 0.2 }
+    ],
+    "voiceover": [
+      { "asset_ref": "vo_user", "sync_frame": 10, "volume": 0.9 },
+      { "asset_ref": "vo_agent", "sync_frame": 108, "volume": 1.0 }
+    ]
+  },
+  "continuity": {
+    "prev_shot": "S01_SH01",
+    "next_shot": "null",
+    "inherit_from_prev": ["voice_orb_mesh"],
+    "state_transfer": { "orb_active_state": true }
+  },
+  "transition_out": {
+    "type": "fade_to_black",
+    "duration_frames": 12,
+    "easing": [0.5, 0.0, 1.0, 1.0]
+  }
+}

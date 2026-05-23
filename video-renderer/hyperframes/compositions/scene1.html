@@ -1,0 +1,65 @@
+<!doctype html>
+<template id="scene1-template">
+<div data-composition-id="scene1" data-start="0" data-duration="7" data-width="1920" data-height="1080">
+<style>
+  #s1-bg { position:absolute; inset:0; z-index:0; background:#F4F4F5; }
+  #s1-text { font-size:88px; font-weight:600; color:#111; letter-spacing:-0.02em; opacity:0; font-family:Inter,sans-serif; }
+  #s1-chat { display:flex; align-items:center; padding:20px 28px; background:#FFF; border-radius:20px; box-shadow:0 4px 24px rgba(0,0,0,0.06); opacity:0; scale:0.95; translate:0 12px; }
+  #s1-chat-txt { font-size:24px; font-weight:500; color:#333; letter-spacing:-0.01em; font-family:Inter,sans-serif; }
+  #s1-tgl { display:flex; align-items:center; gap:16px; opacity:0; }
+  #s1-tgl-pill { width:56px; height:30px; border-radius:15px; background:#E5E5E5; position:relative; }
+  #s1-tgl-knob { position:absolute; top:2px; left:2px; width:26px; height:26px; border-radius:13px; background:#FFF; box-shadow:0 1px 4px rgba(0,0,0,0.12); }
+  #s1-tgl-lbl { font-size:20px; font-weight:500; color:#666; letter-spacing:-0.01em; font-family:Inter,sans-serif; }
+  #s1-orb { width:200px; height:200px; border-radius:100px; background:radial-gradient(circle at 32% 32%,#FFFFFF 0%,#C8C8CC 20%,#6B6B72 55%,#2C2C30 85%,#18181B 100%); box-shadow:inset -14px -14px 30px rgba(0,0,0,0.55),0px 24px 48px rgba(0,0,0,0.18); opacity:0; scale:0; }
+  .grain-scene { position:absolute; inset:0; mix-blend-mode:multiply; opacity:0.08; pointer-events:none; z-index:100; }
+</style>
+
+<div id="s1-bg" class="clip" data-start="0" data-duration="7" data-track-index="0"></div>
+<div class="grain-scene clip" data-start="0" data-duration="7" data-track-index="99">
+  <svg width="100%" height="100%"><filter id="g1"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#g1)"/></svg>
+</div>
+
+<div class="clip" data-start="0" data-duration="3.5" data-track-index="10" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+  <span id="s1-text">ElevenLabs</span>
+</div>
+
+<div class="clip" data-start="3.5" data-duration="3.5" data-track-index="20" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+  <div id="s1-chat"><span id="s1-chat-txt">I need to reschedule my meeting...</span></div>
+</div>
+
+<div class="clip" data-start="4.8" data-duration="2.2" data-track-index="30" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+  <div id="s1-tgl"><div id="s1-tgl-pill"><div id="s1-tgl-knob"></div></div><span id="s1-tgl-lbl">Speech Engine</span></div>
+</div>
+
+<div class="clip" data-start="5.8" data-duration="1.2" data-track-index="40" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+  <div id="s1-orb"></div>
+</div>
+
+<div class="clip" data-start="6.5" data-duration="0.5" data-track-index="200" style="position:absolute;inset:0;background:#000;opacity:0" id="s1-curtain"></div>
+
+<script>
+(function(){
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+  var fps = 24, f2s = function(f){ return f / fps; };
+
+  tl.set("#s1-bg", { backgroundColor: "#F4F4F5" }, 0);
+  tl.to("#s1-bg", { backgroundColor: "#18181B", duration: f2s(48), ease: "power3.inOut" }, f2s(120));
+  tl.fromTo("#s1-text", { opacity:0 }, { opacity:1, duration:f2s(12), ease:"power2.out" }, 0);
+  tl.to("#s1-text", { opacity:0, duration:f2s(2) }, f2s(34));
+  tl.call(function(){ document.getElementById("s1-text").textContent = "Speech Engine"; }, [], f2s(36));
+  tl.to("#s1-text", { opacity:1, duration:f2s(4) }, f2s(36));
+  tl.to("#s1-text", { opacity:0, duration:f2s(8), ease:"power2.in" }, f2s(72));
+  tl.fromTo("#s1-chat", { opacity:0, scale:0.95, y:-12 }, { opacity:1, scale:1, y:0, duration:f2s(15), ease:"expo.out" }, f2s(90));
+  tl.fromTo("#s1-tgl", { opacity:0 }, { opacity:1, duration:f2s(15), ease:"power2.out" }, f2s(120));
+  tl.to("#s1-tgl-knob", { x:26, duration:f2s(10), ease:"power3.out" }, f2s(135));
+  tl.to("#s1-tgl-pill", { backgroundColor:"#34C759", duration:f2s(10), ease:"power3.out" }, f2s(135));
+  tl.fromTo("#s1-orb", { opacity:0, scale:0 }, { opacity:1, scale:1, duration:f2s(10), ease:"back.out(1.5)" }, f2s(145));
+  tl.fromTo("#s1-curtain", { opacity:0 }, { opacity:1, duration:f2s(12), ease:"power1.in" }, f2s(156));
+  tl.set({}, {}, 7);
+  window.__timelines["scene1"] = tl;
+})();
+</script>
+</div>
+</template>
+</html>

@@ -1,0 +1,106 @@
+<!doctype html>
+<template id="scene3-template">
+<div data-composition-id="scene3" data-start="0" data-duration="13.5" data-width="1920" data-height="1080">
+<style>
+  .grain-scene { position:absolute; inset:0; mix-blend-mode:multiply; opacity:0.05; pointer-events:none; z-index:100; }
+  .orb-metallic { width:200px; height:200px; border-radius:100px; background:radial-gradient(circle at 35% 30%,#FFFFFF 0%,#F5F5F5 8%,#D4D4D8 20%,#A1A1AA 40%,#52525B 65%,#27272A 85%,#18181B 100%); box-shadow:inset -14px -14px 30px rgba(0,0,0,0.55),0 0 60px rgba(228,228,231,0.12); }
+  .pipe-item { background:rgba(24,24,27,0.9); border:1.5px solid #3F3F46; border-radius:10px; padding:12px 24px; font-size:20px; font-weight:500; color:#D4D4D8; text-align:center; font-family:Inter,sans-serif; }
+  .arch-box { background:#FFF; border-radius:14px; padding:18px 28px; font-size:18px; font-weight:500; color:#18181B; box-shadow:0 2px 16px rgba(0,0,0,0.06); text-align:center; opacity:0; font-family:Inter,sans-serif; }
+  .arch-box.hl { background:#18181B; color:#FFF; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+</style>
+
+<div id="s3-bg" class="clip" data-start="0" data-duration="13.5" data-track-index="0" style="position:absolute;inset:0;z-index:0;background:#18181B"></div>
+
+<div class="grain-scene clip" data-start="0" data-duration="13.5" data-track-index="99">
+  <svg width="100%" height="100%"><filter id="g3"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#g3)"/></svg>
+</div>
+
+<div class="clip" data-start="0" data-duration="13.5" data-track-index="1" style="position:absolute;inset:0;z-index:1;mix-blend-mode:overlay;opacity:0;pointer-events:none" id="s3-noise">
+  <svg width="100%" height="100%"><filter id="n3"><feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#n3)"/></svg>
+</div>
+
+<div id="s3-orb-w" class="clip" data-start="0" data-duration="13.5" data-track-index="50" style="position:absolute;top:50%;left:50%;translate:-50% -50%;z-index:50">
+  <div class="orb-metallic"></div>
+</div>
+
+<div id="s3-pipe" class="clip" data-start="0" data-duration="4.5" data-track-index="20" style="position:absolute;top:50%;left:50%;translate:-50% -50%;display:flex;flex-direction:column;gap:10px;z-index:20;opacity:0">
+  <div class="pipe-item">Speech to Text</div><div class="pipe-item">Turn Taking</div><div class="pipe-item">Voice Activity Detection</div><div class="pipe-item">Text to Speech</div><div class="pipe-item">Interruption Detection</div>
+</div>
+
+<div id="s3-merge" class="clip" data-start="3.1" data-duration="1.7" data-track-index="15" style="position:absolute;top:50%;left:50%;translate:-50% -50%;width:340px;height:220px;border:2px solid #A1A1AA;border-radius:16px;opacity:0;scale:1 1.5;z-index:15"></div>
+
+<div id="s3-se" class="clip" data-start="4.6" data-duration="9.9" data-track-index="30" style="position:absolute;display:flex;align-items:center;gap:14px;z-index:30;opacity:0">
+  <div style="width:44px;height:44px;border-radius:22px;background:radial-gradient(circle at 35% 30%,#FFF 0%,#D4D4D8 30%,#71717A 65%,#3F3F46 100%);box-shadow:0 8px 24px rgba(0,0,0,0.3)"></div>
+  <span style="font-size:22px;font-weight:600;color:#18181B;letter-spacing:-0.01em;font-family:Inter,sans-serif">Speech Engine</span>
+</div>
+
+<div id="s3-card" class="clip" data-start="6.7" data-duration="7.8" data-track-index="31" style="position:absolute;display:flex;align-items:center;gap:12px;padding:16px 24px;background:#FFF;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);z-index:30;opacity:0">
+  <div style="width:32px;height:32px;border-radius:16px;background:linear-gradient(135deg,#6366F1,#8B5CF6)"></div>
+  <span style="font-size:20px;font-weight:500;color:#18181B;font-family:Inter,sans-serif">Your agent</span>
+</div>
+
+<div id="s3-hdr" class="clip" data-start="9.6" data-duration="3.9" data-track-index="32" style="position:absolute;top:0;left:0;right:0;height:80px;display:flex;align-items:center;padding:0 60px;z-index:30;opacity:0">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 24px;background:#FFF;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+    <div style="width:24px;height:24px;border-radius:12px;background:linear-gradient(135deg,#6366F1,#8B5CF6)"></div>
+    <span style="font-size:18px;font-weight:600;color:#18181B;font-family:Inter,sans-serif">Your agent</span>
+  </div>
+</div>
+
+<div id="s3-conn" class="clip" data-start="7.1" data-duration="2.1" data-track-index="25" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0">
+  <svg width="1920" height="1080" viewBox="0 0 1920 1080"><path id="s3-line" d="M 460 540 Q 960 480 1460 540" stroke="#D4D4D8" stroke-width="2" stroke-dasharray="1000" stroke-dashoffset="1000" fill="none"/></svg>
+</div>
+
+<div id="s3-arch" class="clip" data-start="9.6" data-duration="3.9" data-track-index="20" style="position:absolute;top:50%;left:50%;translate:-50% -50%;display:flex;flex-wrap:wrap;gap:16px;max-width:900px;justify-content:center;z-index:20;opacity:0">
+  <div class="arch-box" id="ab-sys">System prompt</div><div class="arch-box" id="ab-kb">Knowledge base</div><div class="arch-box" id="ab-rag">RAG</div><div class="arch-box hl" id="ab-llm">LLM</div><div class="arch-box" id="ab-rt">Workflows &amp; Routing</div>
+</div>
+
+<div id="s3-integ" class="clip" data-start="11.2" data-duration="2.3" data-track-index="21" style="position:absolute;right:80px;top:50%;translate:0 -50%;z-index:20;opacity:0">
+  <div style="font-size:20px;font-weight:600;color:#18181B;margin-bottom:14px;font-family:Inter,sans-serif">Integrations</div>
+  <div style="font-size:17px;font-weight:400;color:#52525B;padding:6px 0;display:flex;align-items:center;gap:8px;font-family:Inter,sans-serif"><span style="width:6px;height:6px;border-radius:3px;background:#A1A1AA;display:inline-block"></span>CRM</div>
+  <div style="font-size:17px;font-weight:400;color:#52525B;padding:6px 0;display:flex;align-items:center;gap:8px;font-family:Inter,sans-serif"><span style="width:6px;height:6px;border-radius:3px;background:#A1A1AA;display:inline-block"></span>Ticketing</div>
+  <div style="font-size:17px;font-weight:400;color:#52525B;padding:6px 0;display:flex;align-items:center;gap:8px;font-family:Inter,sans-serif"><span style="width:6px;height:6px;border-radius:3px;background:#A1A1AA;display:inline-block"></span>Billing</div>
+  <div style="font-size:17px;font-weight:400;color:#52525B;padding:6px 0;display:flex;align-items:center;gap:8px;font-family:Inter,sans-serif"><span style="width:6px;height:6px;border-radius:3px;background:#A1A1AA;display:inline-block"></span>Any system, API or webhook</div>
+</div>
+
+<div class="clip" data-start="13.1" data-duration="0.4" data-track-index="200" style="position:absolute;inset:0;background:#FFF;opacity:0" id="s3-curtain"></div>
+
+<script>
+(function(){
+  window.__timelines = window.__timelines || {};
+  var tl = gsap.timeline({ paused: true });
+  var fps = 24, f2s = function(f){ return f / fps; };
+
+  tl.set("#s3-bg", { backgroundColor:"#18181B" }, 0);
+  tl.to("#s3-bg", { backgroundColor:"#71717A", duration:f2s(20), ease:"power3.out" }, f2s(110));
+  tl.to("#s3-bg", { backgroundColor:"#F4F4F5", duration:f2s(80), ease:"power3.inOut" }, f2s(130));
+  tl.to("#s3-noise", { opacity:0.4, duration:f2s(20), ease:"power3.out" }, f2s(110));
+  tl.to("#s3-noise", { opacity:0, duration:f2s(20), ease:"power3.inOut" }, f2s(190));
+  tl.to("#s3-orb-w", { scale:0.4, x:280, y:-80, duration:f2s(30), ease:"power3.out" }, 0);
+  tl.to("#s3-orb-w", { scale:0.3, x:-440, y:-120, duration:f2s(90), ease:"power3.out" }, f2s(30));
+  tl.to("#s3-orb-w .orb-metallic", { opacity:0, duration:f2s(12), ease:"power1.in" }, f2s(208));
+  tl.fromTo("#s3-pipe", { opacity:0, y:20 }, { opacity:1, y:0, duration:f2s(15), ease:"expo.out" }, f2s(10));
+  tl.to("#s3-pipe", { opacity:0, gap:"0px", duration:f2s(20), ease:"power2.in" }, f2s(70));
+  tl.fromTo("#s3-merge", { opacity:0, scaleY:1.5 }, { opacity:1, scaleY:1, duration:f2s(20), ease:"back.out(1.2)" }, f2s(75));
+  tl.to("#s3-merge", { opacity:0, duration:f2s(20), ease:"power2.in" }, f2s(95));
+  tl.fromTo("#s3-se", { opacity:0, x:0, y:0 }, { opacity:1, x:-440, y:0, duration:f2s(20), ease:"power3.out" }, f2s(110));
+  tl.to("#s3-se", { opacity:0, duration:f2s(10) }, f2s(220));
+  tl.fromTo("#s3-card", { opacity:0, x:100 }, { opacity:1, x:440, duration:f2s(20), ease:"expo.out" }, f2s(160));
+  tl.to("#s3-card", { y:-420, x:0, scale:1.2, duration:f2s(20), ease:"power3.inOut" }, f2s(210));
+  tl.to("#s3-card", { opacity:0, duration:f2s(4) }, f2s(226));
+  tl.fromTo("#s3-hdr", { opacity:0, y:-20 }, { opacity:1, y:0, duration:f2s(12), ease:"expo.out" }, f2s(230));
+  tl.fromTo("#s3-conn", { opacity:0 }, { opacity:1, duration:f2s(2) }, f2s(170));
+  tl.fromTo("#s3-line", { strokeDashoffset:1000 }, { strokeDashoffset:0, duration:f2s(20), ease:"power3.out" }, f2s(170));
+  tl.to("#s3-conn", { opacity:0, duration:f2s(5) }, f2s(210));
+  tl.fromTo("#s3-arch", { opacity:0, y:50 }, { opacity:1, y:0, duration:f2s(50), ease:"expo.out" }, f2s(230));
+  var ids = ["#ab-sys","#ab-kb","#ab-rag","#ab-llm","#ab-rt"], starts = [240,245,250,260,270];
+  ids.forEach(function(s,i){ tl.fromTo(s,{opacity:0,y:10},{opacity:1,y:0,duration:f2s(8),ease:"power2.out"},f2s(starts[i])); });
+  tl.fromTo("#ab-llm", { scale:0.9 }, { scale:1, duration:f2s(10), ease:"back.out(1.2)" }, f2s(260));
+  tl.fromTo("#s3-integ", { opacity:0, y:20 }, { opacity:1, y:0, duration:f2s(30), ease:"back.out(1.2)" }, f2s(270));
+  tl.fromTo("#s3-curtain", { opacity:0 }, { opacity:1, duration:f2s(10), ease:"power1.in" }, f2s(314));
+  tl.set({}, {}, 13.5);
+  window.__timelines["scene3"] = tl;
+})();
+</script>
+</div>
+</template>
+</html>

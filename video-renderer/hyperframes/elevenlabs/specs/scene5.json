@@ -1,0 +1,23 @@
+{
+  "schema_version": "hf-exec-ir-1.0",
+  "shot_id": "S05_SH01",
+  "scene_id": "S05_Security_Outro",
+  "time_control": { "start_sec": 0.0, "end_sec": 10.0, "duration_sec": 10.0, "total_frames": 240, "fps": 24, "frame_ref": "shot_start" },
+  "render_target": { "type": "frame_sequence", "output_dir": "output/shots/S05_SH01/", "capture": true },
+  "asset_bindings": { "voice_orb":"mdl_ai_voice_sphere", "font_main":"font_inter", "vo_narrator":"vo_security_and_outro", "sfx_shield":"sfx_forcefield_hum", "sfx_shrink":"sfx_swoosh_down", "sfx_text_pop":"sfx_minimal_pop" },
+  "semantic_role": { "narrative_function":"resolution_and_cta", "attention_target":"brand_logo_and_url", "emotional_intent":"trust_and_action" },
+  "camera": { "shot_size":"MCU", "angle":"front_orthographic", "focal_length_equiv":50, "fov_deg":45.0, "dof":{"enabled":false}, "keyframes":[{"frame":0,"position":[0,0,-10],"look_at":[0,0,0]}] },
+  "layers": [
+    { "layer_id":"bg_canvas","type":"solid","z_index":0,"color":"#F4F4F5","opacity":1 },
+    { "layer_id":"security_shield_lines","type":"shape","z_index":10,"shape_type":"rounded_rectangle","stroke_color":"#A1A1AA","stroke_width":1.5,"fill_color":"transparent","keyframes":[{"frame":0,"opacity":0,"scale":0.5,"corner_radius":100},{"frame":12,"opacity":0.8,"scale":1.2,"corner_radius":40,"easing":[0.2,0.8,0.2,1]},{"frame":60,"opacity":0.8,"scale":1.5},{"frame":84,"opacity":0,"scale":1.8,"easing":[0.4,0,1,1]}] },
+    { "layer_id":"orbiting_nodes","type":"ui_group","z_index":15,"layout":"radial_orbit","elements":["node_1","node_2","node_3"],"color":"#FFFFFF","keyframes":[{"frame":0,"opacity":1,"radius":2.5,"rotation_deg":0},{"frame":48,"opacity":1,"radius":2.5,"rotation_deg":90},{"frame":72,"opacity":0,"radius":0,"easing":[0.4,0,1,1]}] },
+    { "layer_id":"voice_orb_model","type":"3d_model","asset_ref":"voice_orb","z_index":20,"keyframes":[{"frame":0,"scale":1,"position":[0,0,0]},{"frame":60,"scale":1,"position":[0,0,0]},{"frame":96,"scale":0.12,"position":[1.5,0,0],"easing":[0.65,0,0.35,1]}] },
+    { "layer_id":"text_secured","type":"text","z_index":30,"content":"Secured","font":"font_inter","font_weight":500,"font_size_px":48,"color":"#FFFFFF","position":"center","keyframes":[{"frame":12,"opacity":0},{"frame":24,"opacity":1,"easing":[0.3,1,0.4,1]},{"frame":60,"opacity":1},{"frame":72,"opacity":0,"easing":[0.4,0,1,1]}] },
+    { "layer_id":"text_logo_morph","type":"text","z_index":30,"content":"ElevenLabs","font":"font_inter","font_weight":600,"font_size_px":42,"color":"#18181B","position":"center","offset_x_px":-40,"keyframes":[{"frame":90,"opacity":0,"content":"Eleven API"},{"frame":105,"opacity":1,"content":"Eleven API","easing":[0.25,1,0.5,1]},{"frame":140,"opacity":0,"content":"Eleven API"},{"frame":145,"opacity":1,"content":"ElevenLabs"}] },
+    { "layer_id":"cta_url","type":"text","z_index":30,"content":"elevenlabs.io/speech-engine","font":"font_inter","font_weight":400,"font_size_px":20,"color":"#71717A","position":"bottom-center","offset_y_px":60,"keyframes":[{"frame":168,"opacity":0,"offset_y_px":80},{"frame":184,"opacity":1,"offset_y_px":60,"easing":[0.2,0.8,0.2,1]}] }
+  ],
+  "post_fx": [{"effect":"motion_blur","order":1,"params":{"shutter_angle":180,"samples":6}}],
+  "audio": { "sfx":[{"asset_ref":"sfx_shield","sync_frame":12,"volume":0.5},{"asset_ref":"sfx_shrink","sync_frame":60,"volume":0.6},{"asset_ref":"sfx_text_pop","sync_frame":105,"volume":0.4},{"asset_ref":"sfx_text_pop","sync_frame":145,"volume":0.4}], "voiceover":[{"asset_ref":"vo_narrator","sync_frame":0,"volume":1}] },
+  "continuity": { "prev_shot":"S04_SH01","next_shot":"null","inherit_from_prev":["voice_orb_model"],"state_transfer":{"orb_scale":1} },
+  "transition_out": { "type":"fade_to_white","duration_frames":24,"easing":[0.5,0,1,1] }
+}

@@ -1,0 +1,141 @@
+{
+  "schema_version": "hf-exec-ir-1.0",
+  "project_id": "elevenlabs_speech_engine_001",
+  "project_name": "Speech_Engine_Launch_Promo",
+  "video_goal": "Introduce a new developer tool with a sleek, minimalist aesthetic, emphasizing ease of use and powerful capabilities.",
+  "format": {
+    "aspect_ratio": "16:9",
+    "resolution": "3840x2160",
+    "fps": 24,
+    "duration_total_ms": 53000,
+    "total_frames": 1272,
+    "output_codec": "H264",
+    "output_bitrate_mbps": 80,
+    "color_space": "Rec.709"
+  },
+  "coordinate_system": {
+    "space": "world",
+    "unit": "meter",
+    "up_axis": "Y",
+    "rotation_order": "XYZ",
+    "frame_origin": "shot_start"
+  },
+  "override_policy": {
+    "post_fx": "global -> scene -> shot -> transition",
+    "camera": "shot_only",
+    "audio": "global -> shot",
+    "lighting": "shot -> scene -> global"
+  },
+  "global_composition": {
+    "background_default": "#F5F5F5",
+    "default_easing": "ease_in_out_expo",
+    "motion_blur_shutter_angle": 180,
+    "depth_of_field_default": false
+  },
+  "global_post_fx": [
+    {
+      "effect": "monochromatic_contrast",
+      "order": 1,
+      "params": { "black_level": 0.05, "white_level": 0.95 }
+    },
+    {
+      "effect": "film_grain",
+      "order": 2,
+      "params": { "intensity": 0.08, "type": "fine" }
+    }
+  ],
+  "asset_registry": [
+    { "asset_id": "mdl_agent_sphere", "type": "3d_model", "file": "assets/models/abstract_sphere_metallic.glb", "preload": true },
+    { "asset_id": "mdl_ui_glass_cards", "type": "3d_model", "file": "assets/models/glassmorphism_cards.glb", "preload": true },
+    { "asset_id": "font_primary", "type": "font", "file": "assets/fonts/Inter-Medium.ttf", "preload": true },
+    { "asset_id": "fx_audio_waveform", "type": "particle_system", "file": "assets/fx/sine_wave_line.json", "preload": false },
+    { "asset_id": "sfx_ui_click", "type": "audio", "file": "sfx/clean_ui_click.wav", "preload": true },
+    { "asset_id": "sfx_swoosh_transition", "type": "audio", "file": "sfx/minimal_swoosh.wav", "preload": true },
+    { "asset_id": "voiceover_main", "type": "audio", "file": "audio/ai_voiceover_clean.wav", "preload": true },
+    { "asset_id": "music_ambient", "type": "audio", "file": "audio/minimal_ambient_drone.wav", "preload": true }
+  ],
+  "audio_master": {
+    "music_track_ref": "music_ambient",
+    "music_volume": 0.3,
+    "voiceover_track_ref": "voiceover_main",
+    "voiceover_volume": 1.0,
+    "ducking_enabled": true,
+    "ducking_target_db": -24
+  },
+  "scenes": [
+    {
+      "scene_id": "S01",
+      "label": "Title & Concept Introduction",
+      "start_time_ms": 0,
+      "end_time_ms": 8000,
+      "frame_in": 0,
+      "frame_out": 192,
+      "scene_function": "establish",
+      "emotional_tone": "clean_innovative",
+      "scene_post_fx": []
+    },
+    {
+      "scene_id": "S02",
+      "label": "Live Interactive Demo",
+      "start_time_ms": 8000,
+      "end_time_ms": 17000,
+      "frame_in": 193,
+      "frame_out": 408,
+      "scene_function": "feature_reveal",
+      "emotional_tone": "seamless_tech",
+      "scene_post_fx": [
+        {
+          "effect": "background_color_shift",
+          "order": 1,
+          "params": { "target_color": "#111111", "transition_duration_ms": 1000 }
+        }
+      ]
+    },
+    {
+      "scene_id": "S03",
+      "label": "Pipeline & Architecture Breakdown",
+      "start_time_ms": 17000,
+      "end_time_ms": 31000,
+      "frame_in": 409,
+      "frame_out": 744,
+      "scene_function": "technical_explanation",
+      "emotional_tone": "authoritative_structured",
+      "scene_post_fx": []
+    },
+    {
+      "scene_id": "S04",
+      "label": "Core Capabilities & Global Reach",
+      "start_time_ms": 31000,
+      "end_time_ms": 42000,
+      "frame_in": 745,
+      "frame_out": 1008,
+      "scene_function": "feature_highlight",
+      "emotional_tone": "expansive_fluid",
+      "scene_post_fx": [
+        {
+          "effect": "background_color_shift",
+          "order": 1,
+          "params": { "target_color": "#F5F5F5", "transition_duration_ms": 1500 }
+        }
+      ]
+    },
+    {
+      "scene_id": "S05",
+      "label": "Security, Outro & Call to Action",
+      "start_time_ms": 42000,
+      "end_time_ms": 53000,
+      "frame_in": 1009,
+      "frame_out": 1272,
+      "scene_function": "conclusion_cta",
+      "emotional_tone": "secure_premium",
+      "scene_post_fx": []
+    }
+  ],
+  "render_pipeline": {
+    "shot_order": "sequential",
+    "micro_json_dir": "shots/",
+    "output_dir": "output/shots/",
+    "final_assembly": true,
+    "final_output_file": "output/elevenlabs_promo_master.mp4"
+  }
+}

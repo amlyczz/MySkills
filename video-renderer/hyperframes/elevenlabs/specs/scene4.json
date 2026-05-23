@@ -1,0 +1,23 @@
+{
+  "schema_version": "hf-exec-ir-1.0",
+  "shot_id": "S04_SH01",
+  "scene_id": "S04_Core_Capabilities_and_Global_Reach",
+  "time_control": { "start_sec": 0.0, "end_sec": 11.0, "duration_sec": 11.0, "total_frames": 264, "fps": 24, "frame_ref": "shot_start" },
+  "render_target": { "type": "frame_sequence", "output_dir": "output/shots/S04_SH01/", "capture": true },
+  "asset_bindings": { "font_main":"font_inter", "vo_narrator":"vo_core_capabilities", "sfx_pop":"sfx_bubble_pop", "sfx_wave":"sfx_sine_sweep", "voice_orb":"mdl_ai_voice_sphere" },
+  "semantic_role": { "narrative_function":"feature_highlight", "attention_target":"multilingual_ui_and_orb", "emotional_intent":"global_scale_and_intelligence" },
+  "camera": { "shot_size":"Wide", "angle":"front_orthographic", "focal_length_equiv":50, "fov_deg":45.0, "dof":{"enabled":false}, "keyframes":[{"frame":0,"position":[0,0,-10],"look_at":[0,0,0]}] },
+  "layers": [
+    { "layer_id":"bg_canvas","type":"solid","z_index":0,"color":"#F4F4F5","opacity":1 },
+    { "layer_id":"multilingual_bubbles","type":"ui_group","z_index":10,"layout":"scattered_cloud","elements":[{"id":"en","text":"Thanks for reaching out.","position":[0,0]},{"id":"it","text":"Certo, sono felice di aiutarti.","position":[-3,3]},{"id":"ko","text":"이메일 주소가 어떻게 되세�?","position":[2,4]},{"id":"ar","text":"ما هو عنوان بريدك الإلكتروني؟","position":[5,3]},{"id":"zh","text":"您的邮箱地址是什么？","position":[1,1]}],"keyframes":[{"frame":0,"opacity":0,"scale":0.8},{"frame":24,"opacity":1,"scale":1,"easing":[0.3,1,0.4,1]},{"frame":72,"opacity":1},{"frame":84,"opacity":0,"scale":0.9,"easing":[0.4,0,1,1]}] },
+    { "layer_id":"audio_sine_waves","type":"shape","z_index":20,"shape_type":"intersecting_lines","stroke_color":"#A1A1AA","stroke_width":1.5,"keyframes":[{"frame":96,"opacity":0,"amplitude":0},{"frame":108,"opacity":1,"amplitude":1,"easing":[0.2,0.8,0.2,1]},{"frame":132,"opacity":1},{"frame":144,"opacity":0,"easing":[0.4,0,1,1]}] },
+    { "layer_id":"text_transcription","type":"text","z_index":30,"content":"Industry-leading transcription","font":"font_inter","color":"#18181B","font_size_px":36,"keyframes":[{"frame":96,"opacity":0},{"frame":108,"opacity":1},{"frame":132,"opacity":1},{"frame":144,"opacity":0}] },
+    { "layer_id":"voice_orb_model","type":"3d_model","asset_ref":"voice_orb","z_index":40,"keyframes":[{"frame":144,"position":[8,4,0],"scale":0,"opacity":0},{"frame":168,"position":[0,0,0],"scale":1,"opacity":1,"easing":[0.25,1,0.5,1]}] },
+    { "layer_id":"radar_rings","type":"shape","z_index":15,"shape_type":"concentric_circles","stroke_color":"#D4D4D8","stroke_width":1,"keyframes":[{"frame":168,"opacity":0,"radius":1},{"frame":240,"opacity":0.8,"radius":5,"easing":[0.2,0.8,0.2,1]}] },
+    { "layer_id":"capability_labels","type":"ui_group","z_index":50,"layout":"radial_orbit","elements":[{"id":"turn_taking","label":"Natural turn-taking","appear_frame":180,"position":[-2,2]},{"id":"voice_detect","label":"Voice detection","appear_frame":204,"position":[2,-2]},{"id":"interrupt","label":"Interruption handling","appear_frame":228,"position":[-3,-1]}],"keyframes":[{"frame":160,"opacity":0},{"frame":260,"opacity":1}] }
+  ],
+  "post_fx": [{"effect":"motion_blur","order":1,"params":{"shutter_angle":90,"samples":4}}],
+  "audio": { "sfx":[{"asset_ref":"sfx_pop","sync_frame":10,"volume":0.4},{"asset_ref":"sfx_wave","sync_frame":96,"volume":0.3}], "voiceover":[{"asset_ref":"vo_narrator","sync_frame":0,"volume":1}] },
+  "continuity": { "prev_shot":"S03_SH01","next_shot":"null","inherit_from_prev":[],"state_transfer":{} },
+  "transition_out": { "type":"cut","duration_frames":0,"easing":[0,0,0,0] }
+}
