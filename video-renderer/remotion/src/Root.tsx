@@ -24,6 +24,7 @@ import { SpotifyShowcase } from "./SpotifyShowcase";
 import { MetaphorShowcase } from "./MetaphorShowcase";
 import { HealthAppShowcase } from "./HealthAppShowcase";
 import { FastlaneShowcase } from "./FastlaneShowcase";
+import { CohereShowcase } from "./CohereShowcase";
 
 const FPS = 24;
 const WIDTH = 1920;
@@ -189,6 +190,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="Metaphor-Showcase" component={MetaphorShowcase} durationInFrames={260} fps={FPS} width={WIDTH} height={HEIGHT} />
       <Composition id="HealthApp-Showcase" component={HealthAppShowcase} durationInFrames={180} fps={FPS} width={WIDTH} height={HEIGHT} />
       <Composition id="Fastlane-Showcase" component={FastlaneShowcase} durationInFrames={260} fps={FPS} width={WIDTH} height={HEIGHT} />
+      <Composition id="Cohere-Showcase" component={CohereShowcase} durationInFrames={384} fps={FPS} width={WIDTH} height={HEIGHT} />
     </>
   );
 };
