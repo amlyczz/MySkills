@@ -1,12 +1,9 @@
-import os
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base
-
-# 生产环境应当从环境变量获取
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://zand:811098@localhost:5432/video_pipeline")
+from ..config.app_config import settings
 
 engine = create_async_engine(
-    DATABASE_URL,
+    settings.database_url,
     echo=False,
     pool_size=10,
     max_overflow=20,
@@ -22,6 +19,6 @@ async def get_db_session():
     async with async_session_maker() as session:
         yield session
 
-async def init_db():
+async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
