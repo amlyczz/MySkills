@@ -99,30 +99,45 @@ STYLE_CATALOG = [
 ]
 
 LAYOUT_CATALOG = {
-    "hook":       {"primary": "hero-center", "alternatives": ["kinetic-typography", "media-full"]},
-    "problem":    {"primary": "hero-center", "alternatives": ["split-left-text", "quote-style"]},
-    "solution":   {"primary": "split-left-text", "alternatives": ["hero-center", "card-grid"]},
-    "feature":    {"primary": "card-grid", "alternatives": ["hero-center", "floating-grid"]},
-    "showcase":   {"primary": "media-full", "alternatives": ["center-focus-video", "fly-through"]},
-    "proof":      {"primary": "stat-highlight", "alternatives": ["card-grid", "quote-style"]},
-    "cta":        {"primary": "hero-center", "alternatives": ["prompt-input"]},
-    "demo":       {"primary": "media-full", "alternatives": ["center-focus-video"]},
-    "origin":     {"primary": "hero-center", "alternatives": ["split-left-text"]},
-    "milestones": {"primary": "card-grid", "alternatives": ["floating-grid"]},
-    "today":      {"primary": "stat-highlight", "alternatives": ["hero-center"]},
+    "hook":       {"primary": "center-layout", "alternatives": ["split-layout", "title"]},
+    "problem":    {"primary": "center-layout", "alternatives": ["split-layout", "quote-card"]},
+    "solution":   {"primary": "split-layout", "alternatives": ["center-layout", "icon-grid"]},
+    "feature":    {"primary": "icon-grid", "alternatives": ["center-layout", "stat-card"]},
+    "showcase":   {"primary": "split-media", "alternatives": ["browser-mockup", "coverflow-carousel"]},
+    "proof":      {"primary": "stat-card", "alternatives": ["icon-grid", "quote-card"]},
+    "cta":        {"primary": "center-layout", "alternatives": ["title", "cta-button"]},
+    "demo":       {"primary": "split-media", "alternatives": ["browser-mockup"]},
+    "origin":     {"primary": "center-layout", "alternatives": ["split-layout"]},
+    "milestones": {"primary": "icon-grid", "alternatives": ["stat-card"]},
+    "today":      {"primary": "stat-card", "alternatives": ["center-layout"]},
 }
 
 MOTION_CATALOG = {
-    "title":    {"primary": "arc-entrance", "alternatives": ["spring-elastic", "bounce-in"]},
-    "subtitle": {"primary": "scale-fade", "alternatives": ["smooth-scale-up"]},
-    "points":   {"primary": "spring-slide-up", "alternatives": ["staggered-grow"]},
-    "headline": {"primary": "bounce-in", "alternatives": ["arc-entrance", "spring-elastic"]},
-    "stats":    {"primary": "scale-fade", "alternatives": ["spring-slide-up"]},
+    "title":    {"primary": "scale-bounce", "alternatives": ["fade-up", "fade-down"]},
+    "subtitle": {"primary": "fade-up", "alternatives": ["scale-in"]},
+    "points":   {"primary": "fade-up", "alternatives": ["slide-up"]},
+    "headline": {"primary": "scale-bounce", "alternatives": ["fade-up", "scale-in"]},
+    "stats":    {"primary": "scale-in", "alternatives": ["fade-up"]},
+}
+
+STYLE_TO_BG = {
+    "dark-purple":   {"bgType": "dark-neon",     "primary": "#A855F7"},
+    "neon-blue":     {"bgType": "dark-neon",     "primary": "#3B82F6"},
+    "tech-grid":     {"bgType": "tech-overlay",  "primary": "#00F5D4"},
+    "matte-metal":   {"bgType": "noise-background", "primary": "#6B7280"},
+    "sakura-pink":   {"bgType": "aurora-bg",    "primary": "#F48FB1"},
+    "ocean-cyan":    {"bgType": "fluid-aurora", "primary": "#06B6D4"},
+    "warm-orange":   {"bgType": "fluid-background", "primary": "#F97316"},
+    "corporate-gray": {"bgType": "dot-grid-bg", "primary": "#6366F1"},
+    "deep-green":    {"bgType": "dark-neon",     "primary": "#10B981"},
+    "paper-light":   {"bgType": "dot-grid-bg",  "primary": "#78716C"},
+    "ink-dark":      {"bgType": "noise-background", "primary": "#F8FAFC"},
+    "retro-warm":    {"bgType": "fluid-background", "primary": "#F59E0B"},
 }
 
 # ── Prompt template ──
 
-SYSTEM_PROMPT = """You are a video template matching agent for a programmatic video rendering engine. Given a GitHub repository's metadata and content, select the optimal structure, style, layout, and motion templates for a promo video.
+SYSTEM_PROMPT = """You are a video template matching agent for a Remotion-based video rendering engine. Given a GitHub repository's metadata and content, select the optimal structure, style, layout, and motion templates for a promo video.
 
 ## Available Structure Templates
 {structures}
@@ -130,49 +145,49 @@ SYSTEM_PROMPT = """You are a video template matching agent for a programmatic vi
 ## Available Style Templates (by family)
 {styles}
 
-## Available Layout Types (by scene)
+## Available Layout Types (by scene) — MUST use registered component IDs
 {layouts}
 
-## Available Motion Types (by element role)
+## Available Motion Types (by element role) — MUST use AnimationType enum values
 {motions}
+
+## Valid Animation Types
+none, fade-in, fade-out, fade-up, fade-down, scale-in, scale-bounce, slide-left, slide-right, slide-up, slide-down, bar-grow, typewriter
+
+## Valid Background Types
+dark-neon, fluid-aurora, light-beam, tech-overlay, aurora-bg, fluid-background, noise-background, dot-grid-bg, none
 
 ## Output Format
 Return a JSON object with this exact structure:
 {{
   "structureId": "funnel",
   "styleId": "dark-purple",
-  "bgType": "starfield",
+  "bgType": "dark-neon",
   "reasoning": "Brief explanation of your choices (1-2 sentences)",
   "sceneConfigs": {{
     "hook": {{
-      "layoutId": "hero-center",
-      "motionMap": {{ "headline": "bounce-in" }}
+      "layoutId": "center-layout",
+      "motionMap": {{ "headline": "scale-bounce" }}
     }},
     "problem": {{
-      "layoutId": "hero-center",
-      "motionMap": {{ "title": "arc-entrance", "points": "spring-slide-up" }}
+      "layoutId": "center-layout",
+      "motionMap": {{ "title": "fade-up", "points": "fade-up" }}
     }}
-    // ... one entry per scene in the chosen structure
   }}
 }}
 
 ## Selection Rules
 1. **Structure**: Use "product-showcase" if there are 3+ videos/GIFs. Use "funnel" as default.
-2. **Style**: Match to the project's primary programming language and topics. Tech languages → "tech" family. Creative/frontend → "creative" family. CLI/tools → "minimal".
-3. **Layout**: Each scene type has a primary and alternative layout. Choose based on content density.
-   - hook/problem/cta → hero-center (single big message)
-   - solution/feature → split-left-text or card-grid (info-rich)
-   - showcase → media-full (let visuals speak)
-   - proof → stat-highlight (numbers need to pop)
-4. **Motion**: Title/headline → arc-entrance or bounce-in for impact. Points → spring-slide-up with stagger for list reveal. Stats → scale-fade for elegance.
-5. **bgType**: Match to the chosen style family (tech → starfield, creative → fluid-gradient, minimal → bokeh, business → geometric, playful → fluid-gradient).
+2. **Style**: Match to the project's primary language. Tech → tech family. Creative/frontend → creative. CLI/tools → minimal.
+3. **Layout**: Use registered component IDs only. hook/problem/cta → center-layout. solution/feature → split-layout or icon-grid. showcase → split-media. proof → stat-card.
+4. **Motion**: Use AnimationType enum values only. title/headline → scale-bounce. points → fade-up with stagger. stats → scale-in.
+5. **bgType**: Must be a BackgroundType enum value from the catalog.
 
 ## Constraints
-- All layoutId values must be from the Available Layout Types list.
-- All motion values must be from the Available Motion Types list.
-- styleId must be a valid style ID from the catalog.
-- structureId must be one of: funnel, timeline, product-showcase, performance-launch.
-- Do NOT invent new layout or motion names — use ONLY what's listed."""
+- All layoutId values MUST be registered component IDs from the catalog.
+- All motion values MUST be from the AnimationType enum.
+- bgType MUST be a BackgroundType enum value.
+- Do NOT invent new IDs — use ONLY what's listed."""
 
 
 def _build_catalog_text() -> dict[str, str]:
@@ -320,33 +335,26 @@ class LLMMatcher:
     def _validate_and_fix(self, result: dict) -> MatchingResult:
         """Validate LLM output against known-good values, fix simple errors."""
         valid_structures = {"funnel", "timeline", "product-showcase", "performance-launch"}
-        valid_styles = {
-            "dark-purple", "sakura-pink", "neon-blue", "warm-orange",
-            "deep-green", "matte-metal", "ocean-cyan", "tech-grid",
-            "paper-light", "ink-dark", "corporate-gray", "retro-warm",
-        }
-        valid_layouts = set(LAYOUT_CATALOG.keys())
-        # All layout IDs from catalog values
+        valid_styles = set(STYLE_TO_BG.keys())
+
+        valid_layouts = set()
         for info in LAYOUT_CATALOG.values():
             valid_layouts.add(info["primary"])
             valid_layouts.update(info["alternatives"])
-        # add layout IDs not in scene-type catalog
-        valid_layouts.update({"code-display", "sandwich-text", "quote-style", "full-screen-text", "split-right-text"})
 
-        valid_motions = set()
-        for info in MOTION_CATALOG.values():
-            valid_motions.add(info["primary"])
-            valid_motions.update(info["alternatives"])
-        # Add all defined motion types
-        valid_motions.update({
-            "spring-slide-up", "spring-slide-left", "arc-entrance", "scale-fade",
-            "typewriter", "reveal-mask", "bounce-in", "blur-focus",
-            "spring-elastic", "smooth-scale-up", "staggered-grow",
-            "fade-out", "slide-out-left", "scale-down-out", "blur-out",
-            "subtle-float", "glow-pulse", "none",
-        })
+        valid_motions = {
+            "none", "fade-in", "fade-out", "fade-up", "fade-down",
+            "scale-in", "scale-bounce",
+            "slide-left", "slide-right", "slide-up", "slide-down",
+            "bar-grow", "typewriter",
+        }
+        valid_motions.update({"spring-slide-up", "staggered-grow", "subtle-float", "glow-pulse"})
 
-        valid_bg_types = {"starfield", "bokeh", "geometric", "pixel", "fluid-gradient", "none"}
+        valid_bg_types = {
+            "dark-neon", "fluid-aurora", "light-beam", "tech-overlay",
+            "aurora-bg", "fluid-background", "noise-background",
+            "dot-grid-bg", "none",
+        }
 
         # Validate structureId
         structure_id = result.get("structureId", "funnel")
@@ -361,10 +369,10 @@ class LLMMatcher:
             style_id = "dark-purple"
 
         # Validate bgType
-        bg_type = result.get("bgType", "starfield")
+        bg_type = result.get("bgType", "dark-neon")
         if bg_type not in valid_bg_types:
-            print(f"  [LLMMatcher] Invalid bgType '{bg_type}', using 'starfield'")
-            bg_type = "starfield"
+            print(f"  [LLMMatcher] Invalid bgType '{bg_type}', using 'dark-neon'")
+            bg_type = "dark-neon"
 
         # Validate and fix sceneConfigs
         scene_configs = result.get("sceneConfigs", {})
@@ -381,9 +389,9 @@ class LLMMatcher:
                     fixed_motions[role] = motion
                 else:
                     # Use default for that role
-                    defaults = {"title": "arc-entrance", "headline": "bounce-in",
-                                "subtitle": "scale-fade", "points": "spring-slide-up",
-                                "stats": "scale-fade", "url": "spring-slide-up"}
+                    defaults = {"title": "scale-bounce", "headline": "scale-bounce",
+                                "subtitle": "fade-up", "points": "fade-up",
+                                "stats": "scale-in", "url": "fade-up"}
                     fixed_motions[role] = defaults.get(role, "scale-fade")
 
             fixed_configs[scene_id] = {
@@ -419,13 +427,8 @@ class LLMMatcher:
         }
         style_id = lang_map.get(lang, "dark-purple")
 
-        # bgType from style family
-        family_bg = {"dark-purple": "starfield", "tech-grid": "starfield", "neon-blue": "starfield",
-                     "corporate-gray": "geometric", "ink-dark": "geometric", "paper-light": "geometric",
-                     "sakura-pink": "fluid-gradient", "ocean-cyan": "fluid-gradient",
-                     "matte-metal": "bokeh",
-                     "warm-orange": "fluid-gradient", "warm-yellow": "fluid-gradient", "retro-warm": "fluid-gradient"}
-        bg_type = family_bg.get(style_id, "starfield")
+        # bgType from STYLE_TO_BG
+        bg_type = STYLE_TO_BG.get(style_id, {}).get("bgType", "dark-neon")
 
         # Scene configs (simple defaults)
         scene_configs = {}
@@ -443,7 +446,7 @@ class LLMMatcher:
         # Fill content from request
         if "hook" in scene_configs:
             scene_configs["hook"]["content"] = {"headline": request.title}
-            scene_configs["hook"]["motionMap"] = {"headline": "bounce-in"}
+            scene_configs["hook"]["motionMap"] = {"headline": "scale-bounce"}
         if "cta" in scene_configs:
             scene_configs["cta"]["content"] = {
                 "title": request.url or request.title,

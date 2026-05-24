@@ -33,6 +33,7 @@ import { HealthAppShowcase } from "./HealthAppShowcase";
 import { FastlaneShowcase } from "./FastlaneShowcase";
 import { CohereShowcase } from "./CohereShowcase";
 import { ComponentCatalog, catalogTotalFrames } from "./ComponentCatalog";
+import { VideoComposer } from "./engine/VideoComposer";
 
 const makeBlueprintComp = (bp: any) => ({
   component: TemplateRenderer,
@@ -46,6 +47,15 @@ const makeBlueprintComp = (bp: any) => ({
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="VideoComposer"
+        component={VideoComposer}
+        defaultProps={{ blueprintJson: "{}" }}
+        durationInFrames={900}
+        fps={DEFAULT_FPS}
+        width={DEFAULT_WIDTH}
+        height={DEFAULT_HEIGHT}
+      />
       <Composition id="Component-Catalog" component={ComponentCatalog} durationInFrames={catalogTotalFrames()} fps={DEFAULT_FPS} width={DEFAULT_WIDTH} height={DEFAULT_HEIGHT} />
       <Composition id="AI-Search-Demo" {...makeBlueprintComp(searchDemoBlueprint)} />
       <Composition id="DarkNeon-Blueprint" {...makeBlueprintComp(darkNeonBlueprint)} />

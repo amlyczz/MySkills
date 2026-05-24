@@ -88,12 +88,15 @@ export const ElementRenderer: React.FC<Props> = ({ element, dataCtx = {}, motion
     if (height !== undefined) layoutStyle.height = height;
     if (zIndex !== undefined) layoutStyle.zIndex = zIndex;
     // Static transform (always-on baseline)
-    if (scale !== undefined || rotation !== undefined) {
-      const parts: string[] = [];
-      if (scale !== undefined && scale !== 1) parts.push(`scale(${scale})`);
-      if (rotation !== undefined && rotation !== 0) parts.push(`rotate(${rotation}deg)`);
-      if (parts.length > 0) layoutStyle.transform = parts.join(" ");
+    const transformParts: string[] = [];
+    // Center-align when x/y are percentage values
+    if (position === "absolute") {
+      if (typeof x === "string" && x.endsWith("%")) transformParts.push("translateX(-50%)");
+      if (typeof y === "string" && y.endsWith("%")) transformParts.push("translateY(-50%)");
     }
+    if (scale !== undefined && scale !== 1) transformParts.push(`scale(${scale})`);
+    if (rotation !== undefined && rotation !== 0) transformParts.push(`rotate(${rotation}deg)`);
+    if (transformParts.length > 0) layoutStyle.transform = transformParts.join(" ");
     if (opacity !== undefined) layoutStyle.opacity = opacity;
   }
 
