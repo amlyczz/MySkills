@@ -1,9 +1,15 @@
 import asyncio
 from typing import TypedDict, Annotated, Optional, Dict, Any, List
 from langgraph.graph import StateGraph, END
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
 from .models import RepoAnalysisModel, VideoScriptModel, BlueprintModel
+from .tools.playwright_scraper import scrape_github_repo_tool
+
+# 初始化 LLM (需要环境变量 OPENAI_API_KEY)
+llm = ChatOpenAI(model="gpt-4o", temperature=0.2)
 
 class PipelineState(TypedDict):
     repo_url: str
@@ -23,33 +29,69 @@ class PipelineState(TypedDict):
 
 async def analyze_repo_node(state: PipelineState):
     print("Node: analyze_repo")
-    # In reality: Call Playwright tool, crawl Github, use LLM to parse into RepoAnalysisModel
-    analysis = RepoAnalysisModel(
-        repo_url=state["repo_url"],
-        project_name="Sample Project",
-        project_type="educational",
-        description="A sample project",
-        key_features=["Feature A", "Feature B"],
-        pain_points=["None"]
-    )
+    # 真实逻辑：先爬网页
+    scraped_data = await scrape_github_repo_tool.ainvoke({
+        "url": state["repo_url"], 
+        "output_screenshot_path": "repo_screenshot.png"
+    })
+    
+    # 真实逻辑：让 LLM 解析并输出结构化 JSON
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are an expert repository analyst. Analyze the following GitHub README and extract the project details matching the schema."),
+        ("user", "README Content:\n{readme}\n\nRepo URL: {url}")
+    ])
+    
+    chain = prompt | llm.with_structured_output(RepoAnalysisModel)
+    analysis = await chain.ainvoke({
+        "readme": scraped_data["readme"],
+        "url": state["repo_url"]
+    })
+    
     return {"repo_analysis": analysis, "project_type": analysis.project_type.value}
 
 async def compose_script_node(state: PipelineState):
     print("Node: compose_script")
-    # In reality: Call LLM with state["repo_analysis"] to generate VideoScriptModel
-    script = VideoScriptModel(
-        title="Sample Video",
-        segments=[],
-        target_duration_seconds=60
-    )
+    analysis = state["repo_analysis"]
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a professional video director. Generate a highly engaging video script based on the project analysis. The style should be {project_type}. Target duration is around 60 seconds."),
+        ("user", "Project Name: {name}\nDescription: {desc}\nFeatures: {features}")
+    ])
+    
+    chain = prompt | llm.with_structured_output(VideoScriptModel)
+    script = await chain.ainvoke({
+        "project_type": analysis.project_type.value,
+        "name": analysis.project_name,
+        "desc": analysis.description,
+        "features": ", ".join(analysis.key_features)
+    })
+    
     return {"video_script": script}
+
+class QAResult(BaseModel):
+    score: int
+    reasoning: str
 
 async def qa_script_node(state: PipelineState):
     print("Node: qa_script")
-    # Mock LLM grading
-    score = 85 # Passed
+    script = state["video_script"]
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a harsh QA evaluator for video scripts. Grade the script strictly on a scale of 0 to 100 based on its technical accuracy, pacing, and engaging narrative. Provide your score and reasoning."),
+        ("user", "Script:\n{script_text}")
+    ])
+    
+    chain = prompt | llm.with_structured_output(QAResult)
+    # 转换为文本以便评估
+    script_text = f"Title: {script.title}\nSegments: {len(script.segments)}" 
+    for s in script.segments:
+        script_text += f"\n- {s.text}"
+        
+    result = await chain.ainvoke({"script_text": script_text})
+    
+    print(f"QA Script Score: {result.score}. Reasoning: {result.reasoning}")
     retries = state.get("qa_script_retry_count", 0) + 1
-    return {"qa_script_score": score, "qa_script_retry_count": retries}
+    return {"qa_script_score": result.score, "qa_script_retry_count": retries}
 
 async def generate_blueprint_node(state: PipelineState):
     print("Node: generate_blueprint")
@@ -61,9 +103,19 @@ async def generate_blueprint_node(state: PipelineState):
 
 async def qa_blueprint_node(state: PipelineState):
     print("Node: qa_blueprint")
-    score = 90
+    blueprint = state["blueprint"]
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a visual director. Evaluate if the following JSON blueprint scenes properly translate to the philosophical UI aesthetic (Parchment, Ink, hard borders). Score 0-100."),
+        ("user", "Blueprint Scenes:\n{scenes}")
+    ])
+    
+    chain = prompt | llm.with_structured_output(QAResult)
+    result = await chain.ainvoke({"scenes": str(blueprint.scenes)})
+    
+    print(f"QA Blueprint Score: {result.score}. Reasoning: {result.reasoning}")
     retries = state.get("qa_blueprint_retry_count", 0) + 1
-    return {"qa_blueprint_score": score, "qa_blueprint_retry_count": retries}
+    return {"qa_blueprint_score": result.score, "qa_blueprint_retry_count": retries}
 
 async def agentic_code_gen_node(state: PipelineState):
     print("Node: agentic_code_gen (HITL or Code Agent Call)")
