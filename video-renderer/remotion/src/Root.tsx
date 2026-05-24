@@ -51,10 +51,18 @@ export const RemotionRoot: React.FC = () => {
         id="VideoComposer"
         component={VideoComposer}
         defaultProps={{ blueprintJson: "{}" }}
-        durationInFrames={6000}
+        durationInFrames={1800}
         fps={DEFAULT_FPS}
         width={DEFAULT_WIDTH}
         height={DEFAULT_HEIGHT}
+        calculateMetadata={async ({ props }) => {
+          try {
+            const bp = JSON.parse((props as any).blueprintJson || "{}");
+            const { calculateTotalFrames } = await import("./engine/types");
+            const frames = calculateTotalFrames(bp);
+            return { durationInFrames: Math.max(frames, 900) };
+          } catch { return { durationInFrames: 1800 }; }
+        }}
       />
       <Composition id="Component-Catalog" component={ComponentCatalog} durationInFrames={catalogTotalFrames()} fps={DEFAULT_FPS} width={DEFAULT_WIDTH} height={DEFAULT_HEIGHT} />
       <Composition id="AI-Search-Demo" {...makeBlueprintComp(searchDemoBlueprint)} />

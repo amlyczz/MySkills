@@ -28,6 +28,8 @@ export type ComponentType =
   | "filter-pills" | "progress-ring" | "title" | "cta-button"
   | "stat-card" | "quote-card" | "callout-box" | "step-indicator"
   | "comparison-table" | "code-block" | "key-point" | "chapter-title"
+  | "gradient-text" | "luxury-card" | "reveal-mask" | "stagger-reveal"
+  | "glass-panel"
   // Text
   | "animated-text" | "text-block" | "word-swap-headline" | "typewriter"
   | "prompt-input" | "typing-input" | "subtitle-overlay" | "lower-third"
@@ -36,7 +38,8 @@ export type ComponentType =
   | "cursor" | "decoration-overlay" | "dot-grid-bg" | "graphic-overlay"
   | "organic-blob" | "realistic-sphere" | "generating-pill"
   | "connection-line" | "scene-canvas" | "diagonal-wipe-transition"
-  | "badge" | "ken-burns"
+  | "badge" | "ken-burns" | "cinematic-bars" | "mesh-gradient-bg"
+  | "film-grain"
   // Media primitives (built-in, not from registry)
   | "text" | "image" | "video" | "shape" | "div"
   | "lottie";
