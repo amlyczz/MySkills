@@ -43,8 +43,10 @@ export const SubtitleOverlay: React.FC<Props> = ({
         className="text-center px-16 font-sans font-bold"
         style={{
           fontSize,
-          lineHeight: 1.3,
+          lineHeight: 1.4,
           textShadow: "0 2px 8px rgba(0,0,0,0.6)",
+          maxWidth: "90%",
+          whiteSpace: "pre-wrap",
         }}
       >
         {tokens.map((token, i) => {
@@ -57,7 +59,6 @@ export const SubtitleOverlay: React.FC<Props> = ({
               key={i}
               style={{
                 color: isActive ? highlightColor : "rgba(255,255,255,0.7)",
-                whiteSpace: "pre",
               }}
             >
               {token.text}

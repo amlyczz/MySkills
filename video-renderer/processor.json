@@ -3,7 +3,7 @@
   "description": "使用 Remotion 渲染视频帧序列 → video.mp4",
   "version": "1.0",
   "input": {
-    "contract": "pipeline-contracts/py/video_config#VideoConfig",
+    "contract": "pipeline-contracts/py/blueprint#Blueprint",
     "description": "渲染配置（场景/布局/动效/过渡）"
   },
   "input_extras": [

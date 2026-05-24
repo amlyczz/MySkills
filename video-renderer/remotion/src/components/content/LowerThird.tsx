@@ -30,7 +30,7 @@ export const LowerThird: React.FC<Props> = ({
           style={{ background: barColor || "var(--color-primary, #4285F4)" }}
         />
       )}
-      <div className="flex flex-col">
+      <div className="flex flex-col" style={{ whiteSpace: "nowrap" }}>
         <div
           className="text-[var(--color-foreground,#fff)] font-bold"
           style={{ fontSize: 36, lineHeight: 1.2, textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}
