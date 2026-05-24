@@ -51,7 +51,7 @@ export const RemotionRoot: React.FC = () => {
         id="VideoComposer"
         component={VideoComposer}
         defaultProps={{ blueprintJson: "{}" }}
-        durationInFrames={900}
+        durationInFrames={6000}
         fps={DEFAULT_FPS}
         width={DEFAULT_WIDTH}
         height={DEFAULT_HEIGHT}

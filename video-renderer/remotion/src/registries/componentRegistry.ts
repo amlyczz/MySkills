@@ -4,9 +4,14 @@ import { AgentCard } from "../components/content/AgentCard";
 import { AlbumCard } from "../components/content/AlbumCard";
 import { AnimatedBar } from "../components/content/AnimatedBar";
 import { AnimatedText } from "../components/content/AnimatedText";
+import { CalloutBox } from "../components/content/CalloutBox";
+import { ChapterTitle } from "../components/content/ChapterTitle";
+import { CodeBlock } from "../components/content/CodeBlock";
+import { ComparisonTable } from "../components/content/ComparisonTable";
 import { CtaButton } from "../components/content/CtaButton";
 import { DataBarChart } from "../components/content/DataBarChart";
 import { ExperimentCardLight } from "../components/content/ExperimentCardLight";
+import { KeyPoint } from "../components/content/KeyPoint";
 import { FilterPills } from "../components/content/FilterPills";
 import { FloatingCard } from "../components/layout/FloatingCard";
 import { FlowMusicCard } from "../components/content/FlowMusicCard";
@@ -25,6 +30,7 @@ import { ProgressRing } from "../components/content/ProgressRing";
 import { PromptInput } from "../components/content/PromptInput";
 import { QuoteCard } from "../components/content/QuoteCard";
 import { SearchBar } from "../components/content/SearchBar";
+import { StepIndicator } from "../components/content/StepIndicator";
 import { StatCard } from "../components/content/StatCard";
 import { SubtitleOverlay } from "../components/content/SubtitleOverlay";
 import { TextBlock } from "../components/content/TextBlock";
@@ -70,6 +76,10 @@ export const componentRegistry: Record<RegisteredComponentType, React.FC<any>> =
   "album-card": AlbumCard,
   "animated-bar": AnimatedBar,
   "animated-text": AnimatedText,
+  "callout-box": CalloutBox,
+  "chapter-title": ChapterTitle,
+  "code-block": CodeBlock,
+  "comparison-table": ComparisonTable,
   "cta-button": CtaButton,
   "data-bar-chart": DataBarChart,
   "experiment-card": ExperimentCardLight,
@@ -78,6 +88,7 @@ export const componentRegistry: Record<RegisteredComponentType, React.FC<any>> =
   "flow-music-card": FlowMusicCard,
   "generating-pill": GeneratingPill,
   "ios-list-item": IOSListItem,
+  "key-point": KeyPoint,
   "ios-nav-bar": IOSNavBar,
   "ios-status-bar": IOSStatusBar,
   "lower-third": LowerThird,
@@ -92,6 +103,7 @@ export const componentRegistry: Record<RegisteredComponentType, React.FC<any>> =
   "quote-card": QuoteCard,
   "search-bar": SearchBar,
   "stat-card": StatCard,
+  "step-indicator": StepIndicator,
   "subtitle-overlay": SubtitleOverlay,
   "text-block": TextBlock,
   "title": Title,

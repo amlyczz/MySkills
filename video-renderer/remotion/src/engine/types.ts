@@ -26,7 +26,8 @@ export type ComponentType =
   | "experiment-card" | "flow-music-card" | "album-card"
   | "ios-list-item" | "ios-nav-bar" | "ios-status-bar"
   | "filter-pills" | "progress-ring" | "title" | "cta-button"
-  | "stat-card" | "quote-card"
+  | "stat-card" | "quote-card" | "callout-box" | "step-indicator"
+  | "comparison-table" | "code-block" | "key-point" | "chapter-title"
   // Text
   | "animated-text" | "text-block" | "word-swap-headline" | "typewriter"
   | "prompt-input" | "typing-input" | "subtitle-overlay" | "lower-third"
