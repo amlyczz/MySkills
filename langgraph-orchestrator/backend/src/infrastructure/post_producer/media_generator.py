@@ -8,12 +8,13 @@ class MediaGenerator(VoiceoverGenerator, BGMGenerator):
     
     async def generate_voiceover(self, text: str, output_path: str, voice_id: str) -> str:
         """
-        Generates voiceover by executing the media_generator package.
+        Generates voiceover by executing the media_generator package with pitch parameter.
         """
         cmd = [
             sys.executable, "-m", "media_generator", "voiceover",
             "--text", text,
             "--voice-id", voice_id,
+            "--pitch", "3", # High fidelity pitch enhancer for professional narration voiceover
             "-o", output_path
         ]
         

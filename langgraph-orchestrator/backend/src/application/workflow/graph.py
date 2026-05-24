@@ -13,7 +13,7 @@ from ..usecases.post_process import PostProcessUseCase
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.analyzer.interfaces import RepoScraper, RepoAnalyzer
 from ...domain.composer.interfaces import ScriptComposer, ScriptEvaluator
-from ...domain.blueprint.interfaces import BlueprintEvaluator, VideoRenderer
+from ...domain.blueprint.interfaces import BlueprintComposer, BlueprintEvaluator, VideoRenderer
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator, AudioMixer
 
 # Routing logic for script evaluation
@@ -51,6 +51,7 @@ def compile_workflow(
     scraper: RepoScraper,
     analyzer: RepoAnalyzer,
     composer: ScriptComposer,
+    blueprint_composer: BlueprintComposer,
     script_evaluator: ScriptEvaluator,
     blueprint_evaluator: BlueprintEvaluator,
     video_renderer: VideoRenderer,
@@ -68,7 +69,7 @@ def compile_workflow(
     analyze_repo_uc = AnalyzeRepoUseCase(scraper, analyzer, repository)
     compose_script_uc = ComposeScriptUseCase(composer, repository)
     qa_script_uc = QAScriptUseCase(script_evaluator, repository)
-    generate_blueprint_uc = GenerateBlueprintUseCase(repository)
+    generate_blueprint_uc = GenerateBlueprintUseCase(blueprint_composer, repository) # Injected!
     qa_blueprint_uc = QABlueprintUseCase(blueprint_evaluator, repository)
     render_video_uc = RenderVideoUseCase(video_renderer, repository, semaphore)
     post_process_uc = PostProcessUseCase(voiceover_gen, bgm_gen, audio_mixer, repository)

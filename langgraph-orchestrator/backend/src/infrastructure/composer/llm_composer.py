@@ -4,10 +4,17 @@ from ...domain.composer.entities import VideoScript
 from ...domain.composer.interfaces import ScriptComposer
 from ..llm.client import get_llm_client
 
-COMPOSE_SCRIPT_SYSTEM_PROMPT = """You are a professional video director. Generate a highly engaging video script based on the project analysis. 
-The style should match: {project_type}. 
-Target duration is around {target_duration} seconds.
-Provide a list of segments with narration text and visual prompts.
+COMPOSE_SCRIPT_SYSTEM_PROMPT = """You are a professional video director and script writer.
+Create an engaging narration script based on the project analysis.
+
+### Subtitle Division Rules (排版防撞字幕):
+- You MUST split each scene's subtitles strictly by **punctuation marks** (whole sentences or short clauses).
+- **NEVER split subtitles word-by-word or term-by-term!** Word-by-word subtitles cause rapid flashing and layout collisions. Short sentences display naturally and are wrapped automatically by the engine.
+
+### Narration Script Requirements:
+- Target duration is around {target_duration} seconds.
+- **Technical Architecture Segment**: At least one segment MUST explain the codebase structure, technical highlights, or main design patterns, utilizing the source code insights.
+- Provide a list of segments with title, narration text, visual prompt, visual_type (intro, generic, code, outro).
 """
 
 COMPOSE_SCRIPT_USER_PROMPT = """Project Name: {name}

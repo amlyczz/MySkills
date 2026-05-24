@@ -8,6 +8,7 @@ from ...infrastructure.analyzer.playwright_scraper import PlaywrightScraper
 from ...infrastructure.analyzer.llm_analyzer import LLMRepoAnalyzer
 from ...infrastructure.composer.llm_composer import LLMScriptComposer
 from ...infrastructure.composer.llm_evaluator import LLMScriptEvaluator
+from ...infrastructure.blueprint.llm_composer import LLMBlueprintComposer
 from ...infrastructure.blueprint.llm_evaluator import LLMBlueprintEvaluator
 from ...infrastructure.blueprint.remotion_renderer import RemotionVideoRenderer
 from ...infrastructure.post_producer.media_generator import MediaGenerator
@@ -16,7 +17,7 @@ from ...application.workflow.graph import compile_workflow
 
 router = APIRouter(prefix="/api/v1/task", tags=["stream"])
 
-# Global rendering semaphore to limit GPU/CPU load globally
+# Global rendering semaphore to limit CPU load globally
 global_render_semaphore = asyncio.Semaphore(1)
 
 @router.websocket("/stream/{task_id}")
@@ -32,6 +33,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
         scraper = PlaywrightScraper()
         analyzer = LLMRepoAnalyzer()
         composer = LLMScriptComposer()
+        blueprint_composer = LLMBlueprintComposer() # NEW!
         script_evaluator = LLMScriptEvaluator()
         blueprint_evaluator = LLMBlueprintEvaluator()
         video_renderer = RemotionVideoRenderer()
@@ -43,6 +45,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
             scraper=scraper,
             analyzer=analyzer,
             composer=composer,
+            blueprint_composer=blueprint_composer, # Injected!
             script_evaluator=script_evaluator,
             blueprint_evaluator=blueprint_evaluator,
             video_renderer=video_renderer,

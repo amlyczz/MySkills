@@ -1,46 +1,29 @@
 import uuid
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.blueprint.entities import Blueprint, SceneConfig
+from ...domain.blueprint.interfaces import BlueprintComposer
 from ..workflow.state import PipelineState
 
 class GenerateBlueprintUseCase:
     
-    def __init__(self, repository: PipelineTaskRepository) -> None:
+    def __init__(
+        self,
+        composer: BlueprintComposer,
+        repository: PipelineTaskRepository,
+    ) -> None:
+        self.composer = composer
         self.repository = repository
 
     async def __call__(self, state: PipelineState) -> dict[str, object]:
         print("[UseCase] Running GenerateBlueprint")
         
         script = state["video_script"]
-        if not script:
-            raise ValueError("Video script is missing in state.")
+        analysis = state["repo_analysis"]
+        if not script or not analysis:
+            raise ValueError("Video script or repository analysis is missing in state.")
 
-        scenes = []
-        for s in script.segments:
-            layout_id = "center-layout" if s.visual_type == "intro" else "split-layout"
-            
-            motion_map = {
-                "title": "scale-bounce",
-                "narration": "fade-up",
-            }
-            
-            content = {
-                "text": s.text,
-                "voiceover_prompt": s.voiceover_prompt or "",
-            }
-            
-            scene = SceneConfig(
-                layoutId=layout_id,
-                motionMap=motion_map,
-                content=content,
-            )
-            scenes.append(scene)
-
-        blueprint = Blueprint(
-            durationInFrames=1800,
-            scenes=scenes,
-        )
+        # Dynamic AI Agent visual orchestration
+        blueprint = await self.composer.compose_blueprint(script, analysis)
 
         # Synchronize DB state
         task_id = uuid.UUID(state["task_id"])
