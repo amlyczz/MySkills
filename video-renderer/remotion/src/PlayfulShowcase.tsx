@@ -1,12 +1,11 @@
 import React from "react";
 import { AbsoluteFill, Sequence } from "remotion";
 import { IntroScene } from "./compositions/IntroScene";
-import { HexagonGridScene } from "./layouts/HexagonGrid";
-import { OrganicBlob } from "./components/OrganicBlob";
-import { ExperimentCardLight } from "./components/ExperimentCardLight";
-import { FlowMusicCard } from "./components/FlowMusicCard";
-import { CoverflowCarousel } from "./components/CoverflowCarousel";
-import { FilterPills } from "./components/FilterPills";
+import { OrganicBlob } from "./components/decoration/OrganicBlob";
+import { ExperimentCardLight } from "./components/content/ExperimentCardLight";
+import { FlowMusicCard } from "./components/content/FlowMusicCard";
+import { CoverflowCarousel } from "./components/layout/CoverflowCarousel";
+import { FilterPills } from "./components/content/FilterPills";
 
 const Theme = { bg: "#F5F4F0", dark: "#202120", yellow: "#FFD54F", blue: "#4285F4", pink: "#F48FB1", green: "#34A853" };
 const FPS = 24;
@@ -81,18 +80,16 @@ const GridScene: React.FC = () => (
   </AbsoluteFill>
 );
 
-// ═══ Root: 6 scenes, 528f / 22s ═══
+// ═══ Root: 4 scenes, 456f / 19s ═══
 export const PlayfulShowcase: React.FC = () => (
   <>
     {/* S1: Intro (0-71, 3s) */}
     <Sequence from={0} durationInFrames={FPS * 3}><IntroScene /></Sequence>
-    {/* S2: Hexagon Grid (72-143, 3s) */}
-    <Sequence from={FPS * 3} durationInFrames={FPS * 3}><HexagonGridScene /></Sequence>
-    {/* S3: Flash Text (144-263, 5s) */}
-    <Sequence from={FPS * 6} durationInFrames={FPS * 5}><FlashTextScene /></Sequence>
-    {/* S4: Coverflow (264-431, 7s) */}
-    <Sequence from={FPS * 11} durationInFrames={FPS * 7}><CoverflowScene /></Sequence>
-    {/* S5: CTA (432-527, 4s) */}
-    <Sequence from={FPS * 18} durationInFrames={FPS * 4}><GridScene /></Sequence>
+    {/* S2: Flash Text (72-191, 5s) */}
+    <Sequence from={FPS * 3} durationInFrames={FPS * 5}><FlashTextScene /></Sequence>
+    {/* S3: Coverflow (192-359, 7s) */}
+    <Sequence from={FPS * 8} durationInFrames={FPS * 7}><CoverflowScene /></Sequence>
+    {/* S4: CTA (360-455, 4s) */}
+    <Sequence from={FPS * 15} durationInFrames={FPS * 4}><GridScene /></Sequence>
   </>
 );

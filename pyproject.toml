@@ -12,7 +12,8 @@ dependencies = [
 
 [tool.uv.sources]
 pipeline-contracts = { path = "contracts", editable = true }
-
+[tool.uv.pip]
+index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 [dependency-groups]
 dev = [
     "jsonschema>=4.0",

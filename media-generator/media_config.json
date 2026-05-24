@@ -8,6 +8,12 @@
     "specialized_text": { "provider": "minimax", "model": "MiniMax-M1" }
   },
   "providers": {
+    "omnivoice": {
+      "api_url": "http://localhost:3900",
+      "models": {
+        "speech": ["omnivoice-3"]
+      }
+    },
     "minimax": {
       "api_key_env": "MINIMAX_API_KEY",
       "base_url": "https://api.minimaxi.com/v1",
@@ -44,7 +50,8 @@
     "voiceover": {
       "capability": "speech",
       "providers": [
-        { "provider": "minimax", "model": "speech-hd" }
+        { "provider": "minimax", "model": "speech-hd" },
+        { "provider": "omnivoice", "model": "omnivoice-3" }
       ]
     },
     "bgm": {

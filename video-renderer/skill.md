@@ -16,6 +16,8 @@ tools_allowed:
 
 # Video Renderer — Remotion 渲染 Skill
 
+> **网络依赖**：本 skill 安装依赖和获取音频文件需要外网访问。运行前确保已加载 `proxy/skill.md` 配置代理。
+
 你是 Remotion 视频渲染引擎。接收 `video_config.json`，输出 `video.mp4`。
 
 **调用方**：pipeline-orchestrator（见 pipeline-orchestrator/skill.md）
@@ -85,8 +87,8 @@ output/{source_category}/{YYYY-MM-DD-HHMM}/{repo_name}/
 voiceover/bgm 音频需从 `output/` 复制到 `remotion/public/` 供 `staticFile()` 引用：
 
 ```bash
-cp output/{source}/{date}/{repo}/voiceover.mp3 video-renderer/remotion/public/
-cp output/{source}/{date}/{repo}/bgm.mp3       video-renderer/remotion/public/
+cp output/{source_category}/{YYYY-MM-DD-HHMM}/{repo}/voiceover.mp3 video-renderer/remotion/public/
+cp output/{source_category}/{YYYY-MM-DD-HHMM}/{repo}/bgm.mp3       video-renderer/remotion/public/
 ```
 
 ### Pipeline 调用

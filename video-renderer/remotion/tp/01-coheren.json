@@ -1,0 +1,1011 @@
+```json
+{
+  "projectBlueprint": "本项目是一个基于 React + Remotion 的**数据驱动视频模板**，旨在通过修改 JSON 配置文件来批量生成风格统一的 AI 产品宣传片。",
+  "globalSettings": {
+    "colorPalette": {
+      "primary": "#000000",
+      "secondary": "#1a1a2e",
+      "background": "#0f0f1a",
+      "accent": "#ff6b4a",
+      "textPrimary": "#000000",
+      "textSecondary": "#ffffff",
+      "chartHighlight": "#ff6b4a",
+      "chartBaseline": "#8b7d6b",
+      "fluidBlue": "#0066ff",
+      "fluidRed": "#ff3333",
+      "fluidYellow": "#ffcc00",
+      "fluidGreen": "#33cc66",
+      "uiCardBg": "#ffffff",
+      "uiInputBorder": "#e0e0e0"
+    },
+    "audio": {
+      "bgmBpm": 120,
+      "suggestedBeats_md": "重要的视觉转场应该卡在节拍点上：每 15 帧（0.5秒 @30fps）有一个轻节拍，每 60 帧（2秒）有一个重音节拍。建议在重音节拍触发主要场景切换和文字入场。数据图表的出现应该配合上升音阶，GPU 线框图出现时配合科技感音效。"
+    },
+    "typography": {
+      "primaryFont": "Inter",
+      "fallbackFont": "system-ui, -apple-system, sans-serif",
+      "googleFontsAlternative": "Inter",
+      "scale": {
+        "h1": {
+          "size": "64px",
+          "weight": 600,
+          "lineHeight": 1.1,
+          "letterSpacing": "-0.02em"
+        },
+        "h2": {
+          "size": "48px",
+          "weight": 600,
+          "lineHeight": 1.2,
+          "letterSpacing": "-0.01em"
+        },
+        "body": {
+          "size": "24px",
+          "weight": 400,
+          "lineHeight": 1.5
+        },
+        "caption": {
+          "size": "18px",
+          "weight": 400,
+          "lineHeight": 1.4
+        },
+        "code": {
+          "size": "16px",
+          "weight": 400,
+          "fontFamily": "JetBrains Mono, monospace",
+          "lineHeight": 1.6
+        }
+      }
+    },
+    "frameRate": 30,
+    "resolution": {
+      "width": 1920,
+      "height": 1080
+    }
+  },
+  "scenes": [
+    {
+      "id": "scene-6-speed-metrics",
+      "componentName": "SpeedMetricsScene",
+      "startFrame": 0,
+      "durationInFrames": 180,
+      "description_md": "展示速度和延迟指标：'Over 2x the output speed' (258 vs 123 tokens/sec) 和 '30% lower latency' (124ms vs 178ms)。使用简洁的柱状图对比。",
+      "elements": [
+        {
+          "id": "speed-headline",
+          "type": "text",
+          "props": {
+            "text": "Over 2x the output speed",
+            "fontSize": "48px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 960,
+              "y": 400
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 730,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "speed-chart",
+          "type": "chart-bar",
+          "props": {
+            "label": "Output Tokens per second",
+            "highlightValue": 258,
+            "baselineValue": 123,
+            "maxValue": 300,
+            "position": {
+              "x": 960,
+              "y": 500
+            }
+          },
+          "animation": {
+            "type": "bar-grow",
+            "timeline": {
+              "inFrame": 760,
+              "duration": 60
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 0.7,
+                "damping": 10,
+                "stiffness": 130
+              }
+            }
+          }
+        },
+        {
+          "id": "latency-headline",
+          "type": "text",
+          "props": {
+            "text": "30% lower latency",
+            "fontSize": "44px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 960,
+              "y": 650
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 810,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "latency-chart",
+          "type": "chart-bar",
+          "props": {
+            "label": "Time to first token (ms)",
+            "highlightValue": 124,
+            "baselineValue": 178,
+            "maxValue": 200,
+            "inverted": true,
+            "position": {
+              "x": 960,
+              "y": 730
+            }
+          },
+          "animation": {
+            "type": "bar-grow",
+            "timeline": {
+              "inFrame": 840,
+              "duration": 60
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 0.7,
+                "damping": 10,
+                "stiffness": 130
+              }
+            }
+          }
+        }
+      ],
+      "transitionToNext_md": "过渡到蓝色流体背景的企业级工作流场景。"
+    },
+    {
+      "id": "scene-8-unified-model",
+      "componentName": "UnifiedModelScene",
+      "startFrame": 180,
+      "durationInFrames": 360,
+      "description_md": "展示统一模型的三大能力：agents、vision、reasoning。每个能力配有 UI 界面演示。文字 'One unified model for [capability]' 依次出现，右侧展示对应的交互界面。",
+      "elements": [
+        {
+          "id": "unified-agents-text",
+          "type": "text",
+          "props": {
+            "text": "One unified model for agents",
+            "fontSize": "56px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 200,
+              "y": 500
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1090,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "agent-cards-ui",
+          "type": "ui-component",
+          "props": {
+            "component": "AgentCards",
+            "cards": [
+              {
+                "title": "KYC Onboarding Agent",
+                "description": "Process new banking customer applications",
+                "by": "Compliance Officer"
+              },
+              {
+                "title": "Personal Assistant",
+                "description": "Help you with anything from scheduling to tasks",
+                "by": "Sales Director"
+              },
+              {
+                "title": "Factory Operations Agent",
+                "description": "Automate inventory, quality assurance",
+                "by": "Supply Chain Manager"
+              }
+            ],
+            "position": {
+              "x": 1200,
+              "y": 400
+            }
+          },
+          "animation": {
+            "type": "staggered-slide-in",
+            "timeline": {
+              "inFrame": 1120,
+              "duration": 90
+            },
+            "staggerDelay": 15,
+            "startState": {
+              "opacity": 0,
+              "translateX": 50
+            },
+            "endState": {
+              "opacity": 1,
+              "translateX": 0
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 0.8,
+                "damping": 12,
+                "stiffness": 120
+              }
+            }
+          }
+        },
+        {
+          "id": "unified-vision-text",
+          "type": "text",
+          "props": {
+            "text": "One unified model for vision",
+            "fontSize": "56px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 200,
+              "y": 500
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1260,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "vision-input-ui",
+          "type": "ui-component",
+          "props": {
+            "component": "VisionInput",
+            "placeholder": "Ask anything",
+            "tools": [
+              "Image",
+              "Add from files"
+            ],
+            "position": {
+              "x": 1200,
+              "y": 450
+            }
+          },
+          "animation": {
+            "type": "scale-in",
+            "timeline": {
+              "inFrame": 1290,
+              "duration": 45
+            },
+            "startState": {
+              "opacity": 0,
+              "scale": 0.9
+            },
+            "endState": {
+              "opacity": 1,
+              "scale": 1
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 0.8,
+                "damping": 12,
+                "stiffness": 120
+              }
+            }
+          }
+        },
+        {
+          "id": "vision-analysis-ui",
+          "type": "ui-component",
+          "props": {
+            "component": "DataPreview",
+            "data": "billing_history_table",
+            "position": {
+              "x": 1200,
+              "y": 400
+            }
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 1330,
+              "duration": 45
+            },
+            "easing": {
+              "type": "ease-out"
+            }
+          }
+        },
+        {
+          "id": "unified-reasoning-text",
+          "type": "text",
+          "props": {
+            "text": "One unified model for reasoning",
+            "fontSize": "56px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 200,
+              "y": 450
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1410,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "reasoning-chat-ui",
+          "type": "ui-component",
+          "props": {
+            "component": "ChatInterface",
+            "userMessage": "Are there any flags in this billing history?",
+            "aiResponse": "The billing history attached looks normal. Next bill: In 1 day or when the ~$660 CAD threshold is reached. Remaining balance: $660. Payment method: Visa ending in 4148",
+            "position": {
+              "x": 1200,
+              "y": 500
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1440,
+              "duration": 60
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 0.8,
+                "damping": 12,
+                "stiffness": 120
+              }
+            }
+          }
+        }
+      ],
+      "transitionToNext_md": "UI 组件淡出，过渡到多语言支持场景。"
+    },
+    {
+      "id": "scene-9-languages",
+      "componentName": "LanguagesScene",
+      "startFrame": 540,
+      "durationInFrames": 120,
+      "description_md": "展示多语言能力：'Supporting 48 world languages.'。左侧是标题文字，右侧是语言列表滚动显示（Arabic, Bulgarian, Bengali, Czech, Danish, Dutch, English, Estonian, Filipino, French, German, Greek, Hindi, Hungarian, Indonesian, Irish, Italian, Japanese, Korean, Latvian, Lithuanian, Malay, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian, Slovak, Slovenian, Spanish, Swedish, Thai, Tamil, Turkish, Ukrainian, Urdu, Vietnamese 等）。",
+      "elements": [
+        {
+          "id": "languages-text",
+          "type": "text",
+          "props": {
+            "text": "Supporting 48 world languages.",
+            "fontSize": "48px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 200,
+              "y": 540
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1450,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "language-list-scroll",
+          "type": "text-scroll",
+          "props": {
+            "languages": [
+              "Arabic",
+              "Bulgarian",
+              "Bengali",
+              "Czech",
+              "Danish",
+              "Dutch",
+              "English",
+              "Estonian",
+              "Filipino",
+              "French",
+              "German",
+              "Greek",
+              "Hindi",
+              "Hungarian",
+              "Indonesian",
+              "Irish",
+              "Italian",
+              "Japanese",
+              "Korean",
+              "Latvian",
+              "Lithuanian",
+              "Malay",
+              "Norwegian",
+              "Polish",
+              "Portuguese",
+              "Romanian",
+              "Russian",
+              "Serbian",
+              "Slovak",
+              "Slovenian",
+              "Spanish",
+              "Swedish",
+              "Thai",
+              "Tamil",
+              "Turkish",
+              "Ukrainian",
+              "Urdu",
+              "Vietnamese"
+            ],
+            "fontSize": "28px",
+            "color": "#ffffff",
+            "position": {
+              "x": 1400,
+              "y": 540
+            },
+            "textAlign": "right"
+          },
+          "animation": {
+            "type": "scroll-up",
+            "timeline": {
+              "inFrame": 1480,
+              "duration": 80
+            },
+            "startState": {
+              "translateY": 200,
+              "opacity": 0
+            },
+            "endState": {
+              "translateY": -100,
+              "opacity": 1
+            },
+            "easing": {
+              "type": "linear"
+            }
+          }
+        }
+      ],
+      "transitionToNext_md": "语言列表淡出，过渡到功能调用场景。"
+    },
+    {
+      "id": "scene-10-function-calling",
+      "componentName": "FunctionCallingScene",
+      "startFrame": 660,
+      "durationInFrames": 180,
+      "description_md": "展示功能调用和结构化输出能力：'With function calling and structured outputs.'。右侧显示集成服务列表（Google Drive, Slack, My Files, Web search），左侧展示数据表格和代码片段。",
+      "elements": [
+        {
+          "id": "function-calling-text",
+          "type": "text",
+          "props": {
+            "text": "With function calling",
+            "fontSize": "48px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 200,
+              "y": 500
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1570,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "integration-list",
+          "type": "ui-component",
+          "props": {
+            "component": "IntegrationList",
+            "items": [
+              {
+                "name": "Google Drive",
+                "status": "READY",
+                "tag": "ALPHA"
+              },
+              {
+                "name": "Slack",
+                "status": "READY",
+                "tag": "ALPHA"
+              },
+              {
+                "name": "My Files",
+                "status": "READY"
+              },
+              {
+                "name": "Web search",
+                "status": "READY"
+              }
+            ],
+            "position": {
+              "x": 1200,
+              "y": 450
+            }
+          },
+          "animation": {
+            "type": "staggered-fade-in",
+            "timeline": {
+              "inFrame": 1600,
+              "duration": 60
+            },
+            "staggerDelay": 10,
+            "easing": {
+              "type": "ease-out"
+            }
+          }
+        },
+        {
+          "id": "structured-outputs-text",
+          "type": "text",
+          "props": {
+            "text": "and structured outputs.",
+            "fontSize": "44px",
+            "fontWeight": 600,
+            "color": "#ffffff",
+            "position": {
+              "x": 1200,
+              "y": 540
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1660,
+              "duration": 45
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "data-table-ui",
+          "type": "ui-component",
+          "props": {
+            "component": "DataTable",
+            "columns": [
+              "Part Number",
+              "Item Name",
+              "Location"
+            ],
+            "rows": [
+              [
+                "THRM-001",
+                "Thermostat Control Board",
+                "B1-D2"
+              ],
+              [
+                "SENS-009",
+                "Temperature Sensor",
+                "B1-A1"
+              ],
+              [
+                "DISP-012",
+                "LCD Display Panel",
+                "B1-C2"
+              ]
+            ],
+            "position": {
+              "x": 400,
+              "y": 450
+            }
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 1680,
+              "duration": 45
+            },
+            "easing": {
+              "type": "ease-out"
+            }
+          }
+        },
+        {
+          "id": "code-snippet-ui",
+          "type": "ui-component",
+          "props": {
+            "component": "CodeBlock",
+            "language": "python",
+            "code": "# Verify database schema\\nassert check_schema_changes(), \"Schema changes failed\"\\n\\n# Rollback if needed\\nif not check_data_integrity():\\n    rollback_migration()",
+            "position": {
+              "x": 400,
+              "y": 600
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1710,
+              "duration": 45
+            },
+            "easing": {
+              "type": "ease-out"
+            }
+          }
+        }
+      ],
+      "transitionToNext_md": "所有元素淡出，过渡到结尾场景。"
+    },
+    {
+      "id": "scene-11-outro",
+      "componentName": "OutroScene",
+      "startFrame": 840,
+      "durationInFrames": 90,
+      "description_md": "结尾场景：多彩流体背景回归，显示 'Own your AI.' 和 Cohere Logo。",
+      "elements": [
+        {
+          "id": "fluid-background-outro",
+          "type": "css-background",
+          "props": {
+            "gradients": [
+              "radial-gradient at 30% 40%, rgba(0,102,255,0.6)",
+              "radial-gradient at 70% 60%, rgba(255,51,51,0.5)",
+              "radial-gradient at 50% 50%, rgba(255,204,0,0.4)"
+            ],
+            "animationDuration": "8s"
+          },
+          "animation": {
+            "type": "continuous-morph",
+            "timeline": {
+              "inFrame": 1740,
+              "duration": 90
+            }
+          }
+        },
+        {
+          "id": "outro-text",
+          "type": "text",
+          "props": {
+            "text": "Own your AI.",
+            "fontSize": "80px",
+            "fontWeight": 600,
+            "color": "#000000",
+            "position": {
+              "x": 960,
+              "y": 480
+            }
+          },
+          "animation": {
+            "type": "scale-up",
+            "timeline": {
+              "inFrame": 1750,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "scale": 0.9
+            },
+            "endState": {
+              "opacity": 1,
+              "scale": 1
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "cohere-logo",
+          "type": "svg",
+          "props": {
+            "src": "cohere-logo.svg",
+            "width": 120,
+            "height": 40,
+            "fill": "#000000",
+            "position": {
+              "x": 960,
+              "y": 600
+            }
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 1780,
+              "duration": 45
+            },
+            "startState": {
+              "opacity": 0,
+              "translateY": 20
+            },
+            "endState": {
+              "opacity": 1,
+              "translateY": 0
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 0.8,
+                "damping": 12,
+                "stiffness": 120
+              }
+            }
+          }
+        }
+      ],
+      "transitionToNext_md": "视频结束，淡出到黑屏。"
+    }
+  ],
+  "dynamicProps": {
+    "content": [
+      {
+        "name": "productName",
+        "type": "string",
+        "default": "Command A+",
+        "description": "产品名称"
+      },
+      {
+        "name": "tagline",
+        "type": "string",
+        "default": "Our fastest and most powerful model to date",
+        "description": "产品标语"
+      },
+      {
+        "name": "performanceHeadline",
+        "type": "string",
+        "default": "Up to 48% sharper on agentic and reasoning tasks",
+        "description": "性能提升标题"
+      },
+      {
+        "name": "performanceMetrics",
+        "type": "array",
+        "default": [
+          {
+            "label": "τ²-Bench Telecom",
+            "highlight": 85,
+            "baseline": 37
+          },
+          {
+            "label": "AIME 25",
+            "highlight": 90,
+            "baseline": 57
+          }
+        ],
+        "description": "性能对比数据"
+      },
+      {
+        "name": "workflowMetrics",
+        "type": "array",
+        "default": [
+          {
+            "label": "Agentic Q&A",
+            "highlight": 65,
+            "baseline": 45
+          },
+          {
+            "label": "Data Analysis",
+            "highlight": 45,
+            "baseline": 13
+          },
+          {
+            "label": "Memory Usage Quality",
+            "highlight": 54,
+            "baseline": 39
+          }
+        ],
+        "description": "工作流改进数据"
+      },
+      {
+        "name": "speedMetrics",
+        "type": "object",
+        "default": {
+          "tokensPerSecond": {
+            "highlight": 258,
+            "baseline": 123
+          },
+          "latency": {
+            "highlight": 124,
+            "baseline": 178
+          }
+        },
+        "description": "速度和延迟指标"
+      },
+      {
+        "name": "languageCount",
+        "type": "number",
+        "default": 48,
+        "description": "支持的语言数量"
+      },
+      {
+        "name": "supportedLanguages",
+        "type": "array",
+        "default": [
+          "Arabic",
+          "Bulgarian",
+          "English",
+          "French",
+          "German",
+          "Japanese",
+          "Korean",
+          "Spanish"
+        ],
+        "description": "支持的语言列表"
+      },
+      {
+        "name": "integrations",
+        "type": "array",
+        "default": [
+          "Google Drive",
+          "Slack",
+          "My Files",
+          "Web search"
+        ],
+        "description": "集成的服务列表"
+      },
+      {
+        "name": "outroText",
+        "type": "string",
+        "default": "Own your AI.",
+        "description": "结尾标语"
+      }
+    ],
+    "media": [
+      {
+        "name": "logoUrl",
+        "type": "string",
+        "description": "品牌 Logo 的 URL"
+      },
+      {
+        "name": "gpuWireframeUrl",
+        "type": "string",
+        "description": "GPU 线框图 SVG URL"
+      },
+      {
+        "name": "fluidBackgroundVideoUrl",
+        "type": "string",
+        "description": "可选的流体背景视频 URL（替代 CSS 实现）"
+      }
+    ],
+    "style": [
+      {
+        "name": "primaryColor",
+        "type": "hex",
+        "default": "#000000",
+        "description": "品牌主色"
+      },
+      {
+        "name": "accentColor",
+        "type": "hex",
+        "default": "#ff6b4a",
+        "description": "强调色（用于图表高亮）"
+      },
+      {
+        "name": "fontFamily",
+        "type": "string",
+        "default": "Inter",
+        "description": "主字体"
+      },
+      {
+        "name": "chartBarRadius",
+        "type": "number",
+        "default": 4,
+        "description": "图表柱状图圆角半径"
+      }
+    ],
+    "behavior": [
+      {
+        "name": "useBouncy",
+        "type": "boolean",
+        "default": true,
+        "description": "是否启用弹跳动效"
+      },
+      {
+        "name": "typewriterSpeed",
+        "type": "number",
+        "default": 2,
+        "description": "打字机效果每帧字符数"
+      },
+      {
+        "name": "staggerDelay",
+        "type": "number",
+        "default": 10,
+        "description": "交错动画延迟（帧）"
+      },
+      {
+        "name": "autoCalculateMaxValue",
+        "type": "boolean",
+        "default": true,
+        "description": "是否自动计算图表最大值"
+      }
+    ],
+    "configExample_md": "```json\n{\n  \"productName\": \"Command A+\",\n  \"tagline\": \"Our fastest and most powerful model to date\",\n  \"performanceMetrics\": [\n    {\"label\": \"τ²-Bench Telecom\", \"highlight\": 85, \"baseline\": 37},\n    {\"label\": \"AIME 25\", \"highlight\": 90, \"baseline\": 57}\n  ],\n  \"accentColor\": \"#ff6b4a\",\n  \"useBouncy\": true,\n  \"typewriterSpeed\": 2\n}\n```"
+  },
+  "architectureGuide_md": "## 分层渲染方案\n\n视频采用三层架构：\n\n1. **背景层 (Background Layer)**：使用 `<Sequence>` 包裹，包含流体渐变背景。建议使用 CSS `radial-gradient` 配合 `@keyframes` 实现流体动画，或使用预渲染的 WebM 视频作为背景。\n\n2. **装饰层 (Decoration Layer)**：包含十字星、几何图形等装饰元素。使用 SVG 组件实现，通过 `stroke-dasharray` 和 `stroke-dashoffset` 实现路径绘制动画。\n\n3. **内容层 (Content Layer)**：文字、图表、UI 组件。每个场景使用独立的 `<Sequence>`，通过 `from` 和 `duration` 属性控制显示时间。\n\n## 动效编排逻辑\n\n- **场景切换**：使用 `<TransitionSeries>` 配合自定义 `fade` 过渡组件，实现场景间的平滑过渡。\n- **元素入场**：采用交错 (stagger) 策略，子元素延迟计算为 `childDelay = index * staggerDelay`（默认 10 帧）。\n- **图表动画**：柱状图使用 `scaleX` 从 0 到 1 的变换，配合 spring 缓动实现弹性生长效果。\n- **打字机效果**：使用 `useCurrentFrame` 和字符串切片实现逐字显示，注意设置 `min-height` 避免布局抖动。\n\n## 状态管理建议\n\n- **全局状态**：使用 Remotion 的 `useVideoConfig` 获取帧率和分辨率，使用 `useCurrentFrame` 获取当前帧。\n- **局部 Props**：每个场景组件接收特定的配置对象，通过 `inputProps` 传入。\n- **动画状态**：使用 `spring` 函数计算动画值，避免使用 `useEffect` 和 `useState`（Remotion 不支持）。\n- **数据派生**：图表的最大值建议通过 `Math.max(...values) * 1.1` 自动计算，确保视觉一致性。",
+  "advancedEffects_md": "## 遮罩与显现逻辑\n\n- **文字从边界滑入**：使用 `overflow: hidden` 容器配合 `translateY` 动画，或使用 `clip-path: inset(100% 0 0 0)` 到 `clip-path: inset(0 0 0 0)` 实现裁剪显现效果。\n- **GPU 线框图**：使用 SVG `path` 元素配合 `stroke-dasharray` 和 `stroke-dashoffset` 实现路径绘制动画。`stroke-dashoffset` 从路径长度到 0 的过渡。\n\n## 光影与滤镜\n\n- **流体背景**：使用 CSS `filter: blur(80px)` 对多个 `radial-gradient` 层进行模糊，配合 `mix-blend-mode: screen` 实现光晕融合效果。\n- **UI 卡片**：使用 `box-shadow: 0 4px 24px rgba(0,0,0,0.1)` 实现柔和投影，`backdrop-filter: blur(10px)` 实现毛玻璃效果（如果需要）。\n- **图表高亮**：使用 `linear-gradient(90deg, accentColor, accentColorAlpha)` 实现渐变柱状图。\n\n## 全局运镜\n\n- **缓慢缩放**：背景层使用 `scale` 从 1.0 到 1.05 的缓慢放大，配合 `transform-origin: center` 实现微妙的推拉效果。\n- **视差滚动**：语言列表场景使用 `translateY` 实现向上滚动，前景文字保持静止，创造深度感。\n\n## 资源分类建议\n\n- **CSS 绘制**：流体背景、渐变、简单几何图形（十字星、圆圈）。\n- **SVG 矢量**：Logo、GPU 线框图、装饰图案、图标。\n- **图片导入**：复杂的 UI 截图（如果需要）、产品界面演示（建议使用透明背景 PNG）。\n- **视频资产**：如果 CSS 流体效果性能不足，可提供预渲染的 WebM 循环视频（分辨率 1920x1080，码率 5Mbps）。",
+  "assetStrategy_md": "## 推荐方案：混合实现（CSS + SVG + 可选视频背景）\n\n**理由**：\n\n1. **流体背景**：\n   - **推荐方案**：使用 CSS `radial-gradient` + `filter: blur()` + `@keyframes` 实现。\n   - **优点**：完全可控，可随时调整颜色和动画速度，文件体积小。\n   - **缺点**：在 Remotion 中渲染时，大范围 `filter: blur()` 可能导致性能下降。\n   - **备选方案**：如果性能成为问题，提供预渲染的 WebM 视频（1920x1080，30fps，5秒循环，约 2MB）。\n\n2. **装饰图形**：\n   - **推荐方案**：使用内联 SVG 组件。\n   - **优点**：支持路径动画，缩放不失真，可通过 props 控制颜色和样式。\n   - **规格**：SVG  viewBox=\"0 0 100 100\"，stroke-width=\"2\"，填充色通过 props 传入。\n\n3. **UI 组件**：\n   - **推荐方案**：使用 React 组件纯代码实现（卡片、输入框、图表）。\n   - **优点**：完全可定制，支持数据驱动，易于本地化。\n   - **注意**：避免使用真实截图，使用简化的 UI 组件保持风格一致。\n\n4. **Logo 和图标**：\n   - **推荐方案**：提供 SVG 格式的 Logo 和图标。\n   - **规格**： viewBox 适配，单色或双色，支持通过 CSS `fill` 属性更改颜色。\n\n**资产清单**：\n- `cohere-logo.svg`：品牌 Logo（可选深色/浅色版本）\n- `gpu-wireframe.svg`：GPU 线框图（白色描边，透明背景）\n- `fluid-background.webm`（可选）：流体背景视频（1920x1080，30fps，5秒循环）",
+  "performanceWarnings_md": "## 渲染风险与性能警告\n\n### 1. 大范围模糊滤镜\n**问题**：`filter: blur(80px)` 在 Remotion（基于 Chromium）中可能导致渲染帧率下降，尤其是在 1920x1080 分辨率下。\n**替代方案**：\n- 降低模糊半径至 `blur(40px)`，通过增加渐变层数量弥补效果。\n- 使用预渲染的模糊背景图片（PNG/WebP）替代实时计算。\n- 添加 `will-change: filter` 提示浏览器优化。\n\n### 2. 多个 box-shadow 叠加\n**问题**：UI 卡片组件如果有多个 `box-shadow`，可能引起重绘性能问题。\n**替代方案**：\n- 使用单个复合阴影：`box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.12)`。\n- 或使用图片代替阴影效果（适合静态场景）。\n\n### 3. 高频 transform 叠加\n**问题**：同时使用 `translate`、`scale`、`rotate` 可能引起布局计算开销。\n**替代方案**：\n- 使用 `transform` 复合属性：`transform: translateX(0) scale(1)` 而不是分开设置。\n- 添加 `will-change: transform` 到动画元素。\n\n### 4. mix-blend-mode 滥用\n**问题**：`mix-blend-mode: screen` 在多层叠加时可能导致颜色计算复杂化。\n**替代方案**：\n- 减少使用层级，或改用 `opacity` 控制透明度。\n- 在导出前测试不同浏览器兼容性。\n\n### 5. 打字机效果布局抖动\n**问题**：逐字显示文本时，如果文本换行可能导致高度变化，引起布局抖动。\n**替代方案**：\n- 设置固定高度：`min-height: 1.5em` 或使用 `height` 配合 `overflow: hidden`。\n- 使用 `white-space: nowrap` 防止换行（如果文本较短）。\n- 预先计算文本最大宽度，设置容器 `width`。\n\n### 6. SVG 路径动画性能\n**问题**：复杂的 SVG `path` 动画（如 GPU 线框图）可能导致渲染延迟。\n**替代方案**：\n- 简化路径，减少节点数量。\n- 使用 `stroke-linecap: round` 和 `stroke-linejoin: round` 提升视觉效果同时降低计算量。\n- 在开发模式使用较低的渲染质量测试，生产模式使用全质量。\n\n### 7. 内存管理\n**问题**：长时间渲染（>60 秒）可能导致内存泄漏。\n**替代方案**：\n- 使用 `key` 属性在场景切换时强制重新挂载组件。\n- 避免在循环中创建新的对象引用。\n- 使用 `useMemo` 缓存计算结果（在 Remotion 中通过 `useMemo` hook 实现）。\n\n### 8. 字体加载\n**问题**：使用 Google Fonts 可能导致首帧字体闪烁（FOIT/FOUT）。\n**替代方案**：\n- 预加载字体：`<link rel=\"preload\" href=\"...\" as=\"font\" crossorigin>`。\n- 使用 `font-display: swap` 避免阻塞渲染。\n- 或在项目中嵌入字体文件（WOFF2 格式）。"
+}
+```

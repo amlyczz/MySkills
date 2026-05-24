@@ -362,11 +362,11 @@ def burn_subtitles(video_path: str, srt_path: str, output_path: str | None = Non
         _sh.copy2(video_path, out)
         return out
 
-    # MarginV pushes subtitles above the bottom progress bar (48px + 2px gap)
+    # Alignment=8 (top-center), MarginV=20 from top edge
     _run([
         ffmpeg_bin, '-y',
         '-i', video_path,
-        '-vf', f"subtitles={srt_abs}:force_style='MarginV=24'",
+        '-vf', f"subtitles={srt_abs}:force_style='Alignment=2,FontSize=16,MarginV=70,MarginH=0,BorderStyle=1,Outline=2,Shadow=1'",
         '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
         '-c:a', 'copy',
         out,

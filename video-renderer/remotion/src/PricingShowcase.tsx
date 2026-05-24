@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill } from "remotion";
-import { PricingCard, type CardData } from "./components/PricingCard";
+import { PricingCard, type CardData } from "./components/content/PricingCard";
 
 const cards: CardData[] = [
   {

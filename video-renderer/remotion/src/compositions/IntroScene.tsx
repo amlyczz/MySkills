@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { OrganicBlob } from "../components/OrganicBlob";
+import { OrganicBlob } from "../components/decoration/OrganicBlob";
 
 const Theme = { bg: "#F5F4F0", yellow: "#FFD54F", blue: "#4285F4", pink: "#F48FB1", green: "#34A853" };
 

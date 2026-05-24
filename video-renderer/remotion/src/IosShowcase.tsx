@@ -1,9 +1,9 @@
 import React from "react";
-import { AbsoluteFill, Sequence, useCurrentFrame, interpolate } from "remotion";
-import { IPhoneFrame } from "./components/IPhoneFrame";
-import { IOSStatusBar } from "./components/IOSStatusBar";
-import { IOSNavBar } from "./components/IOSNavBar";
-import { IOSListItem } from "./components/IOSListItem";
+import { AbsoluteFill, Sequence, useCurrentFrame, interpolate, spring, useVideoConfig } from "remotion";
+import { IPhoneFrame } from "./components/layout/IPhoneFrame";
+import { IOSStatusBar } from "./components/content/IOSStatusBar";
+import { IOSNavBar } from "./components/content/IOSNavBar";
+import { IOSListItem } from "./components/content/IOSListItem";
 
 const SlideIn: React.FC<{ children: React.ReactNode; index: number }> = ({ children, index }) => {
   const frame = useCurrentFrame();
@@ -102,13 +102,45 @@ const DetailScreen: React.FC = () => (
   </IPhoneFrame>
 );
 
-export const IosShowcase: React.FC = () => (
-  <AbsoluteFill style={{ background: "#F5F5F7", justifyContent: "center", alignItems: "center", flexDirection: "row", gap: 40 }}>
-    <Sequence from={0} durationInFrames={180}>
-      <HomeScene />
-    </Sequence>
-    <Sequence from={40} durationInFrames={140}>
-      <DetailScreen />
-    </Sequence>
-  </AbsoluteFill>
-);
+export const IosShowcase: React.FC = () => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+
+  // Animations
+  const phone1Fade = spring({ frame, fps, config: { damping: 14 } });
+  const phone1Y = interpolate(phone1Fade, [0, 1], [50, 0]);
+
+  const phone2Fade = spring({ frame: Math.max(0, frame - 40), fps, config: { damping: 14 } });
+  const phone2Y = interpolate(phone2Fade, [0, 1], [50, 0]);
+
+  // When phone2 enters, phone1 shifts left so they are centered together
+  const phone1XSpring = spring({ frame: Math.max(0, frame - 35), fps, config: { damping: 14 } });
+  const shiftX = interpolate(phone1XSpring, [0, 1], [0, -220]); 
+
+  return (
+    <AbsoluteFill style={{ background: "#F5F5F7" }}>
+      <Sequence from={0} durationInFrames={180}>
+        <div style={{
+          position: "absolute",
+          left: 780 + shiftX,
+          top: 130,
+          transform: `scale(1.1) translateY(${phone1Y}px)`,
+          opacity: phone1Fade,
+        }}>
+          <HomeScene />
+        </div>
+      </Sequence>
+      <Sequence from={40} durationInFrames={140}>
+        <div style={{
+          position: "absolute",
+          left: 780 + 220,
+          top: 130,
+          transform: `scale(1.1) translateY(${phone2Y}px)`,
+          opacity: phone2Fade,
+        }}>
+          <DetailScreen />
+        </div>
+      </Sequence>
+    </AbsoluteFill>
+  );
+};

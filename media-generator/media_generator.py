@@ -12,6 +12,7 @@ from typing import Optional
 from .providers.base import GenerationResult, UnsupportedCapabilityError, BaseProvider
 from .providers.minimax import MiniMaxProvider
 from .providers.deepseek import DeepSeekProvider
+from .providers.omnivoice import OmniVoiceProvider
 from .utils.cache import MediaCache
 
 _CONFIG_PATH = os.path.join(os.path.dirname(__file__), "media_config.json")
@@ -131,4 +132,6 @@ class MediaGenerator:
             elif name == "deepseek":
                 model = cfg.get("models", {}).get("specialized_text", ["deepseek-chat"])[0]
                 self._providers[name] = DeepSeekProvider(model=model)
+            elif name == "omnivoice":
+                self._providers[name] = OmniVoiceProvider()
             # Future providers (openai, etc.) added here

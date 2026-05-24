@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI', Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a2e"/>
+      <stop offset="100%" stop-color="#1a1a3e"/>
+    </linearGradient>
+    <linearGradient id="inputGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="encGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="coreGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="genGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="outGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#a5b4fc"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="620" fill="url(#bg)" rx="12"/>
+
+  <!-- Title -->
+  <text x="480" y="40" text-anchor="middle" fill="#e0e7ff" font-size="22" font-weight="bold">Lance 统一多模态架构</text>
+  <text x="480" y="58" text-anchor="middle" fill="#94a3b8" font-size="12">3B Active Parameters · Trained from Scratch · 128 A100 GPUs</text>
+
+  <!-- Layer labels -->
+  <text x="80" y="85" fill="#a5b4fc" font-size="11" font-weight="bold" text-anchor="middle">INPUT</text>
+  <text x="270" y="85" fill="#22d3ee" font-size="11" font-weight="bold" text-anchor="middle">ENCODER</text>
+  <text x="480" y="85" fill="#a78bfa" font-size="11" font-weight="bold" text-anchor="middle">CORE TRANSFORMER</text>
+  <text x="690" y="85" fill="#fbbf24" font-size="11" font-weight="bold" text-anchor="middle">GENERATION</text>
+  <text x="880" y="85" fill="#34d399" font-size="11" font-weight="bold" text-anchor="middle">OUTPUT</text>
+
+  <!-- Input boxes -->
+  <rect x="30" y="100" width="100" height="50" rx="8" fill="url(#inputGrad)" filter="url(#glow)"/>
+  <text x="80" y="130" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Text</text>
+
+  <rect x="30" y="170" width="100" height="50" rx="8" fill="url(#inputGrad)" filter="url(#glow)"/>
+  <text x="80" y="200" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Image</text>
+
+  <rect x="30" y="240" width="100" height="50" rx="8" fill="url(#inputGrad)" filter="url(#glow)"/>
+  <text x="80" y="270" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Video</text>
+
+  <!-- Encoder boxes -->
+  <rect x="200" y="100" width="140" height="60" rx="8" fill="url(#encGrad)"/>
+  <text x="270" y="125" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Text Tokenizer</text>
+  <text x="270" y="145" text-anchor="middle" fill="#cffafe" font-size="10">Qwen2 Tokenizer</text>
+
+  <rect x="200" y="200" width="140" height="60" rx="8" fill="url(#encGrad)"/>
+  <text x="270" y="225" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Vision Encoder</text>
+  <text x="270" y="245" text-anchor="middle" fill="#cffafe" font-size="10">Qwen2.5 ViT</text>
+
+  <!-- Core Transformer (biggest box) -->
+  <rect x="390" y="120" width="180" height="200" rx="12" fill="url(#coreGrad)" filter="url(#glow)"/>
+  <text x="480" y="150" text-anchor="middle" fill="#fff" font-size="16" font-weight="bold">Qwen2 LLM</text>
+  <line x1="420" y1="160" x2="540" y2="160" stroke="#c4b5fd" stroke-width="0.5"/>
+  <text x="480" y="180" text-anchor="middle" fill="#e9d5ff" font-size="11">3B Active Parameters</text>
+  <text x="480" y="198" text-anchor="middle" fill="#e9d5ff" font-size="11">32 Layers</text>
+  <text x="480" y="216" text-anchor="middle" fill="#e9d5ff" font-size="11">Hidden 2560</text>
+  <text x="480" y="234" text-anchor="middle" fill="#e9d5ff" font-size="11">MoE Upcycling</text>
+  <text x="480" y="252" text-anchor="middle" fill="#e9d5ff" font-size="11">QK-Norm</text>
+  <text x="480" y="270" text-anchor="middle" fill="#e9d5ff" font-size="11">Flex Attention</text>
+  <text x="480" y="295" text-anchor="middle" fill="#c4b5fd" font-size="10">Trained from Scratch</text>
+
+  <!-- MLP Connector -->
+  <rect x="390" y="340" width="180" height="40" rx="6" fill="#7e22ce"/>
+  <text x="480" y="365" text-anchor="middle" fill="#fff" font-size="12" font-weight="bold">MLP Connector</text>
+
+  <!-- Generation layer -->
+  <rect x="620" y="120" width="140" height="55" rx="8" fill="url(#genGrad)"/>
+  <text x="690" y="145" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">vae2llm</text>
+  <text x="690" y="162" text-anchor="middle" fill="#fef3c7" font-size="10">Latent → Hidden</text>
+
+  <rect x="620" y="195" width="140" height="55" rx="8" fill="url(#genGrad)"/>
+  <text x="690" y="220" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">llm2vae</text>
+  <text x="690" y="237" text-anchor="middle" fill="#fef3c7" font-size="10">Hidden → Latent</text>
+
+  <rect x="620" y="270" width="140" height="55" rx="8" fill="url(#genGrad)"/>
+  <text x="690" y="295" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">WanVideoVAE</text>
+  <text x="690" y="312" text-anchor="middle" fill="#fef3c7" font-size="10">Video/Image Codec</text>
+
+  <!-- Flow Matching -->
+  <rect x="620" y="345" width="140" height="35" rx="6" fill="#92400e"/>
+  <text x="690" y="367" text-anchor="middle" fill="#fde68a" font-size="11">Flow Matching</text>
+
+  <!-- Output boxes -->
+  <rect x="820" y="100" width="110" height="50" rx="8" fill="url(#outGrad)" filter="url(#glow)"/>
+  <text x="875" y="130" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Text Out</text>
+
+  <rect x="820" y="170" width="110" height="50" rx="8" fill="url(#outGrad)" filter="url(#glow)"/>
+  <text x="875" y="200" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Image</text>
+
+  <rect x="820" y="240" width="110" height="50" rx="8" fill="url(#outGrad)" filter="url(#glow)"/>
+  <text x="875" y="270" text-anchor="middle" fill="#fff" font-size="13" font-weight="bold">Video</text>
+
+  <!-- Understanding path (dashed) -->
+  <rect x="820" y="330" width="110" height="40" rx="6" fill="#065f46"/>
+  <text x="875" y="355" text-anchor="middle" fill="#6ee7b7" font-size="11">Understanding</text>
+
+  <!-- Arrows: Input → Encoder -->
+  <line x1="130" y1="125" x2="195" y2="130" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="130" y1="195" x2="195" y2="230" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="130" y1="265" x2="195" y2="230" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Arrows: Encoder → Core -->
+  <line x1="340" y1="130" x2="385" y2="180" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="340" y1="230" x2="385" y2="240" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M340,280 L360,280 L360,340 L385,340" fill="none" stroke="#a5b4fc" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+
+  <!-- Arrows: Core → Generation -->
+  <line x1="570" y1="220" x2="615" y2="220" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="570" y1="280" x2="615" y2="295" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="570" y1="345" x2="615" y2="345" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Arrows: Generation → Output -->
+  <line x1="760" y1="145" x2="815" y2="125" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="760" y1="220" x2="815" y2="195" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="760" y1="295" x2="815" y2="265" stroke="#a5b4fc" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Understanding path label -->
+  <path d="M570,360 L700,360 L700,355 L815,355" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow)" stroke-dasharray="4,3"/>
+  <text x="690" y="403" text-anchor="middle" fill="#34d399" font-size="10">Understanding Path (autoregressive)</text>
+  <text x="690" y="420" text-anchor="middle" fill="#fbbf24" font-size="10">Generation Path (flow matching denoising)</text>
+
+  <!-- Stats at bottom -->
+  <rect x="160" y="450" width="640" height="140" rx="10" fill="#1e1b4b" stroke="#6366f1" stroke-width="1"/>
+  <text x="480" y="480" text-anchor="middle" fill="#e0e7ff" font-size="14" font-weight="bold">Key Statistics</text>
+
+  <text x="230" y="510" text-anchor="middle" fill="#22d3ee" font-size="20" font-weight="bold">3B</text>
+  <text x="230" y="530" text-anchor="middle" fill="#94a3b8" font-size="10">Active Params</text>
+
+  <text x="390" y="510" text-anchor="middle" fill="#a78bfa" font-size="20" font-weight="bold">6</text>
+  <text x="390" y="530" text-anchor="middle" fill="#94a3b8" font-size="10">Tasks Unified</text>
+
+  <text x="550" y="510" text-anchor="middle" fill="#f59e0b" font-size="20" font-weight="bold">121</text>
+  <text x="550" y="530" text-anchor="middle" fill="#94a3b8" font-size="10">Max Frames</text>
+
+  <text x="710" y="510" text-anchor="middle" fill="#34d399" font-size="20" font-weight="bold">128</text>
+  <text x="710" y="530" text-anchor="middle" fill="#94a3b8" font-size="10">A100 GPUs</text>
+
+  <text x="480" y="565" text-anchor="middle" fill="#64748b" font-size="11">Qwen2 LLM Backbone · Qwen2.5 ViT Visual Encoder · WanVideoVAE · Apache 2.0</text>
+</svg>

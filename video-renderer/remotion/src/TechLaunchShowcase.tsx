@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Sequence, useCurrentFrame, interpolate } from "remotion";
-import { AuroraBg } from "./components/AuroraBg";
-import { FloatingCard } from "./components/FloatingCard";
+import { AuroraBg } from "./components/decoration/AuroraBg";
+import { FloatingCard } from "./components/layout/FloatingCard";
 import { useTypewriter } from "./hooks/useTypewriter";
 
 const TitleText: React.FC<{ text: string; highlight?: string[]; delay: number }> = ({ text, highlight = [], delay }) => {
@@ -23,6 +23,7 @@ const TitleText: React.FC<{ text: string; highlight?: string[]; delay: number }>
 };
 
 const Scene1: React.FC = () => {
+  const frame = useCurrentFrame();
   const { displayText: typed, isTyping } = useTypewriter("Build anything with real data.", 30, 2);
   return (
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", gap: 40 }}>
@@ -32,7 +33,7 @@ const Scene1: React.FC = () => {
         fontWeight: 400, minHeight: 48,
       }}>
         {typed}
-        {isTyping && <span style={{ opacity: Math.sin(useCurrentFrame() * 0.3) > 0 ? 1 : 0 }}>|</span>}
+        <span style={{ opacity: isTyping && Math.sin(frame * 0.3) > 0 ? 1 : 0 }}>|</span>
       </div>
       <FloatingCard delay={40} rotX={10} rotY={-10} glow style={{ width: 500, height: 320, background: "#1A1A1A" }}>
         <div style={{ padding: 30, color: "#FFF", fontFamily: "Inter, sans-serif" }}>

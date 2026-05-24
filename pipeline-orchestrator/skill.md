@@ -18,6 +18,8 @@ tools_allowed:
 
 # Pipeline Orchestrator — 管线编排引擎
 
+> **网络依赖**：本 skill 中多个子 Processor 需要外网访问（下载素材、生成音频等）。运行前确保已加载 `proxy/skill.md` 配置代理。
+
 你是全流程编排引擎。读取 Pipeline DAG 定义，按拓扑排序执行 Processor。
 
 **原则**：所有架构细节不写在此，去读 `.spec/2026-05-23-全链路逻辑梳理.md`。
@@ -42,8 +44,9 @@ tools_allowed:
 
 ```bash
 # 1. 确定输出目录
+SOURCE_CATEGORY="github"  # 信息来源分类：github | manual | etc
 DATE=$(date +%Y-%m-%d-%H%M)
-OUTPUT_DIR="output/github/${DATE}/${REPO_NAME}"
+OUTPUT_DIR="output/${SOURCE_CATEGORY}/${DATE}/${REPO_NAME}"
 mkdir -p "$OUTPUT_DIR"
 
 # 2. 拓扑排序（按 edges 定义）
@@ -64,8 +67,10 @@ mkdir -p "$OUTPUT_DIR"
 
 ## 输出目录
 
+所有管线产物统一按 `source_category`（信息来源分类）、`{YYYY-MM-DD-HHMM}`（精确到分钟的时间戳）、`repo_name` 组织：
+
 ```
-output/github/{YYYY-MM-DD-HHMM}/{repo_name}/
+output/{source_category}/{YYYY-MM-DD-HHMM}/{repo_name}/
   ├── content.json              # RepoAnalyzer
   ├── material_manifest.json    # RepoAnalyzer
   ├── materials/                # RepoAnalyzer
@@ -79,6 +84,8 @@ output/github/{YYYY-MM-DD-HHMM}/{repo_name}/
   ├── final.mp4                 # PostProducer
   └── final_subtitled.mp4       # PostProducer
 ```
+
+**source_category 说明**：区分信息来源，如 `github`（GitHub Trending）、`manual`（手动选题），便于分类管理和去重。
 
 ## 断点续跑
 

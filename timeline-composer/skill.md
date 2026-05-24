@@ -80,8 +80,12 @@ python3 timeline_composer.py chapters <timeline.json>
 
 ## 输出
 
-写入统一 `$OUTPUT_DIR/`：
-- `timeline.json` → PostProducer (audio_mixer.py)
-- `timeline.srt` → PostProducer (burn_subtitles)
-- `timeline.bgm_curve.json` → PostProducer (--bgm-curve)
-- `video_config.json` → VideoRenderer (Remotion)
+所有输出写入统一的 `$OUTPUT_DIR/`，路径格式由 pipeline-orchestrator 确定：
+
+```
+output/{source_category}/{YYYY-MM-DD-HHMM}/{repo_name}/
+  ├── video_config.json         # → VideoRenderer (Remotion)
+  ├── timeline.json             # → PostProducer (audio_mixer.py --timeline)
+  ├── timeline.srt              # → PostProducer (--srt 字幕烧录)
+  └── timeline.bgm_curve.json   # → PostProducer (--bgm-curve BGM 闪避曲线)
+```

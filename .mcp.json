@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "omnivoice": {
+      "command": "/home/zand/proj/OmniVoice-Studio/.venv/bin/python",
+      "args": ["-m", "backend.mcp_server"],
+      "cwd": "/home/zand/proj/OmniVoice-Studio",
+      "env": {
+        "OMNIVOICE_API_URL": "http://localhost:3900",
+        "http_proxy": "http://172.28.0.1:10808",
+        "https_proxy": "http://172.28.0.1:10808",
+        "HTTP_PROXY": "http://172.28.0.1:10808",
+        "HTTPS_PROXY": "http://172.28.0.1:10808",
+        "HF_TOKEN": "${HF_TOKEN}",
+        "PYTHONPATH": "/home/zand/proj/CosyVoice",
+        "OMNIVOICE_COSYVOICE_MODEL": "/home/zand/proj/CosyVoice/pretrained_models/Fun-CosyVoice3-0.5B"
+      }
+    }
+  }
+}

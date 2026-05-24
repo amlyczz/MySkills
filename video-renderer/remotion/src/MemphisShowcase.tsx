@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
-import { MemphisCard } from "./components/MemphisCard";
-import { DotGridBg } from "./components/DotGridBg";
+import { MemphisCard } from "./components/content/MemphisCard";
+import { DotGridBg } from "./components/decoration/DotGridBg";
 
 const TypingInput: React.FC<{ text: string; startFrame: number }> = ({ text, startFrame }) => {
   const frame = useCurrentFrame();

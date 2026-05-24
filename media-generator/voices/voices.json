@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "description": "音色配置目录 — 每个 voice 文件 + 配置在此注册",
+  "voices": [
+    {
+      "id": "qq-voice",
+      "name": "QQ 音色",
+      "file": "Qq.m4a",
+      "provider": "minimax",
+      "language": "zh",
+      "description": "从 Qq.m4a 克隆的音色，用于 MiniMax TTS"
+    }
+  ],
+  "default_voice": "qq-voice"
+}

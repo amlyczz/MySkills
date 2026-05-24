@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
-import { ProgressRing } from "./components/ProgressRing";
+import { ProgressRing } from "./components/content/ProgressRing";
 
 const PhoneFrame: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
   <div style={{ width: 300, height: 600, borderRadius: 40, background: "#FFF", boxShadow: "0 20px 60px rgba(0,0,0,0.15)", overflow: "hidden", position: "relative", flexShrink: 0, ...style }}>

@@ -1,6 +1,6 @@
 import React from "react";
 import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
-import { PromptInput } from "./components/PromptInput";
+import { PromptInput } from "./components/content/PromptInput";
 
 const SceneWrapper: React.FC<{ children: React.ReactNode; bgColor?: string }> = ({ children, bgColor = "#F5F5F7" }) => {
   const frame = useCurrentFrame();

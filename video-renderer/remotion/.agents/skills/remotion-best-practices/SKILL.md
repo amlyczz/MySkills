@@ -3,20 +3,6 @@ name: remotion-best-practices
 description: Best practices for Remotion - Video creation in React
 metadata:
   tags: remotion, video, react, animation, composition
-triggers:
-  - remotion
-  - 视频渲染
-  - VideoComposer
-  - 视频合成
-  - video-renderer
-  - remotion render
-tools_allowed:
-  - Read
-  - Edit
-  - Write
-  - Bash
-  - Glob
-  - Grep
 ---
 
 ## When to use

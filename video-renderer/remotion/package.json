@@ -8,8 +8,10 @@
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.0",
+    "@remotion/captions": "4.0.464",
     "@remotion/cli": "^4.0.0",
     "@remotion/google-fonts": "^4.0.464",
+    "@remotion/layout-utils": "4.0.464",
     "@remotion/media": "^4.0.464",
     "@remotion/renderer": "^4.0.0",
     "@remotion/sfx": "4.0.464",
@@ -21,7 +23,9 @@
     "zod-to-json-schema": "^3.23.0"
   },
   "devDependencies": {
+    "@remotion/tailwind-v4": "^4.0.465",
     "@types/react": "^19.2.14",
+    "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3"
   }
 }
