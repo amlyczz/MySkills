@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Playfair Display", "Noto Serif SC", Georgia, serif;
+  --font-mono: "Courier New", Courier, monospace;
+
+  --color-parchment: #F9F9F6;
+  --color-ink: #1A1A1A;
+  --color-graphite: #595959;
+  --color-marx-red: #8B1A1A;
+  --color-border: #D1D1C7;
+  
+  --radius-none: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-full: 0px;
+}
+
+body {
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  line-height: 1.618;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.philosophical-border {
+  border: 1px solid var(--color-ink);
+}
+
+.philosophical-panel {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
+  box-shadow: 2px 2px 0px var(--color-border);
+}
