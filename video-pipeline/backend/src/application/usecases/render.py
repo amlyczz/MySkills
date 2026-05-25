@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.blueprint.interfaces import VideoRenderer
+from ...domain.visual_blueprint.interfaces import VideoRenderer
 from ...infrastructure.config.app_config import PROJECT_ROOT
 from ..workflow.state import PipelineState
 

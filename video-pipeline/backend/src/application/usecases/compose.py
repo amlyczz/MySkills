@@ -1,7 +1,7 @@
 import uuid
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.composer.interfaces import ScriptComposer
+from ...domain.script_composer.interfaces import ScriptComposer
 from ..workflow.state import PipelineState
 
 class ComposeScriptUseCase:
@@ -24,7 +24,13 @@ class ComposeScriptUseCase:
         # Generate script from ContentModel via ScriptComposer interface
         # Pass QA feedback from previous failed attempt if available
         qa_feedback = state.get("qa_script_feedback")
-        script = await self.composer.compose_script(content_model, target_duration=60, qa_feedback=qa_feedback)
+        domain_analysis = state.get("domain_analysis")
+        script = await self.composer.compose_script(
+            content_model,
+            target_duration=60,
+            domain_analysis=domain_analysis,
+            qa_feedback=qa_feedback
+        )
 
         # Synchronize DB state
         task_id = uuid.UUID(state["task_id"])

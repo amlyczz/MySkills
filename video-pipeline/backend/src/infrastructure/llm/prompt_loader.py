@@ -1,27 +1,23 @@
-"""Load prompt templates from skill reference files.
+"""Load prompt templates from domain prompt directories.
 
-Prompts live in .claude/skills/<skill-name>/references/*.md files.
-This loader resolves the skill directory relative to the project root
-(video-pipeline/) and caches loaded prompts in memory.
+Prompts live in backend/src/infrastructure/<domain>/prompts/*.md files.
 """
 
 from pathlib import Path
 from functools import lru_cache
 
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]
-SKILLS_DIR = _PROJECT_ROOT / "backend" / "src" / "infrastructure" / "skills"
-
+_INFRASTRUCTURE_DIR = Path(__file__).resolve().parents[1]
 
 @lru_cache(maxsize=64)
-def load_prompt(skill_name: str, filename: str) -> str:
-    """Load a prompt template from a skill's references/ directory.
+def load_prompt(domain_name: str, filename: str) -> str:
+    """Load a prompt template from a domain's prompts/ directory.
 
     Args:
-        skill_name: Directory name under .claude/skills/ (e.g. "repo-analyzer")
-        filename: File name under references/ (e.g. "analyze-repo-system.md")
+        domain_name: Directory name under infrastructure/ (e.g. "analyzer")
+        filename: File name under prompts/ (e.g. "analyze_repo_system.md")
 
     Returns:
         The prompt template as a string (with {placeholders} intact).
     """
-    path = SKILLS_DIR / skill_name / "references" / filename
+    path = _INFRASTRUCTURE_DIR / domain_name / "prompts" / filename
     return path.read_text(encoding="utf-8")

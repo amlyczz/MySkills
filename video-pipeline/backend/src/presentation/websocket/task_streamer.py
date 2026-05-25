@@ -6,12 +6,12 @@ from langgraph.types import Command
 from ...domain.task.entities import PipelineStatus
 from ...infrastructure.task.connection import _get_engine, _get_session_maker
 from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
-from ...infrastructure.analyzer.llm_analyzer import LLMRepoAnalyzer
-from ...infrastructure.composer.llm_composer import LLMScriptComposer
-from ...infrastructure.composer.llm_evaluator import LLMScriptEvaluator
-from ...infrastructure.blueprint.llm_composer import LLMBlueprintComposer
-from ...infrastructure.blueprint.llm_evaluator import LLMBlueprintEvaluator
-from ...infrastructure.blueprint.remotion_renderer import RemotionVideoRenderer
+from ...infrastructure.repo_analyzer.llm_analyzer import LLMRepoAnalyzer
+from ...infrastructure.script_composer.llm_composer import LLMScriptComposer
+from ...infrastructure.script_composer.llm_evaluator import LLMScriptEvaluator
+from ...infrastructure.visual_blueprint.llm_composer import LLMBlueprintComposer
+from ...infrastructure.visual_blueprint.llm_evaluator import LLMBlueprintEvaluator
+from ...infrastructure.visual_blueprint.remotion_renderer import RemotionVideoRenderer
 from ...infrastructure.post_producer.media_generator import MediaGenerator
 from ...infrastructure.post_producer.ffmpeg_mixer import FFmpegAudioMixer
 from ...application.workflow.graph import compile_workflow

@@ -12,7 +12,7 @@ import sys
 import uuid
 from datetime import datetime
 
-from ...domain.analyzer.entities import Script, ScriptSegment
+from ...domain.repo_analyzer.entities import Script, ScriptSegment
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
@@ -191,13 +191,12 @@ class AudioDesignUseCase:
             dur = actual_durations[i] if i < len(actual_durations) else seg.duration_est
             segments.append({
                 "id": f"seg_{i:03d}",
-                "type": seg.visual_type or "generic",
                 "text": seg.text,
                 "time_start": round(current_time, 3),
                 "time_end": round(current_time + dur, 3),
                 "duration": round(dur, 3),
-                "duration_est": seg.duration_est,
-                "visual_params": seg.visual_params,
+                "assigned_asset": seg.assigned_asset,
+                "visual_hook": seg.visual_hook,
             })
             current_time += dur
 

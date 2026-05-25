@@ -2,11 +2,11 @@ import os
 import uuid
 from datetime import datetime
 
-from ...domain.analyzer.entities import ContentModel, MaterialManifest
+from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.analyzer.interfaces import RepoAnalyzer
-from ...infrastructure.analyzer.github_collector import GitHubMaterialCollector
+from ...domain.repo_analyzer.interfaces import RepoAnalyzer
+from ...infrastructure.repo_analyzer.github_collector import GitHubMaterialCollector
 from ...infrastructure.config.app_config import PROJECT_ROOT
 from ..workflow.state import PipelineState
 
@@ -50,8 +50,27 @@ class AnalyzeRepoUseCase:
             readme_text, repo_metadata, dependency_summary
         )
 
-        # 3. Analyze via RepoAnalyzer → ContentModel
-        content_model = await self.analyzer.analyze_repo(enriched_input, state["repo_url"])
+        # 3. Analyze via RepoAnalyzer → ContentModel (returns Encyclopedia + Curated Assets)
+        # 3.1 Classify Domain
+        tech_domain = await self.analyzer.classify_tech_domain(enriched_input)
+        
+        # 3.2 Load Candidate Materials
+        candidate_materials_str = ""
+        candidate_path = os.path.join(output_dir, "candidate_materials.json")
+        if os.path.exists(candidate_path):
+            with open(candidate_path, "r", encoding="utf-8") as f:
+                candidate_materials_str = f.read()
+
+        # 3.3 Deep Read
+        content_model = await self.analyzer.analyze_repo(
+            enriched_input, state["repo_url"], tech_domain, candidate_materials_str
+        )
+
+        # 3.5 Lazy Fetch Curated Materials
+        if content_model.curated_materials:
+            await self._download_curated_materials(
+                content_model.curated_materials, output_dir, material_manifest
+            )
 
         # 4. Classify project category for downstream routing
         category = await self.analyzer.classify_category(content_model)
@@ -141,3 +160,42 @@ class AnalyzeRepoUseCase:
         parts.append(readme_text)
 
         return "\n".join(parts)
+
+    async def _download_curated_materials(self, urls: list[str], output_dir: str, manifest: MaterialManifest) -> None:
+        import subprocess
+        import os
+        from ...domain.repo_analyzer.entities import Material, MaterialSource, CaptureInfo, MaterialMetadata
+
+        assets_dir = os.path.join(output_dir, "assets")
+        os.makedirs(assets_dir, exist_ok=True)
+        
+        for url in urls:
+            filename = os.path.basename(url.split("?")[0])
+            if not filename:
+                continue
+            file_path = os.path.join(assets_dir, filename)
+            
+            try:
+                # If it's a GitHub API download_url, we need auth, otherwise normal curl
+                if "api.github.com" in url:
+                    cmd = ["gh", "api", url.replace("https://api.github.com", "")]
+                else:
+                    cmd = ["curl", "-sL", url]
+                    
+                result = subprocess.run(cmd, capture_output=True, timeout=30)
+                if result.returncode == 0 and len(result.stdout) > 0:
+                    with open(file_path, "wb") as f:
+                        f.write(result.stdout)
+                        
+                    ext = os.path.splitext(filename)[1].lower()
+                    mat_type = "image" if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp") else "other"
+                    manifest.materials.append(Material(
+                        id=f"asset_curated_{filename.replace('.', '_')}",
+                        type=mat_type,
+                        path=file_path,
+                        source=MaterialSource(type="curated_download", url=url),
+                        capture=CaptureInfo(method="lazy_fetch")
+                    ))
+            except Exception as e:
+                print(f"[AnalyzeRepoUseCase] Failed to lazy fetch {url}: {e}")
+

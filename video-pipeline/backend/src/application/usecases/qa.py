@@ -1,8 +1,8 @@
 import uuid
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.composer.interfaces import ScriptEvaluator
-from ...domain.blueprint.interfaces import BlueprintEvaluator
+from ...domain.script_composer.interfaces import ScriptEvaluator
+from ...domain.visual_blueprint.interfaces import BlueprintEvaluator
 from ..workflow.state import PipelineState
 
 

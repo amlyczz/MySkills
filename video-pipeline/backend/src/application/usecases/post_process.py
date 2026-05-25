@@ -67,7 +67,7 @@ class PostProcessUseCase:
 
         timeline_data = {
             "segments": [
-                {"text": seg.text, "duration_est": seg.duration_est, "visual_type": seg.visual_type}
+                {"text": seg.text, "duration_est": seg.duration_est, "assigned_asset": seg.assigned_asset, "visual_hook": seg.visual_hook}
                 for seg in script.segments
             ]
         }

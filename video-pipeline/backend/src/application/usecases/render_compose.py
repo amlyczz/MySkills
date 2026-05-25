@@ -6,8 +6,8 @@ import os
 import uuid
 from datetime import datetime
 
-from ...domain.blueprint.entities import Blueprint, SceneConfig
-from ...domain.blueprint.interfaces import VideoRenderer
+from ...domain.visual_blueprint.entities import Blueprint, SceneConfig
+from ...domain.visual_blueprint.interfaces import VideoRenderer
 from ...domain.post_producer.interfaces import AudioMixer
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository

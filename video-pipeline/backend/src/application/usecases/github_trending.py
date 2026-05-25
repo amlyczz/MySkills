@@ -14,7 +14,8 @@ from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.github_trending.entities import ScoredRepo, TrendingResponse, SubjectiveEvaluation
 from ..workflow.state import PipelineState
 from ...infrastructure.config.app_config import PROJECT_ROOT
-from ...infrastructure.skills.github_trending.scripts.fetch_trending import fetch_trending_repos
+from ...infrastructure.github.tools import fetch_trending_repos
+from ...infrastructure.llm.prompt_loader import load_prompt
 
 class GithubTrendingUseCase:
     """
@@ -71,16 +72,8 @@ class GithubTrendingUseCase:
                 r["impact_score"] = int((deps_score + author_score) / 2)
 
             # Perform Subjective Scoring via LLM
-            skill_md_path = PROJECT_ROOT / "backend" / "src" / "infrastructure" / "skills" / "github_trending" / "SKILL.md"
-            with open(skill_md_path, "r", encoding="utf-8") as f:
-                skill_content = f.read()
-
             prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are an expert GitHub Repo Evaluator.\n"
-                           "Here is the SKILL.md documentation containing your scoring rules (specifically Section A3):\n\n"
-                           "{skill_md}\n\n"
-                           "Evaluate the provided repository metadata according to the subjective dimensions defined in A3. "
-                           "Score each dimension (1-5) and provide a one-liner highlight. Ensure accurate evaluations."),
+                ("system", load_prompt("github", "score_trending_system.md")),
                 ("user", "Repos Data:\n{repos_data}")
             ])
             
@@ -101,7 +94,6 @@ class GithubTrendingUseCase:
                 })
                 
             llm_res: TrendingResponse = await chain.ainvoke({
-                "skill_md": skill_content,
                 "repos_data": json.dumps(simplified_data, ensure_ascii=False)
             })
             

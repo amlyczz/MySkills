@@ -1,7 +1,7 @@
 from typing import TypedDict, Optional
 
-from ...domain.analyzer.entities import ContentModel, MaterialManifest, Script, DomainAnalysis
-from ...domain.blueprint.entities import Blueprint
+from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, Script, DomainAnalysis
+from ...domain.visual_blueprint.entities import Blueprint
 from ...domain.task.entities import PipelineStatus, QAScorecard
 from ...domain.github_trending.entities import ScoredRepo
 

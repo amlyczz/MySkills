@@ -1,7 +1,7 @@
 import uuid
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.blueprint.interfaces import BlueprintComposer
+from ...domain.visual_blueprint.interfaces import BlueprintComposer
 from ..workflow.state import PipelineState
 
 class GenerateBlueprintUseCase:

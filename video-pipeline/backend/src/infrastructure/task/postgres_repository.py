@@ -6,8 +6,8 @@ from sqlalchemy.future import select
 
 from ...domain.task.entities import PipelineTask, QAScorecard, PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.analyzer.entities import ContentModel, MaterialManifest, Script
-from ...domain.blueprint.entities import Blueprint
+from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, Script
+from ...domain.visual_blueprint.entities import Blueprint
 from ...domain.github_trending.entities import ScoredRepo
 from .postgres_models import PipelineTaskDB
 

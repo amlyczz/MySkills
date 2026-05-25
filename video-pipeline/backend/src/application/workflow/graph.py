@@ -14,9 +14,9 @@ from ..usecases.render_compose import RenderComposeUseCase
 from ..usecases.github_trending import GithubTrendingUseCase
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.analyzer.interfaces import RepoAnalyzer
-from ...domain.composer.interfaces import ScriptComposer, ScriptEvaluator
-from ...domain.blueprint.interfaces import BlueprintComposer, BlueprintEvaluator, VideoRenderer
+from ...domain.repo_analyzer.interfaces import RepoAnalyzer
+from ...domain.script_composer.interfaces import ScriptComposer, ScriptEvaluator
+from ...domain.visual_blueprint.interfaces import BlueprintComposer, BlueprintEvaluator, VideoRenderer
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator, AudioMixer
 
 def route_trending(state: PipelineState) -> str:
