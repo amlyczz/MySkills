@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Enum
+from sqlalchemy import Column, String, DateTime, Enum, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from .connection import Base
 from ...domain.task.entities import PipelineStatus
@@ -9,6 +9,7 @@ class PipelineTaskDB(Base):
     __tablename__ = "pipeline_tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
     repo_url = Column(String, nullable=False)
     status = Column(Enum(PipelineStatus), default=PipelineStatus.PENDING, nullable=False)
 

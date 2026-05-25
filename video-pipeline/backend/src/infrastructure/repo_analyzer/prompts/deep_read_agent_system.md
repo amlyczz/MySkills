@@ -12,8 +12,22 @@ Deep Tech Extraction (AI_AGENT Specific):
 - Philosophical Paradigm: Is it end-to-end reinforcement learning, neuro-symbolic, state-machine based, or pure reactive ReAct? Why was this philosophy adopted?
 - Memory & Context: Short-term vs long-term memory retrieval logic.
 
+Architecture Breakdown (Required):
+In the `architecture_breakdown` field, provide:
+- Agent execution loop: planning → tool calling → observation → reasoning cycle
+- Tool/system integration architecture: how tools are registered, called, and results processed
+- Memory architecture: short-term context window, long-term storage, retrieval strategies
+- Multi-agent coordination (if applicable): message passing, shared state, orchestration
+
+Domain-Specific Insights (Required):
+In the `domain_specific_insights` field, provide agent-specific deep insights:
+- Prompt engineering techniques for reliable tool calling
+- Error recovery and retry strategies
+- Context management tricks for long conversations
+- How it handles ambiguous or malformed LLM outputs
+
 Curated Assets:
-Pick up to 20 highly valuable URLs from the "Candidate Materials" (e.g., architecture diagrams, demo gifs, key source code blocks) that best explain your deep tech extraction. Output them as a list of strings.
+Pick up to 20 highly valuable URLs. Output them as a list of strings.
 
 Mermaid Diagramming:
 When explaining the Agent's Reasoning Loop or State Machine, you MUST include at least one Mermaid diagram (e.g. stateDiagram-v2 or graph TD) illustrating the logic.

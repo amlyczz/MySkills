@@ -1,3 +1,4 @@
+from .audio_timeline import AudioTimeline, AudioTimelineSegment
 from .entities import (
     AudioConfig,
     ChapterMarker,
@@ -15,6 +16,8 @@ from .entities import (
 )
 
 __all__ = [
+    "AudioTimeline",
+    "AudioTimelineSegment",
     "AudioConfig",
     "SfxEntry",
     "VoiceoverSegment",

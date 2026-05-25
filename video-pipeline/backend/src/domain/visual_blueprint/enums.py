@@ -13,27 +13,30 @@ SceneType = Literal[
 ]
 
 ComponentType = Literal[
-    "browser-mockup", "iphone-frame", "split-layout", "center-layout",
+    "browser-mockup", "device-frame", "split-layout", "center-layout",
     "pricing-stack", "floating-card", "coverflow-carousel", "horizontal-carousel",
     "layered-element", "pop-up-book-base", "icon-grid", "split-media",
-    "search-bar", "ai-summary-box", "pricing-card", "memphis-card",
+    "search-bar", "ai-summary-box", "pricing-card", "geometric-card",
     "data-bar-chart", "animated-bar", "video-card", "product-card",
     "agent-card", "ui-card", "minimal-card", "mock-ui-card",
-    "experiment-card", "flow-music-card", "album-card",
-    "ios-list-item", "ios-nav-bar", "ios-status-bar",
+    "experiment-card", "cover-card", "album-card",
+    "mobile-list-item", "mobile-nav-bar", "mobile-status-bar",
     "filter-pills", "progress-ring", "title", "cta-button",
     "stat-card", "quote-card", "callout-box", "step-indicator",
     "comparison-table", "code-block", "key-point", "chapter-title",
     "gradient-text", "luxury-card", "reveal-mask", "stagger-reveal",
-    "glass-panel",
+    "glass-panel", "glass-card",
+    "chip-card", "branch-flow", "animated-counter",
     "animated-text", "text-block", "word-swap-headline", "typewriter",
     "prompt-input", "typing-input", "subtitle-overlay", "lower-third",
-    "number-counter",
     "cursor", "decoration-overlay", "dot-grid-bg", "graphic-overlay",
     "organic-blob", "realistic-sphere", "generating-pill",
     "connection-line", "scene-canvas", "diagonal-wipe-transition",
     "badge", "ken-burns", "cinematic-bars", "mesh-gradient-bg",
     "film-grain",
+    "radial-glow", "particle-field", "icon-badge",
+    "blur-fade-text", "glow-bar-chart",
+    "typing-message", "canvas-gradient-bg",
     "text", "image", "video", "shape", "div", "lottie",
 ]
 
@@ -42,6 +45,7 @@ AnimationType = Literal[
     "scale-in", "scale-bounce",
     "slide-left", "slide-right", "slide-up", "slide-down",
     "bar-grow", "typewriter",
+    "reveal", "stamp-drop", "brush-strike", "blur-in",
 ]
 
 TransitionType = Literal[

@@ -14,6 +14,11 @@ dependencies = [
 pipeline-contracts = { path = "contracts", editable = true }
 [tool.uv.pip]
 index-url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+
+[tool.uv.workspace]
+members = [
+    "langgraph-orchestrator",
+]
 [dependency-groups]
 dev = [
     "jsonschema>=4.0",

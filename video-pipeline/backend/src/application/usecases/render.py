@@ -1,23 +1,11 @@
 import asyncio
 import os
 import uuid
-from datetime import datetime
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.visual_blueprint.interfaces import VideoRenderer
-from ...infrastructure.config.app_config import PROJECT_ROOT
 from ..workflow.state import PipelineState
-
-
-def _resolve_output_dir(state: PipelineState) -> str:
-    """Compute output directory following convention: output/{source}/{date}/{repo_name}/"""
-    source = state.get("project_category", "github")
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    repo_url = state.get("repo_url", "unknown")
-    repo_name = repo_url.rstrip("/").split("/")[-1] if "/" in repo_url else "unknown"
-    output_dir = str(PROJECT_ROOT / "output" / source / date_str / repo_name)
-    os.makedirs(output_dir, exist_ok=True)
-    return output_dir
+from .output_dir import resolve_output_dir
 
 
 class RenderVideoUseCase:
@@ -42,7 +30,7 @@ class RenderVideoUseCase:
             if not blueprint:
                 raise ValueError("Blueprint is missing in state.")
 
-            output_dir = _resolve_output_dir(state)
+            output_dir = resolve_output_dir(state)
             video_path = os.path.join(output_dir, "video.mp4")
 
             await self.renderer.render_video(blueprint, video_path)

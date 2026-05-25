@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from ...domain.visual_blueprint.entities import Blueprint
 from ...domain.visual_blueprint.interfaces import VideoRenderer
-from ..config.app_config import PROJECT_ROOT
 
 class RemotionVideoRenderer(VideoRenderer):
 
@@ -26,7 +25,7 @@ class RemotionVideoRenderer(VideoRenderer):
             json.dump(blueprint_json, f, ensure_ascii=False, indent=2)
 
         # Resolve the render wrapper script
-        render_script = str(PROJECT_ROOT / "video-renderer" / "scripts" / "render.py")
+        render_script = str(Path(__file__).resolve().parent / "scripts" / "render.py")
 
         cmd = [
             sys.executable, render_script,

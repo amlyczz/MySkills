@@ -10,25 +10,14 @@ import os
 import subprocess
 import sys
 import uuid
-from datetime import datetime
 
 from ...domain.repo_analyzer.entities import Script, ScriptSegment
+from ...domain.post_producer.audio_timeline import AudioTimeline, AudioTimelineSegment
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...infrastructure.config.app_config import PROJECT_ROOT
 from ..workflow.state import PipelineState
-
-
-def _resolve_output_dir(state: PipelineState) -> str:
-    """Compute output directory following convention: output/{source}/{date}/{repo_name}/"""
-    source = state.get("project_category", "github")
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    repo_url = state.get("repo_url", "unknown")
-    repo_name = repo_url.rstrip("/").split("/")[-1] if "/" in repo_url else "unknown"
-    output_dir = str(PROJECT_ROOT / "output" / source / date_str / repo_name)
-    os.makedirs(output_dir, exist_ok=True)
-    return output_dir
+from .output_dir import resolve_output_dir
 
 
 def _get_audio_duration(audio_path: str) -> float:
@@ -83,7 +72,7 @@ class AudioDesignUseCase:
         if not script:
             raise ValueError("Script is missing in state for audio design.")
 
-        output_dir = _resolve_output_dir(state)
+        output_dir = resolve_output_dir(state)
         segments_dir = os.path.join(output_dir, "segments")
         os.makedirs(segments_dir, exist_ok=True)
 
@@ -123,9 +112,9 @@ class AudioDesignUseCase:
 
         # ── 4. Build precise Timeline with actual durations ──
         timeline_path = os.path.join(output_dir, "timeline.json")
-        timeline_data = self._build_timeline(script, segment_durations)
+        timeline = self._build_timeline(script, segment_durations)
         with open(timeline_path, "w", encoding="utf-8") as f:
-            json.dump(timeline_data, f, ensure_ascii=False, indent=2)
+            f.write(timeline.model_dump_json(indent=2, by_alias=True))
 
         # ── 5. Build precise SRT with actual durations ──
         srt_path = os.path.join(output_dir, "subtitles.srt")
@@ -183,29 +172,28 @@ class AudioDesignUseCase:
             shutil.copy2(segment_paths[0], output_path)
             print(f"[AudioDesign] Warning: concat failed, using first segment only")
 
-    def _build_timeline(self, script: Script, actual_durations: list[float]) -> dict:
-        """Build timeline.json with actual audio durations."""
-        segments = []
+    def _build_timeline(self, script: Script, actual_durations: list[float]) -> AudioTimeline:
+        """Build timeline with actual audio durations."""
+        segments: list[AudioTimelineSegment] = []
         current_time = 0.0
         for i, seg in enumerate(script.segments):
             dur = actual_durations[i] if i < len(actual_durations) else seg.duration_est
-            segments.append({
-                "id": f"seg_{i:03d}",
-                "text": seg.text,
-                "time_start": round(current_time, 3),
-                "time_end": round(current_time + dur, 3),
-                "duration": round(dur, 3),
-                "assigned_asset": seg.assigned_asset,
-                "visual_hook": seg.visual_hook,
-            })
+            segments.append(AudioTimelineSegment(
+                id=f"seg_{i:03d}",
+                text=seg.text,
+                time_start=round(current_time, 3),
+                time_end=round(current_time + dur, 3),
+                duration=round(dur, 3),
+                assigned_asset=seg.assigned_asset,
+                visual_hook=seg.visual_hook,
+            ))
             current_time += dur
 
-        return {
-            "version": "3",
-            "total_duration": round(current_time, 3),
-            "total_duration_est": script.total_duration_est,
-            "segments": segments,
-        }
+        return AudioTimeline(
+            total_duration=round(current_time, 3),
+            total_duration_est=script.total_duration_est,
+            segments=segments,
+        )
 
     def _build_srt(self, script: Script, actual_durations: list[float]) -> str:
         """Build SRT content with actual audio durations."""

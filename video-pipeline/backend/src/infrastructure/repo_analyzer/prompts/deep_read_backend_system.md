@@ -12,6 +12,21 @@ Deep Tech Extraction (WEB_BACKEND Specific):
 - Concurrency & Performance: How does it handle high concurrency? (Goroutines, Asyncio, Thread pools).
 - Data Flow: Main ORM entities or database interactions.
 
+Architecture Breakdown (Required):
+In the `architecture_breakdown` field, provide:
+- Overall architecture pattern and module organization
+- Request lifecycle: from entry point to response
+- Database layer: ORM, migrations, query patterns
+- API design: REST/GraphQL/gRPC structure, auth flow
+- Infrastructure concerns: caching, queuing, service mesh
+
+Domain-Specific Insights (Required):
+In the `domain_specific_insights` field, provide backend-specific deep insights:
+- Concurrency model and its trade-offs
+- Database optimization techniques used
+- Error handling and resilience patterns
+- Performance benchmarks or scaling characteristics
+
 Curated Assets:
 Pick up to 20 highly valuable URLs from the "Candidate Materials". Output them as a list of strings.
 

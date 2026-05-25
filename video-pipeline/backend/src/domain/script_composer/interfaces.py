@@ -12,11 +12,15 @@ class ScriptComposer(ABC):
     async def compose_script(
         self,
         content: ContentModel,
-        target_duration: int,
+        target_duration: int = 0,
         domain_analysis: Optional[DomainAnalysis] = None,
         qa_feedback: Optional[str] = None,
     ) -> Script:
-        """Compose a narration script based on the Project Encyclopedia and Domain Analysis."""
+        """Compose a narration script based on the Project Encyclopedia and Domain Analysis.
+
+        Args:
+            target_duration: 0 means let LLM decide duration (3-10 min range).
+        """
         pass
 
 
@@ -26,11 +30,7 @@ class ScriptEvaluator(ABC):
     async def evaluate_script(
         self, script: Script, source_context: Optional[str] = None,
     ) -> QAScorecard:
-        """Evaluates video script and returns QAScorecard.
-
-        Args:
-            source_context: Source materials for fact-checking technical claims.
-        """
+        """Evaluates video script and returns QAScorecard."""
         pass
 
 

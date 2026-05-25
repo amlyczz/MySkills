@@ -1,6 +1,6 @@
 # Video Pipeline
 
-多源输入、多类型产出的自动化视频生成管线服务。基于 LangGraph 状态机编排，带 QA 反馈循环和人机共驾 (HITL) 支持。
+多源输入、多类型产出的自动化视频生成管线服务。基于 LangGraph 状态机编排，带人机共驾 (HITL) 人工审核。
 
 ## 目录
 
@@ -25,62 +25,55 @@ video-pipeline/
 │   └── src/
 │       ├── main.py               # 入口: uvicorn 启动
 │       ├── domain/               # ── 领域层 ──
-│       │   ├── analyzer/
-│       │   │   ├── entities.py   #   ContentModel, MaterialManifest, ProjectCategory
-│       │   │   └── interfaces.py #   RepoScraper, RepoAnalyzer (ABC)
-│       │   ├── composer/
-│       │   │   ├── entities.py   #   Script, ScriptSegment, VisualPlan
-│       │   │   └── interfaces.py #   ScriptComposer, ScriptEvaluator, VisualPlanner (ABC)
-│       │   ├── blueprint/
-│       │   │   ├── entities.py   #   Blueprint, SceneConfig, ElementConfig, AnimationConfig ...
-│       │   │   └── interfaces.py #   BlueprintComposer, BlueprintEvaluator, VideoRenderer (ABC)
-│       │   ├── post_producer/
-│       │   │   └── interfaces.py #   VoiceoverGenerator, BGMGenerator, AudioMixer (ABC)
-│       │   └── task/
-│       │       ├── entities.py   #   PipelineTask, PipelineStatus, QAScorecard
-│       │       └── interfaces.py #   PipelineTaskRepository (ABC)
+│       │   ├── repo_analyzer/    #   ContentModel, MaterialManifest, ProjectCategory
+│       │   ├── script_composer/  #   Script, ScriptSegment, VisualPlan
+│       │   ├── visual_blueprint/ #   Blueprint, SceneConfig, ElementConfig, AnimationConfig ...
+│       │   ├── post_producer/    #   VoiceoverGenerator, BGMGenerator, AudioMixer (ABC)
+│       │   ├── github_trending/  #   GitHub Trending 评估域
+│       │   └── task/             #   PipelineTask, PipelineStatus, QAScorecard
 │       ├── application/          # ── 应用层 ──
 │       │   ├── usecases/         #   LangGraph 节点 = UseCase 类
-│       │   │   ├── analyze.py    #   analyze_repo
-│       │   │   ├── compose.py    #   compose_script
-│       │   │   ├── qa.py         #   qa_script, qa_blueprint
-│       │   │   ├── blueprint.py  #   generate_blueprint
-│       │   │   ├── render.py     #   render_video (带并发控制)
-│       │   │   └── post_process.py # post_process
-│       │   └── workflow/
-│       │       ├── state.py      #   PipelineState (LangGraph 状态定义)
-│       │       └── graph.py      #   StateGraph 编译 + HITL 节点 + 路由
+│       │   └── workflow/         #   PipelineState + StateGraph
 │       ├── infrastructure/       # ── 基础设施层 ──
-│       │   ├── config/
-│       │   │   └── app_config.py #   AppConfig, PROJECT_ROOT
-│       │   ├── llm/
-│       │   │   └── client.py     #   ChatOpenAI 工厂 (Langfuse 追踪)
-│       │   ├── analyzer/
-│       │   │   ├── playwright_scraper.py  #   Playwright 页面抓取
-│       │   │   └── llm_analyzer.py        #   LLM → ContentModel + MaterialManifest
-│       │   ├── composer/
-│       │   │   ├── llm_composer.py        #   LLM → Script
-│       │   │   └── llm_evaluator.py       #   LLM → QAScorecard (4 维)
-│       │   ├── blueprint/
-│       │   │   ├── llm_composer.py        #   LLM → Blueprint (13 维)
-│       │   │   ├── llm_evaluator.py       #   LLM → QAScorecard (6 维)
-│       │   │   └── remotion_renderer.py   #   Blueprint JSON → npx remotion render
-│       │   ├── post_producer/
-│       │   │   ├── media_generator.py     #   python -m media_generator voiceover/bgm
-│       │   │   └── ffmpeg_mixer.py        #   audio_mixer.py → final.mp4
-│       │   └── task/
-│       │       ├── connection.py          #   SQLAlchemy async lazy engine
-│       │       ├── postgres_models.py     #   PipelineTaskDB ORM
-│       │       └── postgres_repository.py #   领域实体 ↔ JSONB 转换
-│       └── presentation/        # ── 展示层 ──
+│       │   ├── config/           #   AppConfig
+│       │   ├── llm/              #   ChatOpenAI 工厂
+│       │   ├── repo_analyzer/    #   Playwright 抓取 + LLM 分析
+│       │   ├── script_composer/  #   LLM 剧本创作 + 评估
+│       │   ├── visual_blueprint/ #   LLM 蓝图生成 + 评估 + Remotion 渲染封装
+│       │   │   ├── remotion_renderer.py   #   Blueprint JSON → npx remotion render
+│       │   │   └── scripts/               #   渲染工具脚本
+│       │   │       ├── render.py          #   Remotion 渲染封装 + Ken Burns + ffmpeg 工具
+│       │   │       └── search_lottie.py   #   Lottie 动画搜索
+│       │   ├── post_producer/             #   后期制作适配器
+│       │   │   ├── ffmpeg_mixer.py        #   audio_mixer → final.mp4
+│       │   │   ├── media_generator.py     #   TTS + BGM 生成
+│       │   │   └── scripts/               #   后期制作脚本
+│       │   │       ├── audio_mixer.py     #   音频混音 + 字幕烧录
+│       │   │       ├── gen_srt.py         #   SRT 生成（等比例缩放）
+│       │   │       ├── gen_srt_sentences.py # 句子级 SRT 生成
+│       │   │       ├── gen_voiceover_timed.py # 段级 TTS + 场景对齐
+│       │   │       ├── gen_voiceover_omnivoice.py # OmniVoice 声音克隆
+│       │   │       └── verify_output.py   #   素材完整性检查
+│       │   ├── qa_evaluator/     #   QA 评估提示词
+│       │   ├── github/           #   GitHub Trending 抓取 + 评分
+│       │   └── task/             #   PostgreSQL 持久化
+│       └── presentation/         # ── 展示层 ──
 │           ├── server.py         #   FastAPI 应用工厂
-│           ├── api/
-│           │   └── task_controller.py  #   REST: submit, get_status
-│           └── websocket/
-│               └── task_streamer.py    #   WS: stream, resume (HITL)
-└── frontend/                    # React + Vite + Tailwind 控制面板
-    └── src/
-        └── App.tsx              #   任务提交 + DAG 可视化 + HITL Modal + 日志流
+│           ├── api/              #   REST 端点
+│           └── websocket/        #   WS 流式推送
+├── frontend/                     # ── 前端 ──
+│   ├── src/                      #   React + Vite + Tailwind 控制面板
+│   │   └── App.tsx               #   任务提交 + DAG 可视化 + HITL Modal
+│   ├── remotion/                 #   Remotion 视频渲染引擎 (TypeScript/React)
+│   │   ├── src/
+│   │   │   ├── engine/           #   VideoComposer + SceneRenderer
+│   │   │   ├── components/       #   UI 组件库 (content/layout/decoration)
+│   │   │   └── compositions/     #   场景组合
+│   │   └── .claude/skills/remotion-best-practices/
+│   └── hyperframes/              #   HyperFrames HTML 视频渲染引擎
+│       ├── compositions/         #   HTML 场景组合
+│       └── elevenlabs/           #   TTS 规格
+└── output/                       #   管线产物输出目录
 ```
 
 ---
@@ -184,39 +177,33 @@ class PipelineState(TypedDict):
 
 ```
 analyze_repo
-  → content_model + material_manifest + project_category
+  → content_model + material_manifest + project_category + domain_analysis
 
 compose_script
-  → script (Script)
+  → script (Script, 3-10 分钟，LLM 自行决定时长)
 
-qa_script
-  → qa_script (QAScorecard)
-  → score >= 80 → generate_blueprint
-  → score < 80, retry < 3 → compose_script
-  → retry >= 3 → hitl_script_review (HITL)
+hitl_script_review (HITL — 始终触发)
+  → 前端展示完整 segments 表格（口播/时长/视觉指令/素材）
+  → approve → generate_blueprint
+  → reject (带 feedback) → compose_script (重试)
+  → abort → END
 
 generate_blueprint
   → blueprint (Blueprint)
+  → 同时写入 frontend/remotion/public/preview.json
 
-qa_blueprint
-  → qa_blueprint (QAScorecard)
-  → score >= 80 → render_video
-  → score < 80, retry < 3 → generate_blueprint
-  → retry >= 3 → hitl_blueprint_review (HITL)
+hitl_blueprint_review (HITL — 始终触发)
+  → 前端展示 Remotion Studio URL + 场景概览
+  → approve → audio_design
+  → reject (带 feedback) → generate_blueprint (重试)
+  → abort → END
 
-hitl_script_review / hitl_blueprint_review
-  → LangGraph interrupt() 暂停，等待人类决策
-  → skip / retry / abort / code_gen
+audio_design
+  → 逐段 TTS → actual_durations[] → voiceover.mp3 + bgm.mp3 + timeline.json + subtitles.srt
 
-agentic_code_gen
-  → 打包上下文发送给 Code Agent
-  → 完成后回退到 generate_blueprint
-
-render_video
-  → video_mp4_path (video.mp4)
-
-post_process
-  → voiceover_path + bgm_path + final_mp4_path (final.mp4)
+render_compose
+  → Blueprint 校准 (actual_durations) → Remotion render → video.mp4
+  → ffmpeg mix + burn → final.mp4
 ```
 
 ### 输出目录
@@ -259,15 +246,13 @@ video-pipeline 的基础设施层提供以下能力，每个能力由一个 doma
 | 适配器 | 接口 | 实现方式 |
 |--------|------|----------|
 | `LLMScriptComposer` | `ScriptComposer` | LLM + `with_structured_output(Script)`: 输入 ContentModel → 输出 Script |
-| `LLMScriptEvaluator` | `ScriptEvaluator` | LLM + `with_structured_output(QAResultSchema)`: 4 维加权评分 |
 
 ### 视觉蓝图 (`infrastructure/blueprint/`)
 
 | 适配器 | 接口 | 实现方式 |
 |--------|------|----------|
 | `LLMBlueprintComposer` | `BlueprintComposer` | LLM + `with_structured_output(Blueprint)`: 13 维编排 → 完整 ElementConfig 树 |
-| `LLMBlueprintEvaluator` | `BlueprintEvaluator` | LLM: 6 维视觉评估 (elements, animation, layout, outFrame, subtitles, cohesion) |
-| `RemotionVideoRenderer` | `VideoRenderer` | 序列化 Blueprint → JSON 文件 → 调用 `video-pipeline/video-renderer/scripts/render.py` |
+| `RemotionVideoRenderer` | `VideoRenderer` | 序列化 Blueprint → JSON 文件 → 调用 `backend/src/infrastructure/visual_blueprint/scripts/render.py` |
 
 ### 后期制作 (`infrastructure/post_producer/`)
 
@@ -312,7 +297,7 @@ qa_blueprint (fail ×3)
    Body: { context, missing_components, style_requirements }
    ```
 3. **Code Agent 执行**:
-   - 在 `video-pipeline/video-renderer/remotion/src/` 下编写新的 React 组件
+   - 在 `video-pipeline/frontend/remotion/src/` 下编写新的 React 组件
    - 注册到 `componentRegistry.ts`
    - 调试并确保 TypeScript 编译通过
    - 热更新 Remotion 开发服务器
@@ -414,26 +399,17 @@ video-pipeline/backend/pyproject.toml
 
 ---
 
-## QA 评估维度
+## HITL 人工审核
 
-### Script QA (4 维, 各 25%)
+所有关键节点均由人工审核替代自动评分：
 
-| 维度 | 权重 | 评估标准 |
-|------|------|----------|
-| Technical Accuracy | 25% | 技术描述准确，代码/架构描述精确 |
-| Narrative Pacing | 25% | 节奏流畅，分段时长均衡 |
-| Audience Engagement | 25% | 语言有吸引力，能抓住观众注意力 |
-| Structure Completeness | 25% | 有清晰的 intro/body/outro，有技术架构段 |
+### Script Review
+- 前端展示完整 segments 表格（序号/口播文本/时长/视觉指令/关联素材）
+- 显示总预估时长
+- 操作: Approve (继续) / Reject + feedback (重写) / Abort
 
-### Blueprint QA (6 维)
-
-| 维度 | 权重 | 评估标准 |
-|------|------|----------|
-| Element Completeness | 20% | 每个场景有完整的 ElementConfig 组件树 |
-| Animation Quality | 20% | 所有动画元素有正确的 inFrame/outFrame, stagger |
-| Flex Layout | 15% | 所有元素使用 flex-child，无绝对定位 |
-| Safe Exit | 15% | outFrame = durationInFrames - 15 |
-| Subtitle Quality | 15% | 按标点分句，非逐词切分 |
-| Visual Cohesion | 15% | 过渡、背景、主题色形成统一视觉语言 |
-
-**阈值**: 80/100 通过。最大重试 3 次。第 3 次失败触发 HITL。
+### Blueprint Review
+- 后端将 Blueprint JSON 写入 `frontend/remotion/public/preview.json`
+- 前端展示 Remotion Studio URL (`http://localhost:31200/`)，用户点击可在 Remotion Studio 中预览
+- 显示场景数量和总时长
+- 操作: Approve (继续) / Reject + feedback (重新生成) / Abort

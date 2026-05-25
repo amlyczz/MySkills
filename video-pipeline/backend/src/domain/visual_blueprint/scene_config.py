@@ -15,6 +15,7 @@ class SceneConfig(BaseModel):
     type: str = "generic"  # SceneType —宽松处理
     startFrame: int = 0
     durationInFrames: int = 90
+    narrativePhase: Optional[str] = None  # hook | context | deep_dive | climax | resolution
     description: Optional[str] = None
     background: Optional[Union[SceneBackground, None]] = None
     style: Optional[dict[str, Any]] = None

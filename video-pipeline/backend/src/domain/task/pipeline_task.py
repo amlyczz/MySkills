@@ -4,8 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from ..analyzer.entities import ContentModel, MaterialManifest, Script
-from ..blueprint.entities import Blueprint
+from ..repo_analyzer.entities import ContentModel, MaterialManifest, Script
+from ..visual_blueprint.entities import Blueprint
 from ..github_trending.entities import ScoredRepo
 from .pipeline_status import PipelineStatus
 from .qa_scorecard import QAScorecard

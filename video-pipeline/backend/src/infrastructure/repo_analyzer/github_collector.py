@@ -4,11 +4,9 @@ Uses the `gh` CLI and GitHub REST API to gather:
 - Repository metadata (stars, forks, topics, language, license)
 - Directory tree structure
 - README content (full, not truncated)
-- Key file contents (pyproject.toml, package.json, go.mod, Cargo.toml, main entry)
+- Core source files (up to 30, prioritized by importance)
 - Asset discovery (logo, screenshots, GIFs)
 - Screenshot capture via Playwright
-
-All collected materials are saved to the output directory and a MaterialManifest is produced.
 """
 
 import asyncio
@@ -26,6 +24,9 @@ from ...domain.repo_analyzer.entities import (
     CaptureInfo,
     MaterialMetadata,
     RepoRef,
+    RepoMetadata,
+    CoreFile,
+    DirectoryEntry,
 )
 
 
@@ -56,26 +57,48 @@ def _extract_repo_full_name(url: str) -> Optional[str]:
     return None
 
 
-class GitHubMaterialCollector:
-    """Collects real materials from a GitHub repository via API + Playwright.
+# Patterns to exclude from source file collection
+_EXCLUDE_PATTERNS = re.compile(
+    r"(" +
+    r"test|spec|__tests__|__mocks__|fixture|stub|mock|e2e|benchmark|perf|demo|example|sample|playground" +
+    r"|node_modules|vendor|dist|build|out|target|\.next|\.cache|\.git" +
+    r"|\.config\.|\.rc\.|webpack|vite|rollup|esbuild|babel|jest|vitest|mocha|cypress|playwright" +
+    r"|Dockerfile|docker-compose|\.env|\.eslintrc|\.prettierrc|\.editorconfig|tsconfig|jest\.config" +
+    r"|README|CHANGELOG|LICENSE|CONTRIBUTING|CODE_OF_CONDUCT" +
+    r")",
+    re.IGNORECASE,
+)
 
-    This replaces the old PlaywrightScraper which only grabbed README text.
-    """
+# File extensions considered source code
+_SOURCE_EXTENSIONS = {
+    ".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java", ".kt",
+    ".swift", ".c", ".cpp", ".h", ".hpp", ".cs", ".rb", ".php", ".scala",
+    ".hs", ".clj", ".ex", ".exs", ".erl", ".zig", ".nim",
+}
+
+# Priority directories
+_PRIORITY_DIRS = {"src/", "lib/", "cmd/", "pkg/", "internal/", "app/", "core/"}
+
+_MAX_SOURCE_FILES = 30
+_MAX_CHARS_PER_FILE = 4000
+
+
+class GitHubMaterialCollector:
+    """Collects real materials from a GitHub repository via API + Playwright."""
 
     async def collect(
         self,
         repo_url: str,
         output_dir: str,
         screenshot_path: str,
-    ) -> tuple[str, MaterialManifest, dict, dict]:
+    ) -> tuple[str, MaterialManifest, RepoMetadata]:
         """Collect all available materials from a GitHub repo.
 
         Returns:
-            (readme_text, material_manifest, repo_metadata, dependency_summary)
+            (readme_text, material_manifest, repo_metadata)
         """
         repo_full_name = _extract_repo_full_name(repo_url)
         if not repo_full_name:
-            # Fallback: use Playwright for non-GitHub URLs
             return await self._fallback_scrape(repo_url, screenshot_path)
 
         os.makedirs(output_dir, exist_ok=True)
@@ -83,66 +106,52 @@ class GitHubMaterialCollector:
 
         # ── 1. Repository metadata ──
         repo_meta = _run_gh_api(repo_full_name, "")
-        repo_metadata = {}
+        metadata = RepoMetadata()
         if repo_meta:
-            repo_metadata = {
-                "full_name": repo_meta.get("full_name", ""),
-                "description": repo_meta.get("description", ""),
-                "language": repo_meta.get("language", ""),
-                "stargazers_count": repo_meta.get("stargazers_count", 0),
-                "forks_count": repo_meta.get("forks_count", 0),
-                "topics": repo_meta.get("topics", []),
-                "license": repo_meta.get("license", {}).get("spdx_id", "") if repo_meta.get("license") else "",
-                "default_branch": repo_meta.get("default_branch", "main"),
-                "homepage": repo_meta.get("homepage", ""),
-            }
+            metadata = RepoMetadata(
+                full_name=repo_meta.get("full_name", ""),
+                description=repo_meta.get("description", ""),
+                language=repo_meta.get("language", ""),
+                stargazers_count=repo_meta.get("stargazers_count", 0),
+                forks_count=repo_meta.get("forks_count", 0),
+                topics=repo_meta.get("topics", []),
+                license=repo_meta.get("license", {}).get("spdx_id", "") if repo_meta.get("license") else "",
+                default_branch=repo_meta.get("default_branch", "main"),
+                homepage=repo_meta.get("homepage", ""),
+            )
 
-        # ── 2. README content (full, not truncated) ──
+        # ── 2. README content ──
         readme_text = await self._fetch_readme(repo_full_name, output_dir, materials)
 
         # ── 3. Directory tree ──
         dir_tree = await self._fetch_directory_tree(repo_full_name)
+        metadata.directory_tree = dir_tree
 
-        # ── 4. Key configuration files ──
-        await self._fetch_config_files(repo_full_name, output_dir, materials)
-
-        # ── 5. Core source files ──
+        # ── 4. Core source files (up to 30) ──
         core_files = await self._fetch_core_source_files(
             repo_full_name, dir_tree, output_dir, materials,
         )
+        metadata.core_files = core_files
 
-        # ── 6. Dependency summary (parses config files collected in step 4) ──
-        dependency_summary = await self._fetch_dependency_summary(output_dir)
-
-        # ── 7. Asset discovery (images, GIFs) ──
+        # ── 5. Asset discovery ──
         await self._discover_assets(repo_full_name, output_dir, materials)
 
-        # ── 8. Page screenshot ──
+        # ── 6. Page screenshot ──
         await self._capture_screenshot(repo_url, screenshot_path, materials)
 
-        # ── 9. Build MaterialManifest ──
+        # ── 7. Build MaterialManifest ──
         manifest = MaterialManifest(
             version="2",
-            repo=RepoRef(
-                full_name=repo_full_name,
-                url=repo_url,
-            ),
+            repo=RepoRef(full_name=repo_full_name, url=repo_url),
             materials=materials,
         )
-
-        # Save manifest
         manifest.to_json_file(os.path.join(output_dir, "material_manifest.json"))
 
-        # Attach dir_tree and core_files to metadata for downstream consumption
-        repo_metadata["directory_tree"] = dir_tree
-        repo_metadata["core_files"] = core_files
-
-        return readme_text, manifest, repo_metadata, dependency_summary
+        return readme_text, manifest, metadata
 
     async def _fetch_readme(
         self, repo_full_name: str, output_dir: str, materials: list[Material]
     ) -> str:
-        """Fetch README content via GitHub API."""
         data = _run_gh_api(repo_full_name, "readme")
         if not data:
             return ""
@@ -154,7 +163,6 @@ class GitHubMaterialCollector:
         else:
             readme_text = content_b64
 
-        # Save README to output dir
         readme_path = os.path.join(output_dir, "README.md")
         with open(readme_path, "w", encoding="utf-8") as f:
             f.write(readme_text)
@@ -170,32 +178,82 @@ class GitHubMaterialCollector:
 
         return readme_text
 
-    async def _fetch_directory_tree(self, repo_full_name: str) -> list[dict]:
-        """Fetch the repository directory tree."""
+    async def _fetch_directory_tree(self, repo_full_name: str) -> list[DirectoryEntry]:
         data = _run_gh_api(repo_full_name, "git/trees/HEAD?recursive=1")
         if not data:
             return []
 
         tree = data.get("tree", [])
-        # Return a simplified version (path + type)
         return [
-            {"path": item.get("path", ""), "type": item.get("type", "")}
-            for item in tree[:500]  # Limit to 500 entries
+            DirectoryEntry(path=item.get("path", ""), type=item.get("type", ""))
+            for item in tree[:500]
         ]
 
-    async def _fetch_config_files(
-        self, repo_full_name: str, output_dir: str, materials: list[Material]
-    ) -> None:
-        """Fetch key configuration/entry files."""
-        config_targets = [
-            "package.json", "pyproject.toml", "Cargo.toml", "go.mod",
-            "setup.py", "requirements.txt", "Gemfile",
-        ]
-        configs_dir = os.path.join(output_dir, "configs")
-        os.makedirs(configs_dir, exist_ok=True)
+    def _score_source_file(self, path: str) -> int:
+        path_lower = path.lower()
 
-        for target in config_targets:
-            data = _run_gh_api(repo_full_name, f"contents/{target}")
+        if _EXCLUDE_PATTERNS.search(path_lower):
+            return -1
+
+        ext = os.path.splitext(path)[1].lower()
+        if ext not in _SOURCE_EXTENSIONS:
+            return -1
+
+        score = 0
+
+        basename = os.path.basename(path_lower)
+        entry_points = {
+            "index.ts", "index.tsx", "index.js", "index.jsx",
+            "main.ts", "main.tsx", "main.js", "main.py",
+            "app.ts", "app.tsx", "app.py", "app.go",
+            "lib.ts", "lib.rs", "mod.rs",
+            "cmd.py", "cli.ts", "cli.py",
+            "__init__.py", "__main__.py",
+            "server.ts", "server.py",
+        }
+        if basename in entry_points:
+            score += 100
+
+        for pdir in _PRIORITY_DIRS:
+            if path.startswith(pdir):
+                score += 30
+                break
+
+        depth = path.count("/")
+        if depth <= 1:
+            score += 20
+        elif depth <= 3:
+            score += 10
+
+        if ext in (".py", ".ts", ".tsx", ".go"):
+            score += 5
+
+        return score
+
+    async def _fetch_core_source_files(
+        self,
+        repo_full_name: str,
+        dir_tree: list[DirectoryEntry],
+        output_dir: str,
+        materials: list[Material],
+    ) -> list[CoreFile]:
+        scored_files: list[tuple[int, str]] = []
+        for item in dir_tree:
+            if item.type != "blob":
+                continue
+            score = self._score_source_file(item.path)
+            if score > 0:
+                scored_files.append((score, item.path))
+
+        scored_files.sort(key=lambda x: -x[0])
+        candidates = [path for _, path in scored_files[:_MAX_SOURCE_FILES]]
+
+        sources_dir = os.path.join(output_dir, "sources")
+        os.makedirs(sources_dir, exist_ok=True)
+
+        collected: list[CoreFile] = []
+        for rel_path in candidates:
+            data = _run_gh_api(repo_full_name, f"contents/{rel_path}")
             if not data or data.get("type") != "file":
                 continue
 
@@ -208,59 +266,60 @@ class GitHubMaterialCollector:
             except Exception:
                 continue
 
-            file_path = os.path.join(configs_dir, target)
+            truncated = content[:_MAX_CHARS_PER_FILE]
+
+            safe_name = rel_path.replace("/", "_")
+            file_path = os.path.join(sources_dir, safe_name)
             with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
+                f.write(truncated)
 
             materials.append(Material(
-                id=f"config_{target.replace('.', '_')}",
+                id=f"source_{safe_name.replace('.', '_')}",
                 type="code",
                 path=file_path,
-                source=MaterialSource(type="gh_api", url=f"https://github.com/{repo_full_name}/blob/HEAD/{target}"),
+                source=MaterialSource(
+                    type="gh_api",
+                    url=f"https://github.com/{repo_full_name}/blob/HEAD/{rel_path}",
+                ),
                 capture=CaptureInfo(method="gh_api"),
-                metadata=MaterialMetadata(language=self._detect_language(target)),
+                metadata=MaterialMetadata(language=self._detect_language(rel_path)),
             ))
+
+            collected.append(CoreFile(path=rel_path, content=truncated))
+
+        print(f"[GitHubCollector] Collected {len(collected)} core source files")
+        return collected
 
     async def _discover_assets(
         self, repo_full_name: str, output_dir: str, materials: list[Material]
     ) -> None:
-        """Discover image/GIF assets and record them as candidates (Lazy Fetching)."""
         candidates = []
-        
-        # Search README for image references and context
         readme_path = os.path.join(output_dir, "README.md")
-        readme_images = {}
+        readme_images: dict[str, dict[str, str]] = {}
         if os.path.exists(readme_path):
             with open(readme_path, "r", encoding="utf-8") as f:
                 readme_text = f.read()
-                
+
             lines = readme_text.splitlines()
             for i, line in enumerate(lines):
-                # find markdown images ![alt](url)
                 for match in re.finditer(r'!\[(.*?)\]\(([^)]+)\)', line):
                     alt_text = match.group(1)
                     url = match.group(2)
                     if url.startswith("http") or url.startswith("data:"):
                         continue
-                    
                     start_idx = max(0, i - 3)
                     end_idx = min(len(lines), i + 3)
-                    context_text = "\n".join(lines[start_idx:end_idx])
-                    readme_images[url] = {"alt": alt_text, "context": context_text}
-                
-                # find html images <img src="url" alt="alt">
+                    readme_images[url] = {"alt": alt_text, "context": "\n".join(lines[start_idx:end_idx])}
+
                 for match in re.finditer(r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>', line):
                     url = match.group(1)
                     if url.startswith("http") or url.startswith("data:"):
                         continue
-                    
                     alt_match = re.search(r'alt=["\']([^"\']*)["\']', match.group(0))
                     alt_text = alt_match.group(1) if alt_match else ""
-                    
                     start_idx = max(0, i - 3)
                     end_idx = min(len(lines), i + 3)
-                    context_text = "\n".join(lines[start_idx:end_idx])
-                    readme_images[url] = {"alt": alt_text, "context": context_text}
+                    readme_images[url] = {"alt": alt_text, "context": "\n".join(lines[start_idx:end_idx])}
 
         asset_paths = [
             "logo.png", "logo.svg", "logo.jpg",
@@ -268,10 +327,9 @@ class GitHubMaterialCollector:
             "assets/logo.png", "assets/logo.svg",
             "img/logo.png", "images/logo.png",
         ]
-        
         all_targets = list(dict.fromkeys(asset_paths + list(readme_images.keys())))
 
-        for rel_path in all_targets[:30]:  # Limit candidates
+        for rel_path in all_targets[:30]:
             data = _run_gh_api(repo_full_name, f"contents/{rel_path}")
             if not data or data.get("type") != "file":
                 continue
@@ -280,16 +338,14 @@ class GitHubMaterialCollector:
             if not download_url:
                 continue
 
-            # Record candidate instead of downloading
             img_info = readme_images.get(rel_path, {"alt": "Project Asset", "context": ""})
             candidates.append({
                 "path": rel_path,
                 "download_url": download_url,
                 "alt": img_info["alt"],
-                "context": img_info["context"]
+                "context": img_info["context"],
             })
 
-        # Save candidates
         candidate_path = os.path.join(output_dir, "candidate_materials.json")
         with open(candidate_path, "w", encoding="utf-8") as f:
             json.dump(candidates, f, indent=2, ensure_ascii=False)
@@ -297,7 +353,6 @@ class GitHubMaterialCollector:
     async def _capture_screenshot(
         self, repo_url: str, screenshot_path: str, materials: list[Material]
     ) -> None:
-        """Capture a full-page screenshot of the GitHub repo page."""
         try:
             from playwright.async_api import async_playwright
             async with async_playwright() as p:
@@ -320,8 +375,7 @@ class GitHubMaterialCollector:
 
     async def _fallback_scrape(
         self, repo_url: str, screenshot_path: str
-    ) -> tuple[str, MaterialManifest, dict, dict]:
-        """Fallback for non-GitHub URLs: Playwright-only scraping."""
+    ) -> tuple[str, MaterialManifest, RepoMetadata]:
         readme_text = ""
         try:
             from playwright.async_api import async_playwright
@@ -348,295 +402,14 @@ class GitHubMaterialCollector:
                 )
             ]
         )
-        return readme_text, manifest, {}, {}
-
-    # ── Core source file patterns (ordered by priority) ──
-    _CORE_FILE_PATTERNS: list[str] = [
-        "src/index.ts", "src/index.tsx", "src/index.js", "src/index.jsx",
-        "src/main.ts", "src/main.tsx", "src/main.js", "src/main.py",
-        "src/app.ts", "src/app.tsx", "src/app.py",
-        "src/lib.ts", "src/lib.rs",
-        "lib/index.ts", "lib/index.js",
-        "cmd/main.go", "main.go",
-        "app.py", "manage.py", "wsgi.py", "asgi.py",
-        "index.ts", "index.js",
-    ]
-
-    async def _fetch_core_source_files(
-        self,
-        repo_full_name: str,
-        dir_tree: list[dict],
-        output_dir: str,
-        materials: list[Material],
-    ) -> list[dict[str, str]]:
-        """Read up to 5 core source files identified from the directory tree.
-
-        Returns a list of dicts with keys 'path' and 'content' (truncated to
-        2000 chars each for LLM context budget).
-        """
-        # Build a set of all file paths in the tree for fast lookup
-        tree_paths = {item["path"] for item in dir_tree if item.get("type") == "blob"}
-
-        # Find which of our candidate patterns actually exist in the repo
-        candidates = [p for p in self._CORE_FILE_PATTERNS if p in tree_paths]
-
-        # If none matched, try a fuzzy search for common entry points
-        if not candidates:
-            fuzzy_patterns = [
-                r"src/index\..+", r"src/main\..+", r"src/app\..+",
-                r"lib/index\..+", r"cmd/main\.go", r"main\.go",
-                r"app\.py", r"manage\.py", r"index\.ts", r"index\.js",
-            ]
-            for item in dir_tree:
-                path = item.get("path", "")
-                if item.get("type") != "blob":
-                    continue
-                for pat in fuzzy_patterns:
-                    if re.match(pat, path):
-                        candidates.append(path)
-                        break
-                if len(candidates) >= 5:
-                    break
-
-        # Limit to 5 files
-        candidates = candidates[:5]
-
-        sources_dir = os.path.join(output_dir, "sources")
-        os.makedirs(sources_dir, exist_ok=True)
-
-        collected: list[dict[str, str]] = []
-        for rel_path in candidates:
-            data = _run_gh_api(repo_full_name, f"contents/{rel_path}")
-            if not data or data.get("type") != "file":
-                continue
-
-            content_b64 = data.get("content", "")
-            if not content_b64:
-                continue
-
-            try:
-                content = base64.b64decode(content_b64).decode("utf-8", errors="replace")
-            except Exception:
-                continue
-
-            # Truncate to 2000 chars for LLM context budget
-            truncated = content[:2000]
-
-            # Save to sources directory
-            safe_name = rel_path.replace("/", "_")
-            file_path = os.path.join(sources_dir, safe_name)
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(truncated)
-
-            materials.append(Material(
-                id=f"source_{safe_name.replace('.', '_')}",
-                type="code",
-                path=file_path,
-                source=MaterialSource(
-                    type="gh_api",
-                    url=f"https://github.com/{repo_full_name}/blob/HEAD/{rel_path}",
-                ),
-                capture=CaptureInfo(method="gh_api"),
-                metadata=MaterialMetadata(
-                    language=self._detect_language(rel_path),
-                ),
-            ))
-
-            collected.append({"path": rel_path, "content": truncated})
-
-        return collected
-
-    async def _fetch_dependency_summary(self, output_dir: str) -> dict:
-        """Parse dependency files already collected in output_dir/configs/.
-
-        Returns a dict like:
-            {"language": "Python", "frameworks": ["FastAPI"], "key_deps": ["langchain", "pydantic"]}
-        """
-        configs_dir = os.path.join(output_dir, "configs")
-        summary: dict[str, list[str]] = {"frameworks": [], "key_deps": []}
-        language = ""
-        frameworks: list[str] = []
-        key_deps: list[str] = []
-
-        # ── package.json ──
-        pkg_path = os.path.join(configs_dir, "package.json")
-        if os.path.exists(pkg_path):
-            language = language or "JavaScript/TypeScript"
-            try:
-                with open(pkg_path, "r", encoding="utf-8") as f:
-                    pkg = json.load(f)
-                all_deps = list(pkg.get("dependencies", {}).keys()) + list(
-                    pkg.get("devDependencies", {}).keys()
-                )
-                # Classify frameworks vs regular deps
-                framework_names = {
-                    "react", "vue", "next", "nuxt", "svelte", "express",
-                    "fastify", "nestjs", "@nestjs/core", "angular", "@angular/core",
-                    "remotion", "@remotion/cli",
-                }
-                for dep in all_deps:
-                    dep_lower = dep.lower()
-                    if any(fw in dep_lower for fw in framework_names):
-                        frameworks.append(dep)
-                    else:
-                        key_deps.append(dep)
-            except (json.JSONDecodeError, OSError):
-                pass
-
-        # ── pyproject.toml ──
-        pyproject_path = os.path.join(configs_dir, "pyproject.toml")
-        if os.path.exists(pyproject_path):
-            language = language or "Python"
-            try:
-                with open(pyproject_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                # Simple TOML parsing for dependencies section
-                in_deps = False
-                for line in content.splitlines():
-                    stripped = line.strip()
-                    if stripped.startswith("[project]") or stripped.startswith("[tool.poetry]"):
-                        in_deps = False
-                    if stripped.startswith("dependencies") and "=" in stripped:
-                        in_deps = True
-                        # Inline format: dependencies = ["foo", "bar"]
-                        if "[" in stripped:
-                            deps_str = stripped[stripped.index("[") + 1 : stripped.rindex("]")]
-                            for dep in deps_str.split(","):
-                                dep = dep.strip().strip("\"'")
-                                if dep:
-                                    self._classify_python_dep(dep, frameworks, key_deps)
-                        continue
-                    if in_deps:
-                        if stripped.startswith("["):
-                            in_deps = False
-                            continue
-                        # Poetry format: dep = "^1.0" or dep = {version = "^1.0", ...}
-                        match = re.match(r'^([a-zA-Z0-9_-]+)\s*=', stripped)
-                        if match:
-                            dep_name = match.group(1)
-                            if dep_name.lower() not in ("python", "version", "optional"):
-                                self._classify_python_dep(dep_name, frameworks, key_deps)
-            except OSError:
-                pass
-
-        # ── requirements.txt ──
-        req_path = os.path.join(configs_dir, "requirements.txt")
-        if os.path.exists(req_path):
-            language = language or "Python"
-            try:
-                with open(req_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith("#") and not line.startswith("-"):
-                            dep_name = re.split(r'[><=!~\[]', line)[0].strip()
-                            if dep_name:
-                                self._classify_python_dep(dep_name, frameworks, key_deps)
-            except OSError:
-                pass
-
-        # ── go.mod ──
-        gomod_path = os.path.join(configs_dir, "go.mod")
-        if os.path.exists(gomod_path):
-            language = language or "Go"
-            try:
-                with open(gomod_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                in_require = False
-                for line in content.splitlines():
-                    stripped = line.strip()
-                    if stripped == "require (":
-                        in_require = True
-                        continue
-                    if in_require:
-                        if stripped == ")":
-                            in_require = False
-                            continue
-                        parts = stripped.split()
-                        if parts:
-                            dep = parts[0]
-                            go_frameworks = {
-                                "github.com/gin-gonic/gin",
-                                "github.com/gofiber/fiber",
-                                "github.com/labstack/echo",
-                                "github.com/go-chi/chi",
-                                "github.com/gorilla/mux",
-                            }
-                            if any(fw in dep for fw in go_frameworks):
-                                frameworks.append(dep)
-                            else:
-                                key_deps.append(dep)
-                    elif stripped.startswith("require "):
-                        # Single-line require
-                        parts = stripped[len("require "):].split()
-                        if parts:
-                            key_deps.append(parts[0])
-            except OSError:
-                pass
-
-        # ── Cargo.toml ──
-        cargo_path = os.path.join(configs_dir, "Cargo.toml")
-        if os.path.exists(cargo_path):
-            language = language or "Rust"
-            try:
-                with open(cargo_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                in_deps = False
-                for line in content.splitlines():
-                    stripped = line.strip()
-                    if stripped == "[dependencies]":
-                        in_deps = True
-                        continue
-                    if stripped.startswith("["):
-                        in_deps = False
-                        continue
-                    if in_deps:
-                        match = re.match(r'^([a-zA-Z0-9_-]+)\s*=', stripped)
-                        if match:
-                            dep_name = match.group(1)
-                            rust_frameworks = {"tokio", "actix-web", "axum", "warp", "rocket"}
-                            if dep_name.lower() in rust_frameworks:
-                                frameworks.append(dep_name)
-                            else:
-                                key_deps.append(dep_name)
-            except OSError:
-                pass
-
-        return {
-            "language": language,
-            "frameworks": list(dict.fromkeys(frameworks)),
-            "key_deps": list(dict.fromkeys(key_deps))[:30],
-        }
-
-    @staticmethod
-    def _classify_python_dep(
-        dep_name: str, frameworks: list[str], key_deps: list[str]
-    ) -> None:
-        """Classify a Python dependency as framework or regular dep."""
-        python_frameworks = {
-            "fastapi", "flask", "django", "starlette", "sanic",
-            "tornado", "aiohttp", "celery", "langchain", "langchain-core",
-            "pydantic", "sqlalchemy", "scrapy", "requests", "httpx",
-        }
-        if dep_name.lower() in python_frameworks:
-            frameworks.append(dep_name)
-        else:
-            key_deps.append(dep_name)
+        return readme_text, manifest, RepoMetadata()
 
     @staticmethod
     def _detect_language(filename: str) -> str:
         lang_map = {
-            ".json": "json",
-            ".toml": "toml",
-            ".py": "python",
-            ".txt": "text",
-            ".mod": "go",
-            ".cfg": "ini",
-            ".ts": "typescript",
-            ".tsx": "typescript",
-            ".js": "javascript",
-            ".jsx": "javascript",
-            ".go": "go",
-            ".rs": "rust",
+            ".json": "json", ".toml": "toml", ".py": "python", ".txt": "text",
+            ".mod": "go", ".cfg": "ini", ".ts": "typescript", ".tsx": "typescript",
+            ".js": "javascript", ".jsx": "javascript", ".go": "go", ".rs": "rust",
         }
         ext = os.path.splitext(filename)[1].lower()
         return lang_map.get(ext, "")

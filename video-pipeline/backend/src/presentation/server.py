@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.task_controller import router as task_controller_router
 from .websocket.task_streamer import router as task_streamer_router
 from .api.trending_controller import router as trending_controller_router
+from .api.project_controller import router as project_controller_router
 
 def create_app() -> FastAPI:
     """
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
     app.include_router(task_controller_router)
     app.include_router(task_streamer_router)
     app.include_router(trending_controller_router)
+    app.include_router(project_controller_router)
     
     return app
 

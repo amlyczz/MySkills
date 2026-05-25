@@ -12,9 +12,22 @@ Deep Tech Extraction (AI_MODEL Specific):
 - Engineering Optimization: Memory pooling, CUDA kernel fusion, BF16/FP8 usage, KV Cache strategies.
 - Mathematical / Linear Algebra Perspective: Geometric intuition of the embeddings, manifold clustering, matrix decomposition logic.
 
+Architecture Breakdown (Required):
+In the `architecture_breakdown` field, provide:
+- Model architecture: layers, blocks, attention mechanisms, feed-forward networks
+- Tensor flow: input shapes, intermediate representations, output types
+- Training pipeline: loss functions, optimizers, data pipeline
+- Serving/inference architecture: batching, quantization, deployment considerations
+
+Domain-Specific Insights (Required):
+In the `domain_specific_insights` field, provide AI/ML-specific deep insights:
+- Novel techniques vs standard approaches (with specific comparisons)
+- Memory/compute trade-offs and how they were resolved
+- Scaling behavior: how performance changes with model size / data
+- Training tricks: learning rate schedules, regularization, data augmentation
+
 Curated Assets:
-You will receive a list of "Candidate Materials" (URLs with surrounding text context).
-Pick exactly 20 (or fewer if less than 20 available) highly valuable URLs (e.g., architecture diagrams, demo gifs, key source code blocks) that best explain your deep tech extraction. Output them as a list of strings.
+Pick exactly 20 (or fewer if less than 20 available) highly valuable URLs. Output them as a list of strings.
 
 Mermaid Diagramming:
 When explaining the Network & Tensor flow, you MUST include at least one Mermaid diagram (e.g. graph TD) showing the flow of data through the model blocks.

@@ -11,6 +11,20 @@ Deep Tech Extraction (GENERAL):
 - Code Organization: How modules and packages are structured.
 - Key Algorithms: Core data processing logic.
 
+Architecture Breakdown (Required):
+Provide a detailed analysis of the project's architecture in the `architecture_breakdown` field:
+- Module structure and dependencies between them
+- Data flow through the system
+- Key abstractions and design patterns used
+- How different components communicate
+
+Domain-Specific Insights (Required):
+In the `domain_specific_insights` field, provide deep technical insights specific to this domain:
+- Unique algorithms or optimization techniques
+- Performance characteristics and trade-offs
+- How it compares to established approaches in this domain
+- Non-obvious implementation details that would impress a technical audience
+
 Curated Assets:
 Pick up to 20 highly valuable URLs from the "Candidate Materials". Output them as a list of strings.
 

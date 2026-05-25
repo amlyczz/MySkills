@@ -1,6 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 
+from ...domain.repo_analyzer.entities import RepoRef
 from .timeline_config import GlobalTimelineConfig
 from .timeline_segment import TimelineSegment
 
@@ -18,7 +19,7 @@ class SubtitleEntry(BaseModel):
 class TimelineModel(BaseModel):
     """timeline.json top-level model."""
     version: str = "2"
-    repo: Optional[dict] = None
+    repo: Optional[RepoRef] = None
     global_: GlobalTimelineConfig = Field(default_factory=GlobalTimelineConfig, alias="global")
     segments: list[TimelineSegment] = Field(default_factory=list)
     chapters: list[ChapterMarker] = Field(default_factory=list)

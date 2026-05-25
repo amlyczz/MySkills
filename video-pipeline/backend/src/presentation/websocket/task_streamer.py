@@ -1,5 +1,6 @@
 import asyncio
 from typing import Any
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from langgraph.types import Command
 
@@ -8,9 +9,7 @@ from ...infrastructure.task.connection import _get_engine, _get_session_maker
 from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
 from ...infrastructure.repo_analyzer.llm_analyzer import LLMRepoAnalyzer
 from ...infrastructure.script_composer.llm_composer import LLMScriptComposer
-from ...infrastructure.script_composer.llm_evaluator import LLMScriptEvaluator
 from ...infrastructure.visual_blueprint.llm_composer import LLMBlueprintComposer
-from ...infrastructure.visual_blueprint.llm_evaluator import LLMBlueprintEvaluator
 from ...infrastructure.visual_blueprint.remotion_renderer import RemotionVideoRenderer
 from ...infrastructure.post_producer.media_generator import MediaGenerator
 from ...infrastructure.post_producer.ffmpeg_mixer import FFmpegAudioMixer
@@ -35,7 +34,6 @@ def _get_checkpointer():
         from ...infrastructure.config.app_config import settings
         if not settings.database_url:
             return None
-        # AsyncPostgresSaver.from_conn_string handles connection pooling
         return AsyncPostgresSaver.from_conn_string(settings.database_url)
     except Exception as e:
         print(f"[WebSocket] Checkpointer unavailable: {e}")
@@ -44,25 +42,15 @@ def _get_checkpointer():
 
 @router.websocket("/stream/{task_id}")
 async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project_type: str = "educational") -> None:
-    """WebSocket endpoint that compiles the StateGraph and streams steps live.
-
-    Handles three types of events:
-    - state_change: Node started/completed
-    - log: LLM token stream
-    - hitl: Pipeline paused for human decision
-    - pipeline_end / error: Terminal events
-    """
+    """WebSocket endpoint that compiles the StateGraph and streams steps live."""
     await websocket.accept()
 
     session_maker = _get_session_maker()
     async with session_maker() as session:
-        # Resolve concrete adapters
         repository = PostgresPipelineTaskRepository(session)
         analyzer = LLMRepoAnalyzer()
         composer = LLMScriptComposer()
         blueprint_composer = LLMBlueprintComposer()
-        script_evaluator = LLMScriptEvaluator()
-        blueprint_evaluator = LLMBlueprintEvaluator()
         video_renderer = RemotionVideoRenderer()
         media_gen = MediaGenerator()
         audio_mixer = FFmpegAudioMixer()
@@ -73,8 +61,6 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
             analyzer=analyzer,
             composer=composer,
             blueprint_composer=blueprint_composer,
-            script_evaluator=script_evaluator,
-            blueprint_evaluator=blueprint_evaluator,
             video_renderer=video_renderer,
             voiceover_gen=media_gen,
             bgm_gen=media_gen,
@@ -112,9 +98,11 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
         }
 
         all_nodes = [
-            "analyze_repo", "compose_script", "qa_script",
-            "generate_blueprint", "qa_blueprint",
-            "hitl_script_review", "hitl_blueprint_review", "agentic_code_gen",
+            "analyze_repo", "compose_script",
+            "hitl_script_review",
+            "generate_diagrams",
+            "generate_blueprint",
+            "hitl_blueprint_review",
             "audio_design", "render_compose",
         ]
 
@@ -150,7 +138,6 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
         except WebSocketDisconnect:
             print(f"[WebSocket] Client disconnected for task {task_id}")
         except Exception as e:
-            # Check if this is an interrupt (HITL pause)
             error_str = str(e)
             if "interrupt" in error_str.lower():
                 await websocket.send_json({
@@ -173,7 +160,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
 async def resume_task(websocket: WebSocket, task_id: str) -> None:
     """WebSocket endpoint to resume a paused (HITL) task with a human decision.
 
-    Client sends: {"action": "skip" | "retry" | "abort" | "code_gen"}
+    Client sends: {"action": "approve" | "reject" | "abort", "feedback": "..."}
     """
     await websocket.accept()
 
@@ -191,7 +178,6 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
 
         config = {"configurable": {"thread_id": task_id}}
 
-        # Resume the graph with the human decision
         async for event in graph.astream_events(
             Command(resume={"action": action, "feedback": feedback, "repo_url": repo_url}),
             config=config,

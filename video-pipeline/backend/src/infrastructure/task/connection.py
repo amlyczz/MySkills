@@ -61,7 +61,7 @@ async_session_maker = _LazySessionMaker()
 
 
 async def get_db_session():
-    async with _get_session_maker() as session:
+    async with _get_session_maker()() as session:
         yield session
 
 

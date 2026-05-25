@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from typing import Optional
 
-from .entities import ContentModel, DomainAnalysis, MaterialManifest, ProjectCategory, TechDomain
+from .entities import ContentModel, DomainAnalysis, MaterialManifest, ProjectCategory, RepoMetadata, TechDomain
 
 
 class RepoScraper(ABC):
@@ -34,7 +34,7 @@ class RepoAnalyzer(ABC):
 
     @abstractmethod
     async def analyze_domain(
-        self, content_model: ContentModel, repo_metadata: Optional[dict] = None,
+        self, content_model: ContentModel, repo_metadata: Optional[RepoMetadata] = None,
     ) -> DomainAnalysis:
         """Analyze domain architecture, build audience profile, and select narrative angle."""
         pass

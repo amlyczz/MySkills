@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from ..analyzer.entities import ContentModel, DomainAnalysis, Script
+from ..repo_analyzer.entities import ContentModel, DomainAnalysis, Script
 from .entities import Blueprint
 from ..task.entities import QAScorecard
 

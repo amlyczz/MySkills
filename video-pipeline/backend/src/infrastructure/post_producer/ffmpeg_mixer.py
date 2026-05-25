@@ -4,7 +4,6 @@ import subprocess
 import sys
 from pathlib import Path
 from ...domain.post_producer.interfaces import AudioMixer
-from ..config.app_config import PROJECT_ROOT
 
 class FFmpegAudioMixer(AudioMixer):
 
@@ -20,7 +19,7 @@ class FFmpegAudioMixer(AudioMixer):
         """
         Executes custom audio_mixer.py in post-producer.
         """
-        mixer_script = str(PROJECT_ROOT / "post-producer" / "scripts" / "audio_mixer.py")
+        mixer_script = str(Path(__file__).resolve().parent / "scripts" / "audio_mixer.py")
         
         cmd = [
             sys.executable, mixer_script,

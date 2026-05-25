@@ -1,6 +1,8 @@
 from typing import Optional
+
 from langchain_core.prompts import ChatPromptTemplate
-from ...domain.repo_analyzer.entities import ContentModel, Script, ScriptSegment
+from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis
+from ...domain.script_composer.entities import Script
 from ...domain.script_composer.interfaces import ScriptComposer
 from ..llm.client import get_llm_client
 from ..llm.prompt_loader import load_prompt
@@ -31,22 +33,45 @@ class LLMScriptComposer(ScriptComposer):
         architecture = encyclopedia.architecture_breakdown if encyclopedia else ""
         domain_specific_insights = encyclopedia.domain_specific_insights if encyclopedia else ""
 
-        # Format curated materials into a readable list
-        curated_materials_text = "\n".join(content.curated_materials) if content.curated_materials else "No explicit assets provided. Use Mermaid instead."
+        # Supplement with source code insight if available
+        if content.source_code_insight:
+            sci = content.source_code_insight
+            if sci.architecture and not architecture:
+                architecture = sci.architecture
+            if sci.highlights:
+                extra = "\n\nSource Code Highlights: " + "; ".join(sci.highlights)
+                domain_specific_insights = (domain_specific_insights + extra).strip()
+
+        # Format curated materials
+        curated_materials_text = (
+            "\n".join(content.curated_materials)
+            if content.curated_materials
+            else "No explicit assets provided. Use Mermaid diagrams for architecture visualization."
+        )
 
         audience_primary = domain_analysis.audience.primary if domain_analysis else "General Developers"
         audience_expertise = domain_analysis.audience.expertise_level if domain_analysis else "Intermediate"
         technical_depth = domain_analysis.technical_depth if domain_analysis else "Moderate"
         narrative_angle = domain_analysis.narrative.angle if domain_analysis else "Educational Breakdown"
 
-        # Inject QA feedback if available
+        # Inject HITL feedback
         feedback_section = ""
         if qa_feedback:
-            feedback_section = f"\n{qa_feedback}\n\nThis is a RETRY. Address the deficiencies above."
+            feedback_section = (
+                f"\n## Human Review Feedback\n"
+                f"The reviewer gave the following feedback on the previous version:\n\n"
+                f"{qa_feedback}\n\n"
+                f"You MUST address this feedback in your new version."
+            )
 
         chain = prompt | self.llm.with_structured_output(Script)
         script: Script = await chain.ainvoke({
-            "target_duration": target_duration,
+            "target_duration": "180-600 (3-10 minutes), decide based on project complexity and depth of content",
+            "hook_pct": "~5-8%",
+            "context_pct": "~10-15%",
+            "deep_dive_pct": "~55-70%",
+            "climax_pct": "~8-12%",
+            "resolution_pct": "~3-5%",
             "audience_primary": audience_primary,
             "audience_expertise": audience_expertise,
             "technical_depth": technical_depth,

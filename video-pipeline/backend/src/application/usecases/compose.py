@@ -27,7 +27,7 @@ class ComposeScriptUseCase:
         domain_analysis = state.get("domain_analysis")
         script = await self.composer.compose_script(
             content_model,
-            target_duration=60,
+            target_duration=0,
             domain_analysis=domain_analysis,
             qa_feedback=qa_feedback
         )

@@ -115,6 +115,73 @@ def _add_sfx_to_scene(scene: SceneConfig) -> None:
         scene.sfx = sfx_list
 
 
+def _apply_decoration_layers(scene: SceneConfig, theme_colors: dict) -> None:
+    """Automatically add decoration elements based on narrative phase and theme."""
+    from .schemas import _decoration_overlay_layout
+
+    phase = getattr(scene, "narrativePhase", None) or ""
+    existing_types = {e.type for e in (scene.elements or [])}
+
+    decorations: list[ElementConfig] = []
+
+    # Dark themes: add subtle film grain for cinematic texture
+    bg = theme_colors.get("background", "")
+    if bg and bg.startswith("#") and _is_dark_color(bg):
+        if "film-grain" not in existing_types:
+            decorations.append(ElementConfig(
+                id=f"{scene.id}_grain",
+                type="film-grain",
+                layout=_decoration_overlay_layout(z_index=999),
+                animation=AnimationConfig(
+                    type="fade-in",
+                    timeline=AnimationTimeline(inFrame=0, duration=15),
+                ),
+            ))
+
+    # Hook/Climax: cinematic letterbox bars
+    if phase in ("hook", "climax"):
+        if "cinematic-bars" not in existing_types:
+            decorations.append(ElementConfig(
+                id=f"{scene.id}_cinema",
+                type="cinematic-bars",
+                layout=_decoration_overlay_layout(z_index=998),
+            ))
+
+    # Deep dive with multiple elements: connection lines for tech feel
+    if phase == "deep_dive" and len([e for e in (scene.elements or []) if e.type not in (
+        "film-grain", "cinematic-bars", "dot-grid-bg", "mesh-gradient-bg",
+        "noise-background", "organic-blob", "connection-line", "graphic-overlay",
+    )]) >= 2:
+        if "connection-line" not in existing_types:
+            decorations.append(ElementConfig(
+                id=f"{scene.id}_conn",
+                type="connection-line",
+                layout=_decoration_overlay_layout(z_index=-1),
+            ))
+
+    # Deep dive: dot grid background for technical diagrams
+    if phase == "deep_dive":
+        if "dot-grid-bg" not in existing_types:
+            decorations.append(ElementConfig(
+                id=f"{scene.id}_dots",
+                type="dot-grid-bg",
+                layout=_decoration_overlay_layout(z_index=-2),
+            ))
+
+    scene.elements = (scene.elements or []) + decorations
+
+
+def _is_dark_color(hex_color: str) -> bool:
+    """Check if a hex color is dark (luminance < 0.3)."""
+    try:
+        hex_color = hex_color.lstrip("#")
+        r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+        luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        return luminance < 0.3
+    except (ValueError, IndexError):
+        return False
+
+
 # ─── Main Composer ──────────────────────────────────────────────────
 
 class LLMBlueprintComposer(BlueprintComposer):
@@ -141,9 +208,11 @@ class LLMBlueprintComposer(BlueprintComposer):
             filled_scene = await self._fill_scene_elements(scene, seg, content)
             blueprint.scenes[i] = filled_scene
 
-        # ── Step 3: Programmatic assembly (voiceover, subtitles, SFX) ──
+        # ── Step 3: Programmatic assembly (decoration, voiceover, subtitles, SFX) ──
+        theme_colors = blueprint.globalSettings.theme.colors if blueprint.globalSettings and blueprint.globalSettings.theme else {}
         for i, scene in enumerate(blueprint.scenes):
             seg = script.segments[i] if i < len(script.segments) else None
+            _apply_decoration_layers(scene, theme_colors)
             if seg:
                 _add_voiceover_to_scene(scene, seg.text)
                 _add_subtitles_to_scene(scene, seg.text)

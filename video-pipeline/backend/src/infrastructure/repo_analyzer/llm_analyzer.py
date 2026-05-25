@@ -1,7 +1,8 @@
 from typing import Optional
 
 from langchain_core.prompts import ChatPromptTemplate
-from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, GitHubSourceMeta, ProjectEncyclopedia, Script, SourceCodeInsight, MaterialManifest, ProjectCategory, TechDomain
+from pydantic import BaseModel
+from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, GitHubSourceMeta, ProjectEncyclopedia, Script, SourceCodeInsight, MaterialManifest, ProjectCategory, TechDomain, RepoMetadata
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
 from ..llm.client import get_llm_client
 from ..llm.prompt_loader import load_prompt
@@ -16,11 +17,9 @@ class LLMRepoAnalyzer(RepoAnalyzer):
             ("system", load_prompt("repo_analyzer", "classify_domain_system.md")),
             ("user", "Determine the tech domain of this repository based on the following input:\n\n{input}")
         ])
-        # Force the output to be one of the enum values
         class DomainWrapper(BaseModel):
             domain: TechDomain
-        
-        from pydantic import BaseModel
+
         chain = prompt | self.llm.with_structured_output(DomainWrapper)
         result = await chain.ainvoke({"input": enriched_input})
         return result.domain
@@ -28,7 +27,6 @@ class LLMRepoAnalyzer(RepoAnalyzer):
     async def analyze_repo(
         self, enriched_input: str, repo_url: str, tech_domain: TechDomain, candidate_materials: str
     ) -> ContentModel:
-        # Map TechDomain to specific prompt file
         domain_prompt_map = {
             TechDomain.AI_MODEL: "deep_read_ai_system.md",
             TechDomain.AI_AGENT: "deep_read_agent_system.md",
@@ -51,16 +49,11 @@ class LLMRepoAnalyzer(RepoAnalyzer):
             "enriched_input": enriched_input,
         })
 
-        # Safety: ensure script is null (analyzer should not produce scripts)
         content_model.script = None
-
         return content_model
 
     async def classify_category(self, content: ContentModel) -> ProjectCategory:
-        """Classify based on source metadata and content characteristics."""
-        # Simple rule-based classification; can be replaced with LLM classification
         source_type = getattr(content.source, "source_type", "github")
-        points = content.content.points if content.content else []
         has_code_insight = bool(content.source_code_insight and content.source_code_insight.highlights)
 
         if has_code_insight:
@@ -68,9 +61,8 @@ class LLMRepoAnalyzer(RepoAnalyzer):
         return ProjectCategory.PROMO
 
     async def analyze_domain(
-        self, content_model: ContentModel, repo_metadata: Optional[dict] = None,
+        self, content_model: ContentModel, repo_metadata: Optional[RepoMetadata] = None,
     ) -> DomainAnalysis:
-        """Analyze domain architecture, build audience profile, select narrative angle."""
         prompt = ChatPromptTemplate.from_messages([
             ("system", load_prompt("repo_analyzer", "analyze_domain_system.md")),
             ("user", load_prompt("repo_analyzer", "analyze_domain_user.md")),
@@ -78,7 +70,6 @@ class LLMRepoAnalyzer(RepoAnalyzer):
 
         chain = prompt | self.llm.with_structured_output(DomainAnalysis)
 
-        # Extract fields from ContentModel and repo_metadata for the user prompt
         insight = content_model.source_code_insight
         source = content_model.source
 
@@ -92,7 +83,7 @@ class LLMRepoAnalyzer(RepoAnalyzer):
             "language": getattr(source, "language", "") or "",
             "stars": str(getattr(source, "stars", 0) or 0),
             "topics": ", ".join(getattr(source, "topics", []) or []),
-            "dependency_summary": (repo_metadata or {}).get("dependency_summary", ""),
+            "dependency_summary": "",
             "directory_tree": self._format_directory_tree(repo_metadata),
         }
 
@@ -100,17 +91,13 @@ class LLMRepoAnalyzer(RepoAnalyzer):
         return domain_analysis
 
     @staticmethod
-    def _format_directory_tree(repo_metadata: Optional[dict]) -> str:
-        """Format directory tree entries as a plain-text tree."""
-        if not repo_metadata:
-            return ""
-        tree = repo_metadata.get("directory_tree", [])
-        if not tree:
+    def _format_directory_tree(repo_metadata: Optional[RepoMetadata]) -> str:
+        if not repo_metadata or not repo_metadata.directory_tree:
             return ""
         lines = []
-        for item in tree[:50]:
-            prefix = "📁 " if item.get("type") == "tree" else "📄 "
-            lines.append(f"{prefix}{item.get('path', '')}")
-        if len(tree) > 50:
-            lines.append(f"... and {len(tree) - 50} more entries")
+        for item in repo_metadata.directory_tree[:50]:
+            prefix = "📁 " if item.type == "tree" else "📄 "
+            lines.append(f"{prefix}{item.path}")
+        if len(repo_metadata.directory_tree) > 50:
+            lines.append(f"... and {len(repo_metadata.directory_tree) - 50} more entries")
         return "\n".join(lines)

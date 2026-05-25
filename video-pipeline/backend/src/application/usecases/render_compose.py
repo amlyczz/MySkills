@@ -4,23 +4,14 @@ durations, renders video via Remotion, then mixes audio and burns subtitles.
 
 import os
 import uuid
-from datetime import datetime
 
 from ...domain.visual_blueprint.entities import Blueprint, SceneConfig
 from ...domain.visual_blueprint.interfaces import VideoRenderer
 from ...domain.post_producer.interfaces import AudioMixer
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...infrastructure.config.app_config import PROJECT_ROOT
 from ..workflow.state import PipelineState
-
-
-def _resolve_output_dir(state: PipelineState) -> str:
-    source = state.get("project_category", "github")
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    repo_url = state.get("repo_url", "unknown")
-    repo_name = repo_url.rstrip("/").split("/")[-1] if "/" in repo_url else "unknown"
-    return str(PROJECT_ROOT / "output" / source / date_str / repo_name)
+from .output_dir import resolve_output_dir
 
 
 def _recalibrate_blueprint(
@@ -108,7 +99,7 @@ class RenderComposeUseCase:
         bgm_path = state.get("bgm_path")
         actual_durations = state.get("segment_actual_durations", [])
 
-        output_dir = _resolve_output_dir(state)
+        output_dir = resolve_output_dir(state)
         os.makedirs(output_dir, exist_ok=True)
 
         # ── 1. Recalibrate Blueprint frames using actual audio durations ──
