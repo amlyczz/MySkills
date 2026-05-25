@@ -35,8 +35,8 @@ tools_allowed:
 | RepoAnalyzer | `repo-analyzer/` | AI Agent | GitHub URL | content.json + material_manifest.json + materials/ |
 | ScriptTimelineComposer | `script-timeline-composer/` | AI Agent + 工具 | content.json | timeline.json + video_config.json + .srt + bgm_curve.json |
 | MediaGenerator | `media-generator/` | CLI | content.json | voiceover.mp3 + bgm.mp3 |
-| VideoRenderer | `video-renderer/remotion/` | CLI | video_config.json | video.mp4 |
-| PostProducer | `post-producer/` | CLI | video.mp4 + 音频 + timeline | final.mp4 + final_subtitled.mp4 |
+| VideoRenderer | `video-pipeline/video-renderer/remotion/` | CLI | video_config.json | video.mp4 |
+| PostProducer | `video-pipeline/post-producer/` | CLI | video.mp4 + 音频 + timeline | final.mp4 + final_subtitled.mp4 |
 
 ---
 

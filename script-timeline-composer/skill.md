@@ -24,9 +24,9 @@ tools_allowed:
 
 ## 动态探索高级视觉品质库 (Blueprint 动态体系)
 
-底层的 `video-renderer/remotion/src/engine/types.ts` 定义了极其丰富的顶级视觉积木。**不要自己凭空编造组件名！**
+底层的 `video-pipeline/video-renderer/remotion/src/engine/types.ts` 定义了极其丰富的顶级视觉积木。**不要自己凭空编造组件名！**
 在每次开始工作前，你必须：
-1. **查阅组件名录**：使用工具读取 `video-renderer/remotion/src/engine/types.ts` 中的 `ComponentType`, `AnimationType`, `BackgroundType` 等类型定义，看看当前系统支持哪些高质感组件（如毛玻璃、霓虹效果等新加入的组件）。
+1. **查阅组件名录**：使用工具读取 `video-pipeline/video-renderer/remotion/src/engine/types.ts` 中的 `ComponentType`, `AnimationType`, `BackgroundType` 等类型定义，看看当前系统支持哪些高质感组件（如毛玻璃、霓虹效果等新加入的组件）。
 2. **查阅属性映射表**：读取 `contracts/component-props-schema.json` 或底层实现，了解选中的组件需要传入什么 `props`。
 3. **优先选用现代高质感组件**：在读取到的枚举中，优先发掘和使用具备现代设计感的组件（如带有 `glass`, `luxury`, `gradient`, `card`, `mesh` 等字眼的组合），彻底摒弃丑陋的老式图标网格或原生表格。
 

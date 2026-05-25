@@ -11,6 +11,7 @@
 ```
 - **TDD 流程**：spec 确认后，按测试驱动开发实践。
 - **AI 操作日志**：大功能任务、技术决策、架构变更使用 `@agent-harness/memory-logs.md` 规范记录在 `memory/YYYY-MM-DD.md` 中。
+- **技能开发铁律**：Any creation, modification, or optimization of skills MUST follow the standard skill structure (`SKILL.md` + `scripts/` directory). You must refer to the `skill-creator` skill instructions in `.agents/skills/skill-creator/SKILL.md` for guidance.
 
 ## Git 操作铁律
 
@@ -36,8 +37,8 @@
 | **RepoAnalyzer** | GitHub URL 至 `repo-analyzer/` | ContentModel + material_manifest.json + materials/ |
 | **ScriptTimelineComposer** | ContentModel + material_manifest.json 至 `script-timeline-composer/` | TimelineModel + VideoConfig |
 | **MediaGenerator** | Script 至 `media-generator/` | voiceover.mp3 + bgm.mp3 |
-| **VideoRenderer** | VideoConfig + Timeline 至 `video-renderer/remotion/` | video.mp4 |
-| **PostProducer** | video.mp4 + audio + timeline 至 `post-producer/` | final.mp4 |
+| **VideoRenderer** | VideoConfig + Timeline 至 `video-pipeline/video-renderer/remotion/` | video.mp4 |
+| **PostProducer** | video.mp4 + audio + timeline 至 `video-pipeline/post-producer/` | final.mp4 |
 
 ### 数据契约
 

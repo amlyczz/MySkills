@@ -11,13 +11,16 @@ from typing import Optional, Literal, Union
 class SourceMeta(BaseModel):
     """数据源元信息 — 多态基类"""
     source_type: str
-    source_url: str
-    source_name: str
+    source_url: str = ""
+    source_name: str = ""
 
 
 class GitHubSourceMeta(SourceMeta):
     """GitHub 特有元信息"""
     source_type: Literal["github"] = "github"
+    url: Optional[str] = Field(None, alias="url", description="Repository URL")
+    name: Optional[str] = Field(None, description="Repository name")
+    full_name: Optional[str] = Field(None, description="owner/repo")
     language: Optional[str] = None
     stars: Optional[int] = 0
     forks: Optional[int] = 0
@@ -60,7 +63,9 @@ class NormalizedContent(BaseModel):
 class ScriptSegment(BaseModel):
     """口播脚本段落"""
     text: str
-    duration_est: float = Field(..., ge=0)
+    duration_est: float = Field(5.0, ge=0)
+    visual_type: Optional[str] = Field(None, description="Scene visual type: intro, generic, code, data, split, outro")
+    visual_params: Optional[dict[str, str]] = Field(None, description="Visual parameters for blueprint generation")
 
 
 class Script(BaseModel):
@@ -119,11 +124,11 @@ class ContentModel(BaseModel):
     """content.json 顶层模型"""
     source: AnySourceMeta = Field(..., discriminator="source_type")
     content: NormalizedContent
-    script: Script
-    covers: Covers
-    publish_copy: PublishCopy
+    script: Optional[Script] = None
+    covers: Optional[Covers] = None
+    publish_copy: Optional[PublishCopy] = None
     source_code_insight: Optional[SourceCodeInsight] = None
-    meta: Meta
+    meta: Optional[Meta] = None
 
     def to_json_file(self, path: str) -> None:
         """序列化并写入 JSON 文件。"""
