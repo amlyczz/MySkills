@@ -85,9 +85,9 @@ async def hitl_trending_review_node(state: PipelineState) -> PipelineState:
 
 async def hitl_script_review_node(state: PipelineState) -> PipelineState:
     """HITL breakpoint for script review — always triggers after compose_script."""
-    # Auto-approve guard: only skip when script exists AND feedback exists
-    # (meaning user approved → regenerate was triggered). Otherwise always require human review.
-    if state.get("script") is not None and state.get("qa_script_feedback") is not None:
+    # Auto-approve guard: if a downstream blueprint exists, it means this script
+    # was already approved in a previous run. Skip the manual review interrupt.
+    if state.get("blueprint") is not None:
         return PipelineState(
             task_id=state["task_id"],
             repo_url=state["repo_url"],
@@ -121,6 +121,7 @@ async def hitl_script_review_node(state: PipelineState) -> PipelineState:
             task_id=state["task_id"],
             repo_url=state["repo_url"],
             script=script,
+            qa_script_feedback=None,
             status=PipelineStatus.COMPOSING,
         )
     elif action == "reject":
@@ -143,9 +144,9 @@ async def hitl_script_review_node(state: PipelineState) -> PipelineState:
 
 async def hitl_blueprint_review_node(state: PipelineState) -> PipelineState:
     """HITL breakpoint for blueprint review — always triggers after generate_blueprint."""
-    # Auto-approve guard: only skip when blueprint exists AND feedback exists
-    # (meaning user approved → regenerate was triggered). Otherwise always require human review.
-    if state.get("blueprint") is not None and state.get("qa_blueprint_feedback") is not None:
+    # Auto-approve guard: if downstream media exists, it means this blueprint
+    # was already approved in a previous run. Skip the manual review interrupt.
+    if state.get("voiceover_path") is not None or state.get("video_mp4_path") is not None:
         return PipelineState(
             task_id=state["task_id"],
             repo_url=state["repo_url"],
@@ -190,6 +191,7 @@ async def hitl_blueprint_review_node(state: PipelineState) -> PipelineState:
             task_id=state["task_id"],
             repo_url=state["repo_url"],
             blueprint=blueprint,
+            qa_blueprint_feedback=None,
             status=PipelineStatus.BLUEPRINTING,
         )
     elif action == "reject":
