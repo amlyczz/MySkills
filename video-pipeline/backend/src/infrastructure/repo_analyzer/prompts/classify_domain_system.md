@@ -3,9 +3,9 @@ Your goal is to classify the technical domain of the repository based on its REA
 
 OUTPUT FORMAT:
 You MUST output a valid JSON object matching this schema:
-{
+{{
   "domain": "one of the Tech Domains listed below"
-}
+}}
 
 Tech Domains:
 - AI_MODEL: Foundational AI algorithms, models, Transformers, LLMs, Computer Vision.
