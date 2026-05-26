@@ -37,5 +37,11 @@ class PipelineTask(BaseModel):
     video_mp4_path: Optional[str] = None
     final_mp4_path: Optional[str] = None
 
+    # Node-level progress tracking (stored in DB for frontend restore)
+    current_node: Optional[str] = None
+    completed_nodes: list[str] = Field(default_factory=list)
+    failed_node: Optional[str] = None
+    node_error: Optional[str] = None
+
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

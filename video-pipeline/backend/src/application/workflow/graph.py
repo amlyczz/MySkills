@@ -16,7 +16,7 @@ from ..usecases.blueprint import GenerateBlueprintUseCase
 from ..usecases.audio_design import AudioDesignUseCase
 from ..usecases.render_compose import RenderComposeUseCase
 from ..usecases.github_trending import GithubTrendingUseCase
-from ...domain.task.entities import PipelineStatus
+from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
 from ...domain.script_composer.interfaces import ScriptComposer
@@ -222,20 +222,21 @@ def compile_workflow(
     audio_mixer: AudioMixer,
     repository: PipelineTaskRepository,
     semaphore: asyncio.Semaphore,
+    status_service: StatusTransitionService,
     checkpointer: Optional[BaseCheckpointSaver] = None,
 ) -> Any:
     """Compiles the LangGraph StateGraph with DDD-injected services and HITL support."""
-    analyze_repo_uc = AnalyzeRepoUseCase(analyzer, repository)
-    compose_script_uc = ComposeScriptUseCase(composer, repository)
-    generate_diagrams_uc = GenerateDiagramsUseCase(repository)
-    generate_blueprint_uc = GenerateBlueprintUseCase(blueprint_composer, repository)
-    audio_design_uc = AudioDesignUseCase(voiceover_gen, bgm_gen, repository)
-    render_compose_uc = RenderComposeUseCase(video_renderer, audio_mixer, repository, semaphore)
+    analyze_repo_uc = AnalyzeRepoUseCase(analyzer, repository, status_service)
+    compose_script_uc = ComposeScriptUseCase(composer, repository, status_service)
+    generate_diagrams_uc = GenerateDiagramsUseCase(repository, status_service)
+    generate_blueprint_uc = GenerateBlueprintUseCase(blueprint_composer, repository, status_service)
+    audio_design_uc = AudioDesignUseCase(voiceover_gen, bgm_gen, repository, status_service)
+    render_compose_uc = RenderComposeUseCase(video_renderer, audio_mixer, repository, semaphore, status_service)
 
     workflow = StateGraph(PipelineState)
 
     # Nodes
-    workflow.add_node("github_trending", GithubTrendingUseCase(repository))
+    workflow.add_node("github_trending", GithubTrendingUseCase(repository, status_service))
     workflow.add_node("hitl_trending_review", hitl_trending_review_node)
     workflow.add_node("analyze_repo", analyze_repo_uc)
     workflow.add_node("compose_script", compose_script_uc)

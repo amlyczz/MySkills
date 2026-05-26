@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_deepseek import ChatDeepSeek
 
 logger = logging.getLogger(__name__)
-from ...domain.task.entities import PipelineStatus
+from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.github_trending.entities import ScoredRepo, TrendingResponse, RawTrendingRepo
 from ..workflow.state import PipelineState
@@ -17,7 +17,7 @@ from ...infrastructure.llm.prompt_loader import load_prompt
 class GithubTrendingUseCase:
     """LangGraph Node: Fetches trending repos and uses LLM to score subjective dimensions."""
 
-    def __init__(self, repository: PipelineTaskRepository):
+    def __init__(self, repository: PipelineTaskRepository, status_service: StatusTransitionService):
         api_key = os.getenv("DEEPSEEK_V4_API_KEY")
         self.llm = ChatDeepSeek(
             model=os.getenv("LLM_MODEL_FAST", "deepseek-chat"),
@@ -26,6 +26,7 @@ class GithubTrendingUseCase:
             max_retries=2,
         )
         self.repository = repository
+        self.status_service = status_service
 
     async def __call__(self, state: PipelineState) -> PipelineState:
         repo_url = state.get("repo_url", "")
@@ -35,6 +36,13 @@ class GithubTrendingUseCase:
                 repo_url=repo_url,
                 status=state.get("status", PipelineStatus.PENDING),
             )
+
+        task_id = uuid.UUID(state["task_id"])
+
+        # ① Enter node: mark active immediately
+        await self.status_service.transition(
+            task_id, PipelineStatus.FETCHING_TRENDING, node="github_trending"
+        )
 
         logger.info("[Graph] GithubTrendingUseCase: Fetching top trending repos autonomously...")
 
@@ -52,11 +60,10 @@ class GithubTrendingUseCase:
             logger.info(f"[Graph] GithubTrendingUseCase: Got {len(raw_repos)} repos")
 
             if not raw_repos:
-                task_id = uuid.UUID(state["task_id"])
-                task = await self.repository.get_by_id(task_id)
-                if task:
-                    task.status = PipelineStatus.ERROR
-                    await self.repository.update(task)
+                await self.status_service.transition(
+                    task_id, PipelineStatus.ERROR, node="github_trending",
+                    error="No trending repositories found.",
+                )
                 return PipelineState(
                     task_id=state["task_id"],
                     repo_url=state.get("repo_url", ""),
@@ -167,12 +174,11 @@ class GithubTrendingUseCase:
                   f"{final_repos[0].owner}/{final_repos[0].name} "
                   f"(score={final_repos[0].final_score}, 7d_stars={final_repos[0].recent_stars_7d})")
 
-            task_id = uuid.UUID(state["task_id"])
-            task = await self.repository.get_by_id(task_id)
-            if task:
-                task.status = PipelineStatus.HITL_TRENDING
-                task.trending_repos = final_repos
-                await self.repository.update(task)
+            # ② Complete node: update via FSM
+            await self.status_service.mark_node_completed(
+                task_id, "github_trending",
+                updates={"trending_repos": final_repos, "status": PipelineStatus.HITL_TRENDING},
+            )
 
             return PipelineState(
                 task_id=state["task_id"],
@@ -183,14 +189,9 @@ class GithubTrendingUseCase:
 
         except Exception as e:
             logger.exception(f"[Graph] GithubTrendingUseCase ERROR: {e}")
-            try:
-                task_id = uuid.UUID(state["task_id"])
-                task = await self.repository.get_by_id(task_id)
-                if task:
-                    task.status = PipelineStatus.ERROR
-                    await self.repository.update(task)
-            except Exception:
-                pass
+            await self.status_service.transition(
+                task_id, PipelineStatus.ERROR, node="github_trending", error=str(e),
+            )
             return PipelineState(
                 task_id=state["task_id"],
                 repo_url=state.get("repo_url", ""),

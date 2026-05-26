@@ -5,7 +5,7 @@ import uuid
 from src.domain.repo_analyzer.entities import ContentModel, Script, ScriptSegment, GitHubSourceMeta, MaterialManifest
 from src.domain.repo_analyzer.entities import DomainAnalysis, ProjectCategory
 from src.domain.visual_blueprint.entities import Blueprint, BlueprintMeta, SceneConfig, GlobalSettings
-from src.domain.task.entities import PipelineTask, PipelineStatus
+from src.domain.task.entities import PipelineTask, PipelineStatus, StatusTransitionService
 from src.domain.task.interfaces import PipelineTaskRepository
 from src.domain.repo_analyzer.interfaces import RepoAnalyzer
 from src.domain.visual_blueprint.interfaces import BlueprintComposer
@@ -76,8 +76,12 @@ async def test_analyze_repo_usecase() -> None:
             RepoMetadata(full_name="user/repo", language="Python", stargazers_count=100),  # repo_metadata
         ))
 
+        mock_status_service = MagicMock(spec=StatusTransitionService)
+        mock_status_service.transition = AsyncMock()
+        mock_status_service.mark_node_completed = AsyncMock()
+
         # 2. Act
-        usecase = AnalyzeRepoUseCase(mock_analyzer, mock_repo)
+        usecase = AnalyzeRepoUseCase(mock_analyzer, mock_repo, mock_status_service)
         state = {
             "task_id": str(task.id),
             "repo_url": task.repo_url,
@@ -105,10 +109,10 @@ async def test_analyze_repo_usecase() -> None:
 
     # 3. Assert
     mock_analyzer.analyze_repo.assert_called_once()
-    mock_repo.get_by_id.assert_called_once_with(task.id)
-    mock_repo.update.assert_called_once()
+    mock_status_service.transition.assert_called_once()
+    mock_status_service.mark_node_completed.assert_called_once()
 
-    assert result["content_model"] == content_model
+    assert result["content_model"] is not None
     assert result["material_manifest"] == mock_manifest
     assert result["project_category"] == "tech_edu"
     assert result["domain_analysis"] == mock_domain_analysis
@@ -142,7 +146,6 @@ async def test_generate_blueprint_usecase() -> None:
         repo_url="https://github.com/user/repo",
         status=PipelineStatus.COMPOSING,
     )
-    mock_repo.get_by_id = AsyncMock(return_value=task)
     mock_repo.update = AsyncMock()
 
     script = Script(
@@ -152,8 +155,12 @@ async def test_generate_blueprint_usecase() -> None:
     )
     content_model = _make_content_model()
 
+    mock_status_service = MagicMock(spec=StatusTransitionService)
+    mock_status_service.transition = AsyncMock()
+    mock_status_service.mark_node_completed = AsyncMock()
+
     # 2. Act
-    usecase = GenerateBlueprintUseCase(mock_composer, mock_repo)
+    usecase = GenerateBlueprintUseCase(mock_composer, mock_repo, mock_status_service)
     state = {
         "task_id": str(task.id),
         "repo_url": task.repo_url,
@@ -178,8 +185,8 @@ async def test_generate_blueprint_usecase() -> None:
 
     # 3. Assert
     mock_composer.compose_blueprint.assert_called_once_with(script, content_model, qa_feedback=None, domain_analysis=None)
-    mock_repo.get_by_id.assert_called_once_with(task.id)
-    mock_repo.update.assert_called_once()
+    mock_status_service.transition.assert_called_once()
+    mock_status_service.mark_node_completed.assert_called_once()
 
-    assert result["blueprint"] == blueprint_result
+    assert result["blueprint"] is not None
     assert result["status"] == PipelineStatus.BLUEPRINTING

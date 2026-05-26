@@ -2,6 +2,7 @@
 BGM, and precise Timeline/SRT based on real audio timing.
 """
 
+import asyncio
 import logging
 import os
 import subprocess
@@ -12,27 +13,32 @@ logger = logging.getLogger(__name__)
 from ...domain.repo_analyzer.entities import Script, ScriptSegment
 from ...domain.post_producer.audio_timeline import AudioTimeline, AudioTimelineSegment
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator
-from ...domain.task.entities import PipelineStatus
+from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ..workflow.state import PipelineState
 from .output_dir import resolve_output_dir
 
 
-def _get_audio_duration(audio_path: str) -> float:
-    """Probe actual audio duration in seconds using ffprobe."""
+async def _get_audio_duration(audio_path: str) -> float:
+    """Probe actual audio duration in seconds using ffprobe (async)."""
     try:
-        result = subprocess.run(
-            [
-                "ffprobe", "-v", "quiet",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                audio_path,
-            ],
-            capture_output=True, text=True, timeout=10,
+        process = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "quiet",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            audio_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
-        if result.returncode == 0 and result.stdout.strip():
-            return float(result.stdout.strip())
-    except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.communicate()
+            return 0.0
+        if process.returncode == 0 and stdout.strip():
+            return float(stdout.strip())
+    except (FileNotFoundError, ValueError):
         pass
     return 0.0
 
@@ -52,16 +58,25 @@ class AudioDesignUseCase:
         voiceover_gen: VoiceoverGenerator,
         bgm_gen: BGMGenerator,
         repository: PipelineTaskRepository,
+        status_service: StatusTransitionService,
     ) -> None:
         self.voiceover_gen = voiceover_gen
         self.bgm_gen = bgm_gen
         self.repository = repository
+        self.status_service = status_service
 
     async def __call__(self, state: PipelineState) -> PipelineState:
         # Skip-if-done guard: if voiceover already exists, skip
         if state.get("voiceover_path"):
             logger.info("[AudioDesign] Skipping (voiceover already exists)")
             return PipelineState(task_id=state["task_id"], repo_url=state["repo_url"])
+
+        task_id = uuid.UUID(state["task_id"])
+
+        # ① Enter node: mark active immediately
+        await self.status_service.transition(
+            task_id, PipelineStatus.GENERATE_MEDIA, node="audio_design"
+        )
 
         logger.info("[AudioDesign] Starting audio generation with per-segment TTS")
 
@@ -85,7 +100,7 @@ class AudioDesignUseCase:
                 voice_id="Chinese (Mandarin)_Male_Announcer",
             )
 
-            actual_dur = _get_audio_duration(seg_path)
+            actual_dur = await _get_audio_duration(seg_path)
             if actual_dur <= 0:
                 actual_dur = seg.duration_est
             segment_durations.append(actual_dur)
@@ -118,14 +133,15 @@ class AudioDesignUseCase:
         with open(srt_path, "w", encoding="utf-8") as f:
             f.write(srt_content)
 
-        # ── 6. Sync DB state ──
-        task_id = uuid.UUID(state["task_id"])
-        task = await self.repository.get_by_id(task_id)
-        if task:
-            task.status = PipelineStatus.GENERATE_MEDIA
-            task.voiceover_path = voiceover_path
-            task.bgm_path = bgm_path
-            await self.repository.update(task)
+        # ② Complete node: update via FSM
+        await self.status_service.mark_node_completed(
+            task_id, "audio_design",
+            updates={
+                "status": PipelineStatus.GENERATE_MEDIA,
+                "voiceover_path": voiceover_path,
+                "bgm_path": bgm_path,
+            },
+        )
 
         return PipelineState(
             task_id=state["task_id"],
@@ -154,7 +170,7 @@ class AudioDesignUseCase:
             "ffmpeg", "-y", "-f", "concat", "-safe", "0",
             "-i", list_path, "-c", "copy", output_path,
         ]
-        process = await __import__("asyncio").create_subprocess_exec(
+        process = await asyncio.create_subprocess_exec(
             *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         stdout, stderr = await process.communicate()

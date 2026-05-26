@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from langgraph.types import Command, Interrupt
 
-from ...domain.task.entities import PipelineStatus
+from ...domain.task.entities import PipelineStatus, StatusTransitionService
+from ...domain.task.status_machine import NODE_TO_STATUS
 from ...infrastructure.task.connection import _get_session_maker
 from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
 from ...infrastructure.repo_analyzer.llm_analyzer import LLMRepoAnalyzer
@@ -28,26 +29,29 @@ global_render_semaphore = asyncio.Semaphore(1)
 _active_graphs: dict[str, Any] = {}
 
 
-async def _mark_task_error(task_id: str, error_msg: str) -> None:
-    """Update task status to ERROR in the database."""
+def _build_services(session):
+    """Create all DDD services with shared session and StatusTransitionService."""
+    repository = PostgresPipelineTaskRepository(session)
+    status_service = StatusTransitionService(repository)
+    return repository, status_service
+
+
+async def _mark_task_error(task_id: str, error_msg: str, node: str | None = None) -> None:
+    """Update task status to ERROR in the database via FSM."""
     try:
         session_maker = _get_session_maker()
         async with session_maker() as session:
             repo = PostgresPipelineTaskRepository(session)
-            task = await repo.get_by_id(uuid.UUID(task_id))
-            if task:
-                task.status = PipelineStatus.ERROR
-                await repo.update(task)
+            status_service = StatusTransitionService(repo)
+            await status_service.transition(
+                uuid.UUID(task_id), PipelineStatus.ERROR, node=node, error=error_msg,
+            )
     except Exception as e:
         logger.error("Failed to mark task %s as ERROR: %s", task_id, e)
 
 
 def _get_checkpointer_context():
-    """Return an async context manager that yields a PostgresSaver checkpointer.
-
-    AsyncPostgresSaver.from_conn_string() returns an async context manager —
-    we must stay inside it while the graph is in use to keep the connection alive.
-    """
+    """Return an async context manager that yields a PostgresSaver checkpointer."""
     from ...infrastructure.config.app_config import settings
 
     if not settings.database_url:
@@ -94,164 +98,10 @@ def _output_to_dict(output: Any) -> dict[str, Any]:
     if isinstance(output, dict):
         return output
     if hasattr(output, "model_dump"):
-        # PipelineState (or other Pydantic BaseModel) — exclude None fields to avoid
-        # overwriting existing state with nulls during merge
         return output.model_dump(exclude_none=True)
     if hasattr(output, "__dict__"):
         return vars(output)
     return {}
-
-
-async def _stream_graph(graph: Any, state_input: Any, config: dict, websocket: WebSocket, all_nodes: set[str]) -> str:
-    """Stream a LangGraph execution, sending rich node updates and HITL interrupts to the WebSocket.
-
-    Uses astream() which properly surfaces __interrupt__ events (unlike astream_events).
-    Returns: "completed" | "hitl" | "error"
-    """
-    # ── Node start announcement ──
-    async def _send_node_start(node_name: str, detail: str = "") -> None:
-        payload: dict[str, Any] = {
-            "type": "state_change",
-            "node": node_name,
-            "status": "active",
-        }
-        if detail:
-            payload["detail"] = detail
-        await websocket.send_json(payload)
-
-    # ── Node completion with rich data ──
-    async def _send_node_completed(node_name: str, output: dict) -> None:
-        payload: dict[str, Any] = {
-            "type": "state_change",
-            "node": node_name,
-            "status": "completed",
-        }
-        # Attach node-specific rich detail for the frontend log
-        detail = _extract_detail(node_name, output)
-        if detail:
-            payload["detail"] = detail
-        await websocket.send_json(payload)
-
-    # ── Predict next node from graph structure ──
-    # astream("updates") only fires on node completion, so we proactively
-    # send "active" for the next expected node to give real-time feedback.
-    SEQUENTIAL_NEXT: dict[str, str | None] = {
-        "hitl_trending_review": "analyze_repo",
-        "analyze_repo": "compose_script",
-        "compose_script": "hitl_script_review",
-        "generate_diagrams": "generate_blueprint",
-        "generate_blueprint": "hitl_blueprint_review",
-        "audio_design": "render_compose",
-        "render_compose": None,  # END
-    }
-
-    def _predict_next_node(completed_node: str, output: dict) -> str | None:
-        """Determine the next node based on completed node + its output."""
-        # Conditional edges
-        if completed_node == "github_trending":
-            trending = output.get("trending_repos")
-            if trending:
-                return "hitl_trending_review"
-            return "analyze_repo"
-
-        if completed_node == "hitl_trending_review":
-            if output.get("hitl_trending_feedback"):
-                return "github_trending"
-            return "analyze_repo"
-
-        if completed_node == "hitl_script_review":
-            if output.get("qa_script_feedback"):
-                return "compose_script"
-            return "generate_diagrams"
-
-        if completed_node == "hitl_blueprint_review":
-            if output.get("qa_blueprint_feedback"):
-                return "generate_blueprint"
-            return "audio_design"
-
-        return SEQUENTIAL_NEXT.get(completed_node)
-
-    # ── Determine entry node and send initial "active" ──
-    first_node: str | None = None
-    if isinstance(state_input, dict):
-        # Fresh start — entry node is github_trending (trending) or analyze_repo (direct URL)
-        repo_url = state_input.get("repo_url", "")
-        first_node = "github_trending" if repo_url in ("", "trending", "pending") else "analyze_repo"
-        await _send_node_start(first_node, "Starting pipeline...")
-        logger.info("Pipeline starting. Entry node: %s", first_node)
-
-    try:
-      async for chunk in graph.astream(state_input, config=config, stream_mode="updates"):
-        if "__interrupt__" in chunk:
-            # HITL interrupt — one or more Interrupt objects
-            interrupts: tuple[Interrupt, ...] = chunk["__interrupt__"]
-            for intr in interrupts:
-                value = _serialize_interrupt_value(intr.value)
-                reason = value.get("reason") if isinstance(value, dict) else "?"
-                logger.info("HITL interrupt: reason=%s", reason)
-
-                # The node is PAUSED (not completed). The frontend already received
-                # "active" for this node; the HITL event will set the correct hitl state.
-                await websocket.send_json({
-                    "type": "hitl",
-                    "message": "Pipeline paused for human review.",
-                    "interrupt_id": intr.id,
-                    "value": value,
-                })
-            return "hitl"  # Don't send pipeline_end — graph is paused
-
-        # Normal node update: {node_name: {output_dict}}
-        for node_name, node_output in chunk.items():
-            if node_name.startswith("__"):
-                continue
-
-            # Detect error outputs and send details to frontend
-            if isinstance(node_output, dict):
-                error_msg = node_output.get("error")
-                status_val = node_output.get("status")
-                if error_msg or (status_val is not None and str(status_val) == "PipelineStatus.ERROR"):
-                    logger.error("Node '%s' ERROR: %s", node_name, error_msg)
-                    await websocket.send_json({
-                        "type": "state_change",
-                        "node": node_name,
-                        "status": "error",
-                        "detail": error_msg or str(status_val),
-                    })
-                    await websocket.send_json({
-                        "type": "error",
-                        "content": f"[{node_name}] {error_msg or status_val}",
-                    })
-                    return "error"
-
-            logger.info("Node '%s' completed.", node_name)
-            output_dict = _output_to_dict(node_output)
-            await _send_node_completed(node_name, output_dict)
-
-            # Predict and announce the next node
-            next_node = _predict_next_node(node_name, output_dict)
-            if next_node:
-                await _send_node_start(next_node)
-                first_node = next_node
-                logger.info("Next node predicted: %s", next_node)
-
-      logger.info("Pipeline finished normally (no more nodes)")
-      await websocket.send_json({"type": "pipeline_end"})
-      return "completed"
-    except Exception as e:
-      # Unhandled exception during node execution — send node-level error
-      failed_node = first_node or "unknown"
-      logger.error("Unhandled error in node '%s': %s", failed_node, e)
-      await websocket.send_json({
-          "type": "state_change",
-          "node": failed_node,
-          "status": "error",
-          "detail": str(e),
-      })
-      await websocket.send_json({
-          "type": "error",
-          "content": f"[{failed_node}] {e}",
-      })
-      return "error"
 
 
 def _get_field(obj: Any, key: str, default: Any = None) -> Any:
@@ -263,10 +113,216 @@ def _get_field(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
+async def _send_node_event(
+    websocket: WebSocket,
+    node: str,
+    status: str,
+    pipeline_status: str,
+    completed_nodes: list[str],
+    detail: str = "",
+    error: str = "",
+) -> None:
+    """Send a unified node_event to the WebSocket."""
+    payload: dict[str, Any] = {
+        "type": "node_event",
+        "node": node,
+        "status": status,
+        "pipeline_status": pipeline_status,
+        "completed_nodes": completed_nodes,
+    }
+    if detail:
+        payload["detail"] = detail
+    if error:
+        payload["error"] = error
+    await websocket.send_json(payload)
+
+
+async def _send_hitl_event(
+    websocket: WebSocket,
+    node: str,
+    pipeline_status: str,
+    reason: str,
+    data: Any,
+    completed_nodes: list[str],
+) -> None:
+    """Send a unified hitl_event to the WebSocket."""
+    await websocket.send_json({
+        "type": "hitl_event",
+        "node": node,
+        "pipeline_status": pipeline_status,
+        "reason": reason,
+        "data": data,
+        "completed_nodes": completed_nodes,
+    })
+
+
+async def _send_pipeline_event(
+    websocket: WebSocket,
+    status: str,
+    completed_nodes: list[str],
+) -> None:
+    """Send a pipeline_event (completed or error) to the WebSocket."""
+    await websocket.send_json({
+        "type": "pipeline_event",
+        "status": status,
+        "completed_nodes": completed_nodes,
+    })
+
+
+async def _stream_graph(
+    graph: Any,
+    state_input: Any,
+    config: dict,
+    websocket: WebSocket,
+    task_id: str,
+) -> str:
+    """Stream a LangGraph execution with unified event protocol.
+
+    The StatusTransitionService inside each UseCase node handles DB updates.
+    This function only reads DB state for progress and sends WebSocket events.
+
+    Returns: "completed" | "hitl" | "error"
+    """
+    session_maker = _get_session_maker()
+    completed_nodes: list[str] = []
+
+    # Load initial progress from DB
+    try:
+        async with session_maker() as session:
+            repo = PostgresPipelineTaskRepository(session)
+            task = await repo.get_by_id(uuid.UUID(task_id))
+            if task and task.completed_nodes:
+                completed_nodes = list(task.completed_nodes)
+    except Exception:
+        pass
+
+    # Track which node is currently active
+    last_announced_node: str | None = None
+
+    try:
+        async for chunk in graph.astream(state_input, config=config, stream_mode="updates"):
+            if "__interrupt__" in chunk:
+                # HITL interrupt
+                interrupts: tuple[Interrupt, ...] = chunk["__interrupt__"]
+                for intr in interrupts:
+                    value = _serialize_interrupt_value(intr.value)
+                    reason = value.get("reason") if isinstance(value, dict) else "?"
+                    logger.info("HITL interrupt: reason=%s", reason)
+
+                    # Map reason → node + status
+                    reason_to_node = {
+                        "trending_review": "hitl_trending_review",
+                        "script_review": "hitl_script_review",
+                        "blueprint_review": "hitl_blueprint_review",
+                    }
+                    hitl_node = reason_to_node.get(reason, last_announced_node or "unknown")
+                    hitl_status = NODE_TO_STATUS.get(hitl_node, PipelineStatus.PENDING).value
+
+                    await _send_hitl_event(
+                        websocket, hitl_node, hitl_status, reason, value, completed_nodes,
+                    )
+                return "hitl"
+
+            # Normal node update: {node_name: {output_dict}}
+            for node_name, node_output in chunk.items():
+                if node_name.startswith("__"):
+                    continue
+
+                output_dict = _output_to_dict(node_output)
+
+                # Check for error
+                error_msg = output_dict.get("error")
+                status_val = output_dict.get("status")
+                is_error = error_msg or (
+                    status_val is not None and (
+                        str(status_val) == "PipelineStatus.ERROR"
+                        or status_val == PipelineStatus.ERROR
+                        or str(status_val) == "error"
+                    )
+                )
+
+                if is_error:
+                    logger.error("Node '%s' ERROR: %s", node_name, error_msg)
+                    node_status = NODE_TO_STATUS.get(node_name, PipelineStatus.ERROR).value
+                    await _send_node_event(
+                        websocket, node_name, "error", "error",
+                        completed_nodes, error=error_msg or str(status_val),
+                    )
+                    await _send_pipeline_event(websocket, "error", completed_nodes)
+                    return "error"
+
+                # Node completed successfully
+                if node_name not in completed_nodes:
+                    completed_nodes.append(node_name)
+
+                pipeline_status = NODE_TO_STATUS.get(node_name, PipelineStatus.PENDING).value
+                detail = _extract_detail(node_name, output_dict)
+
+                logger.info("Node '%s' completed. Progress: %s", node_name, completed_nodes)
+                await _send_node_event(
+                    websocket, node_name, "completed", pipeline_status,
+                    completed_nodes, detail=detail,
+                )
+
+                last_announced_node = node_name
+
+                # Announce next node as started (from DB state refreshed by FSM)
+                try:
+                    async with session_maker() as session:
+                        repo = PostgresPipelineTaskRepository(session)
+                        task = await repo.get_by_id(uuid.UUID(task_id))
+                        if task and task.current_node:
+                            next_node = task.current_node
+                            next_status = NODE_TO_STATUS.get(next_node, PipelineStatus.PENDING).value
+                            await _send_node_event(
+                                websocket, next_node, "started", next_status,
+                                completed_nodes,
+                            )
+                            last_announced_node = next_node
+                except Exception:
+                    pass  # Non-critical — frontend will still work without start announcements
+
+        logger.info("Pipeline finished normally (no more nodes)")
+        await _send_pipeline_event(websocket, "completed", completed_nodes)
+        return "completed"
+
+    except WebSocketDisconnect:
+        logger.info("Client disconnected during _stream_graph for task %s", task_id)
+        return "disconnected"
+    except RuntimeError as e:
+        if "close message has been sent" in str(e) or "WebSocket is not connected" in str(e):
+            logger.info("Websocket closed prematurely during _stream_graph for task %s", task_id)
+            return "disconnected"
+        raise
+    except Exception as e:
+        failed_node = last_announced_node or "unknown"
+        # Try to get the actual failed node from the DB, since the node that threw the exception
+        # would have marked itself as current_node in the FSM before failing.
+        try:
+            async with session_maker() as session:
+                repo = PostgresPipelineTaskRepository(session)
+                task = await repo.get_by_id(uuid.UUID(task_id))
+                if task and task.current_node:
+                    failed_node = task.current_node
+        except Exception:
+            pass
+
+        err_msg = str(e) or repr(e)
+        logger.error("Unhandled error in node '%s': %s", failed_node, err_msg)
+        try:
+            await _send_node_event(
+                websocket, failed_node, "error", "error",
+                completed_nodes, error=err_msg,
+            )
+            await _send_pipeline_event(websocket, "error", completed_nodes)
+        except Exception:
+            pass
+        return "error"
+
+
 def _extract_detail(node_name: str, output: dict) -> str:
     """Extract a human-readable detail string from node output dict for the frontend log."""
 
-    # ── github_trending ──
     if node_name == "github_trending":
         repos = _get_field(output, "trending_repos")
         if repos and isinstance(repos, list) and len(repos) > 0:
@@ -278,14 +334,12 @@ def _extract_detail(node_name: str, output: dict) -> str:
             return f"Scored {n} repos — Top: {top_name} (score={top_score}, +{top_stars_7d}/7d)"
         return "No trending repos found"
 
-    # ── hitl_trending_review ──
     if node_name == "hitl_trending_review":
         repo_url = _get_field(output, "repo_url")
         if repo_url:
             return f"Selected: {repo_url}"
         return "Trending review decision processed"
 
-    # ── analyze_repo ──
     if node_name == "analyze_repo":
         cm = _get_field(output, "content_model")
         title = ""
@@ -303,14 +357,8 @@ def _extract_detail(node_name: str, output: dict) -> str:
             parts.append(title)
         if category:
             parts.append(f"category={category}")
-        da = _get_field(output, "domain_analysis")
-        if da:
-            aud = _get_field(da, "audience")
-            if aud:
-                parts.append(f"audience={_get_field(aud, 'primary', '')}")
         return " | ".join(parts) if parts else "Analysis complete"
 
-    # ── compose_script ──
     if node_name == "compose_script":
         script = _get_field(output, "script")
         if script:
@@ -319,75 +367,70 @@ def _extract_detail(node_name: str, output: dict) -> str:
             return f"{n_seg} segments, ~{dur:.0f}s total"
         return "Script composed"
 
-    # ── hitl_script_review ──
     if node_name == "hitl_script_review":
         fb = _get_field(output, "qa_script_feedback")
         if fb:
             return "Rejected with feedback — retrying"
         return "Script approved"
 
-    # ── generate_diagrams ──
     if node_name == "generate_diagrams":
-        script = _get_field(output, "script")
-        if script:
-            segs = _get_field(script, "segments", [])
-            diagram_count = sum(
-                1 for s in segs
-                if _get_field(s, "assigned_asset") and
-                str(_get_field(s, "assigned_asset", "")).endswith((".png", ".svg"))
-            )
-            return f"{diagram_count} diagram(s) rendered"
         return "Diagrams generated"
 
-    # ── generate_blueprint ──
     if node_name == "generate_blueprint":
         bp = _get_field(output, "blueprint")
         if bp:
             scenes = _get_field(bp, "scenes", [])
             total_frames = sum(_get_field(s, "durationInFrames", 0) for s in scenes)
             total_s = total_frames / 30 if total_frames else 0
-            gs = _get_field(bp, "globalSettings")
-            theme = ""
-            if gs:
-                t = _get_field(gs, "theme")
-                if t:
-                    theme = f", theme={_get_field(t, 'id', '')}"
-            return f"{len(scenes)} scenes, {total_s:.1f}s{theme}"
+            return f"{len(scenes)} scenes, {total_s:.1f}s"
         return "Blueprint generated"
 
-    # ── hitl_blueprint_review ──
     if node_name == "hitl_blueprint_review":
         fb = _get_field(output, "qa_blueprint_feedback")
         if fb:
             return "Rejected with feedback — retrying"
         return "Blueprint approved"
 
-    # ── audio_design ──
     if node_name == "audio_design":
         durations = _get_field(output, "segment_actual_durations", [])
-        vo = _get_field(output, "voiceover_path")
-        bgm = _get_field(output, "bgm_path")
         if durations:
             total = sum(durations)
             return f"TTS {len(durations)} segments ({total:.1f}s), BGM generated"
-        parts = []
-        if vo:
-            parts.append("voiceover OK")
-        if bgm:
-            parts.append("BGM OK")
-        return ", ".join(parts) if parts else "Audio design complete"
+        return "Audio design complete"
 
-    # ── render_compose ──
     if node_name == "render_compose":
-        video = output.get("video_mp4_path")
         final = output.get("final_mp4_path")
         if final:
             return f"Final video: {final.split('/')[-1]}"
-        if video:
-            return f"Raw video: {video.split('/')[-1]}"
         return "Render & compose complete"
 
     return ""
+
+
+def _compile_graph_with_services(session, checkpointer):
+    """Compile the workflow graph with all injected services."""
+    repository, status_service = _build_services(session)
+    analyzer = LLMRepoAnalyzer()
+    composer = LLMScriptComposer()
+    blueprint_composer = LLMBlueprintComposer()
+    video_renderer = RemotionVideoRenderer()
+    media_gen = MediaGenerator()
+    audio_mixer = FFmpegAudioMixer()
+
+    graph = compile_workflow(
+        analyzer=analyzer,
+        composer=composer,
+        blueprint_composer=blueprint_composer,
+        video_renderer=video_renderer,
+        voiceover_gen=media_gen,
+        bgm_gen=media_gen,
+        audio_mixer=audio_mixer,
+        repository=repository,
+        semaphore=global_render_semaphore,
+        status_service=status_service,
+        checkpointer=checkpointer,
+    )
+    return graph, repository, status_service
 
 
 @router.websocket("/stream/{task_id}")
@@ -397,15 +440,6 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
 
     session_maker = _get_session_maker()
     async with session_maker() as session:
-        repository = PostgresPipelineTaskRepository(session)
-        analyzer = LLMRepoAnalyzer()
-        composer = LLMScriptComposer()
-        blueprint_composer = LLMBlueprintComposer()
-        video_renderer = RemotionVideoRenderer()
-        media_gen = MediaGenerator()
-        audio_mixer = FFmpegAudioMixer()
-
-        # Keep checkpointer context alive for the entire WebSocket session
         checkpointer_ctx = _get_checkpointer_context()
         async with checkpointer_ctx as checkpointer:
             if checkpointer is not None:
@@ -415,19 +449,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
                     logger.error("Checkpointer setup failed: %s", e)
                     checkpointer = None
 
-            graph = compile_workflow(
-                analyzer=analyzer,
-                composer=composer,
-                blueprint_composer=blueprint_composer,
-                video_renderer=video_renderer,
-                voiceover_gen=media_gen,
-                bgm_gen=media_gen,
-                audio_mixer=audio_mixer,
-                repository=repository,
-                semaphore=global_render_semaphore,
-                checkpointer=checkpointer,
-            )
-
+            graph, repository, status_service = _compile_graph_with_services(session, checkpointer)
             _active_graphs[task_id] = graph
 
             config = {"configurable": {"thread_id": task_id}}
@@ -455,22 +477,11 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
                 "error": None,
             }
 
-            all_nodes = {
-                "github_trending", "hitl_trending_review",
-                "analyze_repo", "compose_script",
-                "hitl_script_review",
-                "generate_diagrams",
-                "generate_blueprint",
-                "hitl_blueprint_review",
-                "audio_design", "render_compose",
-            }
-
             try:
-                result = await _stream_graph(graph, state_input, config, websocket, all_nodes)
+                result = await _stream_graph(graph, state_input, config, websocket, task_id)
                 if result == "hitl":
-                    # Graph is paused — keep it in _active_graphs for resume
                     logger.info("Graph paused for HITL, keeping task %s active", task_id)
-                    return  # Don't close websocket or pop graph
+                    return
                 else:
                     _active_graphs.pop(task_id, None)
             except WebSocketDisconnect:
@@ -480,7 +491,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
                 _active_graphs.pop(task_id, None)
                 await _mark_task_error(task_id, str(e))
                 try:
-                    await websocket.send_json({"type": "error", "content": str(e)})
+                    await websocket.send_json({"type": "pipeline_event", "status": "error", "completed_nodes": []})
                 except Exception:
                     pass
                 logger.error("Error during task stream: %s", e)
@@ -493,10 +504,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
 
 @router.websocket("/resume/{task_id}")
 async def resume_task(websocket: WebSocket, task_id: str) -> None:
-    """WebSocket endpoint to resume a paused (HITL) task with a human decision.
-
-    Client sends: {"action": "approve" | "reject" | "abort" | "select", "feedback": "...", "repo_url": "..."}
-    """
+    """WebSocket endpoint to resume a paused (HITL) task with a human decision."""
     await websocket.accept()
 
     try:
@@ -505,21 +513,11 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
         feedback = data.get("feedback")
         repo_url = data.get("repo_url")
 
-        # Always recompile with fresh connections — the stream endpoint's
-        # session/checkpointer contexts are closed by the time we get here.
         _active_graphs.pop(task_id, None)
         logger.info("Recompiling graph for resume of task %s...", task_id)
 
         session_maker = _get_session_maker()
         async with session_maker() as session:
-            repository = PostgresPipelineTaskRepository(session)
-            analyzer = LLMRepoAnalyzer()
-            composer = LLMScriptComposer()
-            blueprint_composer = LLMBlueprintComposer()
-            video_renderer = RemotionVideoRenderer()
-            media_gen = MediaGenerator()
-            audio_mixer = FFmpegAudioMixer()
-
             checkpointer_ctx = _get_checkpointer_context()
             async with checkpointer_ctx as checkpointer:
                 if checkpointer is not None:
@@ -529,24 +527,11 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
                         logger.error("Checkpointer setup failed: %s", e)
                         checkpointer = None
 
-                graph = compile_workflow(
-                    analyzer=analyzer,
-                    composer=composer,
-                    blueprint_composer=blueprint_composer,
-                    video_renderer=video_renderer,
-                    voiceover_gen=media_gen,
-                    bgm_gen=media_gen,
-                    audio_mixer=audio_mixer,
-                    repository=repository,
-                    semaphore=global_render_semaphore,
-                    checkpointer=checkpointer,
-                )
+                graph, repository, status_service = _compile_graph_with_services(session, checkpointer)
 
-                # Reconstruct state from DB to preserve outputs of already-completed nodes
-                # (fresh thread_id = no checkpoint, so skip guards need DB state)
                 db_task = await repository.get_by_id(uuid.UUID(task_id))
                 if db_task is None:
-                    await websocket.send_json({"type": "error", "content": f"Task {task_id} not found"})
+                    await websocket.send_json({"type": "pipeline_event", "status": "error", "completed_nodes": []})
                     await websocket.close()
                     return
 
@@ -566,21 +551,20 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
                     "video_mp4_path": db_task.video_mp4_path,
                     "final_mp4_path": db_task.final_mp4_path,
                 }
-                # Filter out None values so they don't overwrite valid checkpoint state
                 db_state = {k: v for k, v in db_state.items() if v is not None}
 
                 config = {"configurable": {"thread_id": task_id, **db_state}}
                 resume_input = Command(resume={"action": action, "feedback": feedback, "repo_url": repo_url})
 
                 try:
-                    result = await _stream_graph(graph, resume_input, config, websocket, set())
+                    result = await _stream_graph(graph, resume_input, config, websocket, task_id)
                     if result in ("completed", "error"):
                         _active_graphs.pop(task_id, None)
                 except Exception as e:
                     _active_graphs.pop(task_id, None)
                     await _mark_task_error(task_id, str(e))
                     try:
-                        await websocket.send_json({"type": "error", "content": str(e)})
+                        await websocket.send_json({"type": "pipeline_event", "status": "error", "completed_nodes": []})
                     except Exception:
                         pass
                     logger.error("Error during task resume: %s", e)
@@ -591,37 +575,40 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
 
 @router.websocket("/retry/{task_id}")
 async def retry_task(websocket: WebSocket, task_id: str) -> None:
-    """WebSocket endpoint to retry a failed task from the last failed node.
-
-    Reconstructs PipelineState from DB fields, then re-runs the graph.
-    Skip-if-done guards on each node ensure completed nodes are no-ops,
-    and the failed node re-executes with preserved context.
-    """
+    """WebSocket endpoint to retry a failed task from the last failed node."""
     await websocket.accept()
 
     try:
         session_maker = _get_session_maker()
         async with session_maker() as session:
-            repository = PostgresPipelineTaskRepository(session)
+            repository, status_service = _build_services(session)
 
             # 1. Load task from DB
             task = await repository.get_by_id(uuid.UUID(task_id))
             if not task:
-                await websocket.send_json({"type": "error", "content": f"Task {task_id} not found"})
+                await websocket.send_json({"type": "pipeline_event", "status": "error", "completed_nodes": []})
                 await websocket.close()
                 return
 
             # 2. Verify task is in ERROR state
             if task.status != PipelineStatus.ERROR:
-                await websocket.send_json({"type": "error", "content": f"Task is not in ERROR state (current: {task.status})"})
+                await websocket.send_json({
+                    "type": "pipeline_event", "status": "error",
+                    "completed_nodes": task.completed_nodes or [],
+                })
                 await websocket.close()
                 return
 
-            # 3. Reset task status to PENDING
-            task.status = PipelineStatus.PENDING
-            await repository.update(task)
+            # 3. Reset via FSM
+            await status_service.reset_for_retry(uuid.UUID(task_id))
 
-            # 4. Reconstruct PipelineState dict from DB fields
+            # 4. Send immediate pending state to frontend
+            await _send_node_event(
+                websocket, task.failed_node or "unknown", "started", "pending",
+                task.completed_nodes or [], detail="Retrying task...",
+            )
+
+            # 5. Reconstruct PipelineState dict from DB fields
             state_input: dict[str, Any] = {
                 "task_id": task_id,
                 "repo_url": task.repo_url,
@@ -648,14 +635,7 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
                 "error": None,
             }
 
-            # 5. Compile graph with fresh checkpointer (new thread_id)
-            analyzer = LLMRepoAnalyzer()
-            composer = LLMScriptComposer()
-            blueprint_composer = LLMBlueprintComposer()
-            video_renderer = RemotionVideoRenderer()
-            media_gen = MediaGenerator()
-            audio_mixer = FFmpegAudioMixer()
-
+            # 6. Compile graph with fresh checkpointer
             checkpointer_ctx = _get_checkpointer_context()
             async with checkpointer_ctx as checkpointer:
                 if checkpointer is not None:
@@ -665,40 +645,18 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
                         logger.error("Checkpointer setup failed: %s", e)
                         checkpointer = None
 
-                graph = compile_workflow(
-                    analyzer=analyzer,
-                    composer=composer,
-                    blueprint_composer=blueprint_composer,
-                    video_renderer=video_renderer,
-                    voiceover_gen=media_gen,
-                    bgm_gen=media_gen,
-                    audio_mixer=audio_mixer,
-                    repository=repository,
-                    semaphore=global_render_semaphore,
-                    checkpointer=checkpointer,
-                )
+                graph, _, _ = _compile_graph_with_services(session, checkpointer)
 
-                # Use a new thread_id to avoid checkpoint conflicts with the original run
                 config = {"configurable": {"thread_id": f"{task_id}-retry"}}
 
-                all_nodes = {
-                    "github_trending", "hitl_trending_review",
-                    "analyze_repo", "compose_script",
-                    "hitl_script_review",
-                    "generate_diagrams",
-                    "generate_blueprint",
-                    "hitl_blueprint_review",
-                    "audio_design", "render_compose",
-                }
-
                 try:
-                    await _stream_graph(graph, state_input, config, websocket, all_nodes)
+                    await _stream_graph(graph, state_input, config, websocket, task_id)
                 except WebSocketDisconnect:
                     logger.info("Retry client disconnected for task %s", task_id)
                 except Exception as e:
                     await _mark_task_error(task_id, str(e))
                     try:
-                        await websocket.send_json({"type": "error", "content": str(e)})
+                        await websocket.send_json({"type": "pipeline_event", "status": "error", "completed_nodes": []})
                     except Exception:
                         pass
                     logger.error("Error during task retry: %s", e)
@@ -708,7 +666,7 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
     except Exception as e:
         logger.error("Retry setup error for task %s: %s", task_id, e)
         try:
-            await websocket.send_json({"type": "error", "content": str(e)})
+            await websocket.send_json({"type": "pipeline_event", "status": "error", "completed_nodes": []})
         except Exception:
             pass
 

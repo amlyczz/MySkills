@@ -35,6 +35,10 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             bgm_path=task.bgm_path,
             video_mp4_path=task.video_mp4_path,
             final_mp4_path=task.final_mp4_path,
+            current_node=task.current_node,
+            completed_nodes=task.completed_nodes or [],
+            failed_node=task.failed_node,
+            node_error=task.node_error,
             created_at=task.created_at,
             updated_at=task.updated_at,
         )
@@ -46,6 +50,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             select(PipelineTaskDB).where(PipelineTaskDB.id == task_id)
         )
         db_task = result.scalars().first()
+        await self.session.commit()
         if not db_task:
             return None
 
@@ -75,6 +80,10 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             bgm_path=db_task.bgm_path,
             video_mp4_path=db_task.video_mp4_path,
             final_mp4_path=db_task.final_mp4_path,
+            current_node=db_task.current_node,
+            completed_nodes=db_task.completed_nodes or [],
+            failed_node=db_task.failed_node,
+            node_error=db_task.node_error,
             created_at=db_task.created_at,
             updated_at=db_task.updated_at,
         )
@@ -84,12 +93,13 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
         result = await self.session.execute(
             select(PipelineTaskDB.repo_url).where(
                 PipelineTaskDB.status.in_([
-                    PipelineStatus.POST_PROCESSING,
                     PipelineStatus.COMPLETED,
                 ])
             )
         )
-        return {row[0] for row in result.all() if row[0] and row[0] not in ("trending", "pending")}
+        urls = {row[0] for row in result.all() if row[0] and row[0] not in ("trending", "pending")}
+        await self.session.commit()
+        return urls
 
     async def update(self, task: PipelineTask) -> None:
         db_task = await self.session.get(PipelineTaskDB, task.id)
@@ -108,5 +118,9 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             db_task.bgm_path = task.bgm_path
             db_task.video_mp4_path = task.video_mp4_path
             db_task.final_mp4_path = task.final_mp4_path
+            db_task.current_node = task.current_node
+            db_task.completed_nodes = task.completed_nodes or []
+            db_task.failed_node = task.failed_node
+            db_task.node_error = task.node_error
             db_task.updated_at = datetime.utcnow()
             await self.session.commit()

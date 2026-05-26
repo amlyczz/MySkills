@@ -12,7 +12,7 @@ This dramatically improves reliability over single-shot generation because:
 
 from typing import Optional
 from pydantic import BaseModel, Field
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, Script, ScriptSegment
 from ...domain.visual_blueprint.entities import (
     Blueprint, BlueprintMeta, SceneConfig, ElementConfig, GlobalSettings,
@@ -229,8 +229,8 @@ class LLMBlueprintComposer(BlueprintComposer):
     ) -> Blueprint:
         """Step 1: Generate Blueprint with scene skeletons only."""
         prompt = ChatPromptTemplate.from_messages([
-            ("system", load_prompt("visual_blueprint", "step1_skeleton_system.md")),
-            ("user", load_prompt("visual_blueprint", "step1_skeleton_user.md")),
+            SystemMessagePromptTemplate.from_template(load_prompt("visual_blueprint", "step1_skeleton_system.md"), template_format="jinja2"),
+            HumanMessagePromptTemplate.from_template(load_prompt("visual_blueprint", "step1_skeleton_user.md")),
         ])
 
         segments_repr = self._serialize_segments(script)
@@ -299,7 +299,7 @@ class LLMBlueprintComposer(BlueprintComposer):
         user_prompt += "\nOutput a complete SceneConfig with rich elements and animations. Respond in valid JSON format conforming to the expected schema."
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", load_prompt("visual_blueprint", "step2_elements_system.md")),
+            SystemMessagePromptTemplate.from_template(load_prompt("visual_blueprint", "step2_elements_system.md"), template_format="jinja2"),
             ("user", "{scene_context}"),
         ])
 

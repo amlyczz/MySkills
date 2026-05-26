@@ -1,11 +1,13 @@
+import asyncio
 import logging
 import os
+import subprocess
 import uuid
 
 from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, RepoMetadata
 
 logger = logging.getLogger(__name__)
-from ...domain.task.entities import PipelineStatus
+from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
 from ...infrastructure.repo_analyzer.github_collector import GitHubMaterialCollector
@@ -19,9 +21,11 @@ class AnalyzeRepoUseCase:
         self,
         analyzer: RepoAnalyzer,
         repository: PipelineTaskRepository,
+        status_service: StatusTransitionService,
     ) -> None:
         self.analyzer = analyzer
         self.repository = repository
+        self.status_service = status_service
         self.collector = GitHubMaterialCollector()
 
     async def __call__(self, state: PipelineState) -> PipelineState:
@@ -33,6 +37,13 @@ class AnalyzeRepoUseCase:
                 repo_url=state["repo_url"],
                 project_category=state.get("project_category", "github"),
             )
+
+        task_id = uuid.UUID(state["task_id"])
+
+        # ① Enter node: mark active immediately
+        await self.status_service.transition(
+            task_id, PipelineStatus.ANALYZING, node="analyze_repo"
+        )
 
         logger.info("[UseCase] Running AnalyzeRepo")
 
@@ -77,16 +88,17 @@ class AnalyzeRepoUseCase:
         # 5. Domain analysis — audience profile + narrative strategy
         domain_analysis = await self.analyzer.analyze_domain(content_model, repo_metadata)
 
-        # 6. Synchronize DB state
-        task_id = uuid.UUID(state["task_id"])
-        task = await self.repository.get_by_id(task_id)
-        if task:
-            task.status = PipelineStatus.ANALYZING
-            task.content_model = content_model
-            task.material_manifest = material_manifest
-            task.domain_analysis = domain_analysis
-            task.project_category = category.value
-            await self.repository.update(task)
+        # ② Complete node: update via FSM
+        await self.status_service.mark_node_completed(
+            task_id, "analyze_repo",
+            updates={
+                "status": PipelineStatus.ANALYZING,
+                "content_model": content_model,
+                "material_manifest": material_manifest,
+                "domain_analysis": domain_analysis,
+                "project_category": category.value,
+            },
+        )
 
         return PipelineState(
             task_id=state["task_id"],
@@ -144,7 +156,6 @@ class AnalyzeRepoUseCase:
         return "\n".join(parts)
 
     async def _download_curated_materials(self, urls: list[str], output_dir: str, manifest: MaterialManifest) -> None:
-        import subprocess
         from ...domain.repo_analyzer.entities import Material, MaterialSource, CaptureInfo, MaterialMetadata
 
         assets_dir = os.path.join(output_dir, "assets")
@@ -162,10 +173,22 @@ class AnalyzeRepoUseCase:
                 else:
                     cmd = ["curl", "-sL", url]
 
-                result = subprocess.run(cmd, capture_output=True, timeout=30)
-                if result.returncode == 0 and len(result.stdout) > 0:
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+                
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    await process.communicate()
+                    raise TimeoutError(f"Command timed out after 30s: {' '.join(cmd)}")
+
+                if process.returncode == 0 and len(stdout) > 0:
                     with open(file_path, "wb") as f:
-                        f.write(result.stdout)
+                        f.write(stdout)
 
                     ext = os.path.splitext(filename)[1].lower()
                     mat_type = "image" if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp") else "other"

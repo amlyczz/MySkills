@@ -88,15 +88,25 @@ async def _gh_get(endpoint: str, extra_headers: dict | None = None) -> dict | li
     headers = _api_headers(token)
     if extra_headers:
         headers.update(extra_headers)
-    try:
-        resp = await client.get(f"https://api.github.com{endpoint}", headers=headers)
-        if resp.status_code >= 400:
-            logger.info(f"API {endpoint} → {resp.status_code}")
+    for attempt in range(3):
+        try:
+            resp = await client.get(f"https://api.github.com{endpoint}", headers=headers, timeout=20.0)
+            if resp.status_code == 403 and "rate limit" in resp.text.lower():
+                await asyncio.sleep(2 * (attempt + 1))
+                continue
+            if resp.status_code >= 400:
+                logger.info(f"API {endpoint} → {resp.status_code}")
+                return None
+            return resp.json()
+        except httpx.TimeoutException as e:
+            if attempt == 2:
+                logger.warning(f"Timeout error for {endpoint}: {e}")
+                return None
+            await asyncio.sleep(1 * (attempt + 1))
+        except httpx.ConnectError as e:
+            logger.warning(f"Connect error for {endpoint}: {e}")
             return None
-        return resp.json()
-    except httpx.ConnectError as e:
-        logger.warning(f"Connect error for {endpoint}: {e}")
-        return None
+    return None
 
 
 async def _gh_get_text(url: str, headers: dict | None = None) -> str:
@@ -106,9 +116,16 @@ async def _gh_get_text(url: str, headers: dict | None = None) -> str:
         "Accept": "text/html",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
     }
-    resp = await client.get(url, headers=h)
-    resp.raise_for_status()
-    return resp.text
+    for attempt in range(3):
+        try:
+            resp = await client.get(url, headers=h, timeout=20.0)
+            resp.raise_for_status()
+            return resp.text
+        except httpx.TimeoutException:
+            if attempt == 2:
+                raise
+            await asyncio.sleep(1 * (attempt + 1))
+    return ""
 
 
 # ── Trending page scraping (only source for actual trending data) ──

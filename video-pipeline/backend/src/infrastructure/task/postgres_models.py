@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, DateTime, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID, ARRAY
 from .connection import Base
 from ...domain.task.entities import PipelineStatus
 
@@ -33,6 +33,12 @@ class PipelineTaskDB(Base):
     bgm_path = Column(String, nullable=True)
     video_mp4_path = Column(String, nullable=True)
     final_mp4_path = Column(String, nullable=True)
+
+    # Node-level progress tracking
+    current_node = Column(String, nullable=True)
+    completed_nodes = Column(ARRAY(String), nullable=True, default=list)
+    failed_node = Column(String, nullable=True)
+    node_error = Column(String, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

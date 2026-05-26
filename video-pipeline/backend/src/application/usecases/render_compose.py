@@ -9,7 +9,7 @@ import uuid
 from ...domain.visual_blueprint.entities import Blueprint
 from ...domain.visual_blueprint.interfaces import VideoRenderer
 from ...domain.post_producer.interfaces import AudioMixer
-from ...domain.task.entities import PipelineStatus
+from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ..workflow.state import PipelineState
 from .output_dir import resolve_output_dir
@@ -67,13 +67,15 @@ class RenderComposeUseCase:
         self,
         video_renderer: VideoRenderer,
         audio_mixer: AudioMixer,
-        repository: object,
+        repository: PipelineTaskRepository,
         semaphore: object,
+        status_service: StatusTransitionService,
     ) -> None:
         self.video_renderer = video_renderer
         self.audio_mixer = audio_mixer
         self.repository = repository
         self.semaphore = semaphore
+        self.status_service = status_service
 
     async def __call__(self, state: PipelineState) -> PipelineState:
         # Skip-if-done guard: if final video exists, skip
@@ -85,6 +87,13 @@ class RenderComposeUseCase:
             )
 
         import asyncio
+
+        task_id = uuid.UUID(state["task_id"])
+
+        # ① Enter node: mark active immediately
+        await self.status_service.transition(
+            task_id, PipelineStatus.RENDERING, node="render_compose"
+        )
 
         blueprint = state.get("blueprint")
         if blueprint is None:
@@ -123,14 +132,15 @@ class RenderComposeUseCase:
             import shutil
             shutil.copy2(video_path, final_mp4_path)
 
-        # ── 4. Sync DB state ──
-        task_id = uuid.UUID(state["task_id"])
-        task = await self.repository.get_by_id(task_id)
-        if task:
-            task.status = PipelineStatus.COMPLETED
-            task.video_mp4_path = video_path
-            task.final_mp4_path = final_mp4_path
-            await self.repository.update(task)
+        # ② Complete node: update via FSM
+        await self.status_service.mark_node_completed(
+            task_id, "render_compose",
+            updates={
+                "status": PipelineStatus.COMPLETED,
+                "video_mp4_path": video_path,
+                "final_mp4_path": final_mp4_path,
+            },
+        )
 
         return PipelineState(
             task_id=state["task_id"],

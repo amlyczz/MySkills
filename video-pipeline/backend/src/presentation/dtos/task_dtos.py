@@ -25,6 +25,14 @@ class TaskStatusResponse(BaseModel):
     task_id: str
     status: str
     repo_url: Optional[str] = None
+
+    # Node-level progress (eliminates frontend guesswork)
+    current_node: Optional[str] = None
+    completed_nodes: list[str] = []
+    failed_node: Optional[str] = None
+    node_error: Optional[str] = None
+
+    # Domain data
     content_model: Optional[dict] = None
     material_manifest: Optional[dict] = None
     script: Optional[dict] = None
