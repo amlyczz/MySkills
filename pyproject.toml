@@ -8,6 +8,7 @@ dependencies = [
     "pipeline-contracts",
     "playwright>=1.60.0",
     "edge-tts>=7.2.8",
+    "aiosqlite>=0.22.1",
 ]
 
 [tool.uv.sources]
