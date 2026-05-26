@@ -20,8 +20,8 @@ class LLMBlueprintEvaluator(BlueprintEvaluator):
         ])
 
         # Pass 1: Structure overview (always fits in context)
-        overview = self._build_structure_overview(blueprint)
-        chain = prompt | self.llm.with_structured_output(QAResultSchema)
+        overview = self._build_structure_overview(blueprint) + "\n\nNote: You must respond in valid JSON format conforming to the expected schema."
+        chain = prompt | self.llm.with_structured_output(QAResultSchema, method="json_mode")
         result: QAResultSchema = await chain.ainvoke({"blueprint_json": overview})
 
         # If score is very low, return immediately (no point in detailed check)
@@ -32,9 +32,9 @@ class LLMBlueprintEvaluator(BlueprintEvaluator):
         scene_results: list[int] = []
         for scene in blueprint.scenes[:3]:
             scene_json = scene.model_dump_json(exclude_none=True, indent=2)
-            scene_chain = prompt | self.llm.with_structured_output(QAResultSchema)
+            scene_chain = prompt | self.llm.with_structured_output(QAResultSchema, method="json_mode")
             scene_result: QAResultSchema = await scene_chain.ainvoke(
-                {"blueprint_json": f"## Scene Detail Check\n\nScene ID: {scene.id}\n{scene_json}"}
+                {"blueprint_json": f"## Scene Detail Check\n\nScene ID: {scene.id}\n{scene_json}\n\nNote: You must respond in valid JSON format conforming to the expected schema."}
             )
             scene_results.append(scene_result.score)
 

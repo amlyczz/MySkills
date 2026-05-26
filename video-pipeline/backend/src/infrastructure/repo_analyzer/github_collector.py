@@ -12,10 +12,13 @@ Uses the `gh` CLI and GitHub REST API to gather:
 import asyncio
 import base64
 import json
+import logging
 import os
 import re
 import subprocess
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from ...domain.repo_analyzer.entities import (
     MaterialManifest,
@@ -287,7 +290,7 @@ class GitHubMaterialCollector:
 
             collected.append(CoreFile(path=rel_path, content=truncated))
 
-        print(f"[GitHubCollector] Collected {len(collected)} core source files")
+        logger.info("Collected %d core source files", len(collected))
         return collected
 
     async def _discover_assets(
@@ -371,7 +374,7 @@ class GitHubMaterialCollector:
                 metadata=MaterialMetadata(alt_text=f"Full-page screenshot of {repo_url}"),
             ))
         except Exception as e:
-            print(f"[GitHubCollector] Screenshot capture failed: {e}")
+            logger.warning("Screenshot capture failed: %s", e)
 
     async def _fallback_scrape(
         self, repo_url: str, screenshot_path: str
@@ -389,7 +392,7 @@ class GitHubMaterialCollector:
                 await page.screenshot(path=screenshot_path, full_page=True)
                 await browser.close()
         except Exception as e:
-            print(f"[GitHubCollector] Fallback scrape failed: {e}")
+            logger.warning("Fallback scrape failed: %s", e)
 
         manifest = MaterialManifest(
             materials=[

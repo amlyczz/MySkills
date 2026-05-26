@@ -15,6 +15,7 @@ from ..dtos.project_dtos import (
     ProjectListResponse,
     ProjectSubmitTaskRequest,
 )
+from ..dtos.task_dtos import TaskListItem
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
 
@@ -101,6 +102,37 @@ async def get_project(
     task_count = (await session.execute(count_stmt)).scalar() or 0
 
     return _project_to_response(project, task_count)
+
+
+@router.get("/{project_id}/tasks", response_model=list[TaskListItem])
+async def list_project_tasks(
+    project_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> list[TaskListItem]:
+    """List all tasks belonging to a project."""
+    try:
+        uid = uuid.UUID(project_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid project ID format.")
+
+    stmt = (
+        select(PipelineTaskDB)
+        .where(PipelineTaskDB.project_id == uid)
+        .order_by(PipelineTaskDB.created_at.desc())
+    )
+    result = await session.execute(stmt)
+    tasks = result.scalars().all()
+
+    return [
+        TaskListItem(
+            task_id=str(t.id),
+            repo_url=t.repo_url or "",
+            status=t.status.value if t.status else "pending",
+            created_at=t.created_at.isoformat() if t.created_at else None,
+            updated_at=t.updated_at.isoformat() if t.updated_at else None,
+        )
+        for t in tasks
+    ]
 
 
 @router.delete("/{project_id}")

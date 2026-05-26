@@ -1,6 +1,16 @@
 import sys
 import os
+import logging
 from pathlib import Path
+
+# Configure logging before anything else
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+
+logger = logging.getLogger(__name__)
 
 # Ensure backend/ (parent of src/) is on sys.path so `src.xxx` imports work
 _backend_root = str(Path(__file__).resolve().parent.parent)
@@ -25,11 +35,11 @@ from src.infrastructure.task.postgres_models import PipelineTaskDB  # register w
 
 async def run_server() -> None:
     # 1. Initialize Postgres tables if not present
-    print("[Main] Initializing database tables...")
+    logger.info("Initializing database tables...")
     await init_db()
     
     # 2. Boot Uvicorn ASGI server
-    print("[Main] Booting Uvicorn ASGI Server...")
+    logger.info("Booting Uvicorn ASGI Server...")
     config = uvicorn.Config(
         "src.presentation.server:app",
         host="0.0.0.0",

@@ -26,7 +26,7 @@ class LLMScriptComposer(ScriptComposer):
 
         encyclopedia = content.content
         name = encyclopedia.title if encyclopedia else "Unknown Project"
-        summary = encyclopedia.summary if encyclopedia else ""
+        summary = encyclopedia.tagline if encyclopedia else ""
         quick_start = encyclopedia.quick_start if encyclopedia else ""
         use_cases = encyclopedia.use_cases if encyclopedia else ""
         usage_intro = encyclopedia.usage_intro if encyclopedia else ""
@@ -64,7 +64,7 @@ class LLMScriptComposer(ScriptComposer):
                 f"You MUST address this feedback in your new version."
             )
 
-        chain = prompt | self.llm.with_structured_output(Script)
+        chain = prompt | self.llm.with_structured_output(Script, method="json_mode")
         script: Script = await chain.ainvoke({
             "target_duration": "180-600 (3-10 minutes), decide based on project complexity and depth of content",
             "hook_pct": "~5-8%",

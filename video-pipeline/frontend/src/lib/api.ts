@@ -75,3 +75,23 @@ export async function deleteTask(taskId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/task/${taskId}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`Failed to delete task: ${res.status}`)
 }
+
+export interface TaskItem {
+  task_id: string
+  repo_url: string
+  status: string
+  created_at: string | null
+  updated_at: string | null
+}
+
+export async function listProjectTasks(projectId: string): Promise<TaskItem[]> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`)
+  if (!res.ok) throw new Error(`Failed to list tasks: ${res.status}`)
+  return res.json()
+}
+
+export async function getTaskStatus(taskId: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API_BASE}/task/${taskId}`)
+  if (!res.ok) throw new Error(`Failed to get task: ${res.status}`)
+  return res.json()
+}

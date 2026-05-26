@@ -11,6 +11,7 @@ export default function App() {
         <Route path="/" element={<ProjectList />} />
         <Route path="/projects/new" element={<NewProject />} />
         <Route path="/project/:id" element={<ProjectDetail />} />
+        <Route path="/project/:id/pipeline" element={<TaskMonitor />} />
         <Route path="/project/:id/task/:tid" element={<TaskMonitor />} />
       </Routes>
     </BrowserRouter>

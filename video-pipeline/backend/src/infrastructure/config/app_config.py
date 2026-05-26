@@ -53,8 +53,11 @@ class AppConfig(BaseModel):
     https_proxy: str | None = Field(
         default_factory=get_auto_proxy
     )
-    llm_model: str = Field(
-        default_factory=lambda: os.getenv("LLM_MODEL", "gpt-4o")
+    llm_model_pro: str = Field(
+        default_factory=lambda: os.getenv("LLM_MODEL_PRO", "deepseek-v4-pro")
+    )
+    llm_model_fast: str = Field(
+        default_factory=lambda: os.getenv("LLM_MODEL_FAST", "deepseek-v4-flash")
     )
     qa_model: str | None = Field(
         default_factory=lambda: os.getenv("QA_MODEL") or None

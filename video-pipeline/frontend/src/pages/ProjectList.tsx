@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Trash2, Film, Globe, Flame, FolderOpen } from 'lucide-react'
+import { Plus, Search, Trash2, Globe, FolderOpen } from 'lucide-react'
 import { listProjects, deleteProject, type ProjectData } from '../lib/api'
-
-const sourceIcons: Record<string, React.ReactNode> = {
-  github_repo: <Globe className="w-4 h-4" />,
-  trending: <Flame className="w-4 h-4" />,
-}
-
-const statusColors: Record<string, string> = {
-  completed: 'text-green-400 border-green-500/30 bg-green-500/10',
-  error: 'text-red-400 border-red-500/30 bg-red-500/10',
-  rendering: 'text-blue-400 border-blue-500/30 bg-blue-500/10',
-  pending: 'text-zinc-400 border-zinc-500/30 bg-zinc-500/10',
-}
 
 export default function ProjectList() {
   const navigate = useNavigate()
@@ -31,7 +19,7 @@ export default function ProjectList() {
       const res = await listProjects(page, search || undefined)
       setProjects(res.projects)
       setTotal(res.total)
-    } catch (e) {
+    } catch {
       setError('Failed to load projects. Is the backend running?')
     }
     setLoading(false)
@@ -56,106 +44,102 @@ export default function ProjectList() {
   const totalPages = Math.ceil(total / 20)
 
   return (
-    <div className="min-h-screen p-8 max-w-6xl mx-auto">
+    <div className="min-h-screen p-6 md:p-8 max-w-5xl mx-auto">
       {/* Header */}
-      <header className="mb-8 flex items-center justify-between">
+      <header className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-            <Film className="w-8 h-8 text-[var(--color-accent)]" />
+          <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
             Video Pipeline
           </h1>
-          <p className="text-[var(--color-text-secondary)] mt-1">Manage your video generation projects</p>
+          <p className="text-sm text-[var(--color-ink-secondary)] mt-1">Manage your video generation projects</p>
         </div>
         <button
           onClick={() => navigate('/projects/new')}
-          className="flex items-center gap-2 bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-purple)] text-white font-bold px-6 py-3 rounded-lg shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:shadow-[0_0_25px_rgba(0,240,255,0.5)] transition-all"
+          className="flex items-center gap-2 bg-[var(--color-accent)] text-white font-semibold px-4 py-2 rounded-md hover:bg-[var(--color-accent-hover)] transition-colors shrink-0"
         >
-          <Plus className="w-5 h-5" /> New Project
+          <Plus className="w-4 h-4" /> New Project
         </button>
       </header>
 
       {/* Search */}
       <form onSubmit={handleSearch} className="mb-6">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-ink-muted)]" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search projects..."
-            className="w-full bg-black/50 border border-white/10 rounded-lg pl-11 pr-4 py-3 text-white focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+            className="w-full bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md pl-10 pr-4 py-2.5 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
           />
         </div>
       </form>
 
-      {/* Error state */}
+      {/* Error */}
       {error && (
-        <div className="glass-panel p-6 text-center text-[var(--color-text-secondary)]">
-          <p>{error}</p>
-          <button onClick={fetchProjects} className="mt-3 text-[var(--color-accent)] hover:underline text-sm">Retry</button>
+        <div className="paper p-6 text-center">
+          <p className="text-[var(--color-status-error)] text-sm">{error}</p>
+          <button onClick={fetchProjects} className="mt-2 text-sm text-[var(--color-accent)] hover:underline">Retry</button>
         </div>
       )}
 
       {/* Loading */}
       {loading && !error && (
-        <div className="glass-panel p-12 text-center text-[var(--color-text-secondary)]">
-          Loading projects...
+        <div className="space-y-3" aria-busy="true" aria-label="Loading projects">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-20 bg-[var(--color-surface)] animate-pulse rounded-md border border-[var(--color-border)]" />
+          ))}
         </div>
       )}
 
       {/* Empty */}
       {!loading && !error && projects.length === 0 && (
-        <div className="glass-panel p-12 text-center">
-          <FolderOpen className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-4" />
-          <p className="text-[var(--color-text-secondary)] mb-4">No projects yet</p>
+        <div className="paper p-12 text-center" role="status">
+          <FolderOpen className="w-10 h-10 text-[var(--color-ink-muted)] mx-auto mb-3" />
+          <p className="text-sm text-[var(--color-ink-secondary)] mb-2">No projects yet</p>
           <button
             onClick={() => navigate('/projects/new')}
-            className="text-[var(--color-accent)] hover:underline"
+            className="text-sm text-[var(--color-accent)] hover:underline"
           >
             Create your first project
           </button>
         </div>
       )}
 
-      {/* Project grid */}
+      {/* Project list */}
       {!loading && !error && projects.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="space-y-2">
           {projects.map(p => (
             <div
               key={p.id}
               onClick={() => navigate(`/project/${p.id}`)}
-              className="glass-panel p-5 cursor-pointer hover:border-[var(--color-accent)]/30 transition-all group relative"
+              className="paper p-4 cursor-pointer transition-all hover:border-[var(--color-border-strong)] group relative"
             >
-              {/* Delete button */}
               <button
                 onClick={e => { e.stopPropagation(); handleDelete(p.id, p.name) }}
-                className="absolute top-3 right-3 text-[var(--color-text-muted)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-3 right-3 text-[var(--color-ink-muted)] hover:text-[var(--color-status-error)] opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label={`Delete ${p.name}`}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
 
-              {/* Title */}
-              <h3 className="text-white font-bold text-lg mb-1 flex items-center gap-2 truncate pr-6">
-                {sourceIcons[p.source_type] || <FolderOpen className="w-4 h-4" />}
+              <h3 className="font-semibold text-[var(--color-ink)] flex items-center gap-2 truncate pr-8">
+                <Globe className="w-4 h-4 text-[var(--color-ink-muted)] shrink-0" />
                 {p.name}
               </h3>
 
-              {/* Meta */}
-              <p className="text-[var(--color-text-secondary)] text-sm mb-3 line-clamp-2">
+              <p className="text-sm text-[var(--color-ink-secondary)] mt-0.5 line-clamp-1">
                 {p.description || p.repo_url || 'No description'}
               </p>
 
-              {/* Tags */}
-              <div className="flex items-center gap-3 text-xs">
-                <span className="text-[var(--color-text-muted)]">
-                  {p.task_count} task{p.task_count !== 1 ? 's' : ''}
-                </span>
+              <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-ink-muted)]">
+                <span>{p.task_count} task{p.task_count !== 1 ? 's' : ''}</span>
                 {p.language && (
-                  <span className="text-[var(--color-accent-purple)] bg-[var(--color-accent-purple)]/10 px-2 py-0.5 rounded">
+                  <span className="text-[var(--color-indigo)] bg-[var(--color-indigo-light)] px-1.5 py-0.5 rounded">
                     {p.language}
                   </span>
                 )}
-                <span className="text-[var(--color-text-muted)] ml-auto">
+                <span className="ml-auto">
                   {p.updated_at ? new Date(p.updated_at).toLocaleDateString() : ''}
                 </span>
               </div>
@@ -166,21 +150,21 @@ export default function ProjectList() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-6 flex justify-center gap-2">
+        <div className="mt-6 flex justify-center items-center gap-3">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="px-4 py-2 bg-white/10 rounded text-white disabled:opacity-30"
+            className="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-md hover:bg-[var(--color-surface)] disabled:opacity-30 transition-colors"
           >
             Prev
           </button>
-          <span className="px-4 py-2 text-[var(--color-text-secondary)]">
+          <span className="text-sm text-[var(--color-ink-secondary)]">
             {page} / {totalPages}
           </span>
           <button
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="px-4 py-2 bg-white/10 rounded text-white disabled:opacity-30"
+            className="px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-md hover:bg-[var(--color-surface)] disabled:opacity-30 transition-colors"
           >
             Next
           </button>

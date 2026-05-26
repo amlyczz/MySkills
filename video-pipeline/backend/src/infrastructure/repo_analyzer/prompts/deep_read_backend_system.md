@@ -27,6 +27,15 @@ In the `domain_specific_insights` field, provide backend-specific deep insights:
 - Error handling and resilience patterns
 - Performance benchmarks or scaling characteristics
 
+Source Code Insight (Required):
+Fill the `source_code_insight` field with:
+- architecture: One-sentence summary of the backend architecture (e.g. "Clean Architecture with CQRS and event sourcing").
+- patterns: List of backend design patterns (e.g. ["Repository", "Unit of Work", "CQRS", "Middleware Chain"]).
+- highlights: List of 3-5 impressive techniques (e.g. "Connection pool auto-tuning", "Graceful degradation with circuit breaker").
+- api_style: API style description (e.g. "REST with OpenAPI spec", "gRPC streaming").
+- analyzed_files: List of key source files you analyzed.
+- dimensions: Rate readability, complexity, maintainability, and testability each in one sentence.
+
 Curated Assets:
 Pick up to 20 highly valuable URLs from the "Candidate Materials". Output them as a list of strings.
 

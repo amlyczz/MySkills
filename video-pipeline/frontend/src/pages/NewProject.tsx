@@ -1,18 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Globe, Flame, Play } from 'lucide-react'
+import { ArrowLeft, Globe } from 'lucide-react'
 import { createProject } from '../lib/api'
-
-const sourceTypes = [
-  { value: 'github_repo', label: 'GitHub Repo', icon: <Globe className="w-5 h-5" />, desc: 'Generate video from a GitHub repository' },
-  { value: 'trending', label: 'GitHub Trending', icon: <Flame className="w-5 h-5" />, desc: 'Pick from trending repos on GitHub' },
-]
 
 export default function NewProject() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
-  const [sourceType, setSourceType] = useState('github_repo')
-  const [repoUrl, setRepoUrl] = useState('')
   const [creating, setCreating] = useState(false)
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -22,8 +15,7 @@ export default function NewProject() {
     try {
       const project = await createProject({
         name: name.trim(),
-        source_type: sourceType,
-        repo_url: repoUrl.trim() || undefined,
+        source_type: 'github_repo',
       })
       navigate(`/project/${project.id}`)
     } catch {
@@ -33,80 +25,56 @@ export default function NewProject() {
   }
 
   return (
-    <div className="min-h-screen p-8 max-w-2xl mx-auto">
-      {/* Back */}
+    <div className="min-h-screen p-6 md:p-8 max-w-xl mx-auto">
       <button
         onClick={() => navigate('/')}
-        className="flex items-center gap-2 text-[var(--color-text-secondary)] hover:text-white mb-8 transition-colors"
+        className="flex items-center gap-1.5 text-sm text-[var(--color-ink-secondary)] hover:text-[var(--color-ink)] mb-8 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" /> Back to Projects
+        <ArrowLeft className="w-3.5 h-3.5" /> Back
       </button>
 
-      <h1 className="text-3xl font-extrabold text-white mb-2">Create New Project</h1>
-      <p className="text-[var(--color-text-secondary)] mb-8">Choose a source type and name your project.</p>
+      <h1 className="text-2xl font-bold tracking-tight mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
+        New Project
+      </h1>
+      <p className="text-sm text-[var(--color-ink-secondary)] mb-8">
+        Name your project. You'll pick a source repo in the next step.
+      </p>
 
-      <form onSubmit={handleCreate} className="space-y-6">
-        {/* Source type */}
+      <form onSubmit={handleCreate} className="space-y-5">
+        {/* Type */}
         <div>
-          <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">Source Type</label>
-          <div className="grid grid-cols-2 gap-3">
-            {sourceTypes.map(st => (
-              <button
-                key={st.value}
-                type="button"
-                onClick={() => setSourceType(st.value)}
-                className={`p-4 rounded-lg border text-left transition-all ${
-                  sourceType === st.value
-                    ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10'
-                    : 'border-white/10 bg-black/30 hover:border-white/20'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1 text-white">
-                  {st.icon}
-                  <span className="font-semibold">{st.label}</span>
-                </div>
-                <p className="text-xs text-[var(--color-text-muted)]">{st.desc}</p>
-              </button>
-            ))}
+          <label className="block text-xs font-medium text-[var(--color-ink-secondary)] uppercase tracking-wider mb-1.5">
+            Type
+          </label>
+          <div className="flex items-center gap-2.5 border border-[var(--color-border)] rounded-md px-4 py-3 bg-[var(--color-surface)]">
+            <Globe className="w-4 h-4 text-[var(--color-accent)]" />
+            <span className="text-sm font-medium text-[var(--color-ink)]">GitHub Repo</span>
+            <span className="text-xs text-[var(--color-ink-muted)] ml-1">— generate video from a repository</span>
           </div>
         </div>
 
-        {/* Project name */}
+        {/* Name */}
         <div>
-          <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">Project Name</label>
+          <label htmlFor="project-name" className="block text-xs font-medium text-[var(--color-ink-secondary)] uppercase tracking-wider mb-1.5">
+            Project Name
+          </label>
           <input
+            id="project-name"
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. LangChain Promo"
             required
-            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+            className="w-full border border-[var(--color-border)] rounded-md px-3 py-2.5 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)] bg-[var(--color-surface)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
           />
         </div>
-
-        {/* Repo URL (optional) */}
-        {sourceType === 'github_repo' && (
-          <div>
-            <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2">
-              Repository URL <span className="text-[var(--color-text-muted)]">(optional — can fill later)</span>
-            </label>
-            <input
-              type="text"
-              value={repoUrl}
-              onChange={e => setRepoUrl(e.target.value)}
-              placeholder="https://github.com/..."
-              className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-[var(--color-accent)] transition-colors"
-            />
-          </div>
-        )}
 
         {/* Submit */}
         <button
           type="submit"
           disabled={creating || !name.trim()}
-          className="w-full bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-purple)] text-white font-bold py-3 rounded-lg shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:shadow-[0_0_25px_rgba(0,240,255,0.5)] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-full bg-[var(--color-accent)] text-white font-semibold py-2.5 rounded-md hover:bg-[var(--color-accent-hover)] transition-colors disabled:opacity-40"
         >
-          <Play className="w-5 h-5 fill-current" />
           {creating ? 'Creating...' : 'Create Project'}
         </button>
       </form>

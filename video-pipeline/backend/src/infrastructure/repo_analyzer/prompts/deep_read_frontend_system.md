@@ -26,6 +26,15 @@ In the `domain_specific_insights` field, provide frontend-specific deep insights
 - Animation/performance trade-offs
 - Bundle size optimization strategies
 
+Source Code Insight (Required):
+Fill the `source_code_insight` field with:
+- architecture: One-sentence summary of the frontend architecture (e.g. "Component-based with virtual DOM diffing and hooks-based state management").
+- patterns: List of UI design patterns (e.g. ["Observer", "Virtual DOM", "Hooks", "Higher-Order Components"]).
+- highlights: List of 3-5 impressive techniques (e.g. "Compiler-optimized reactivity", "Time-sliced rendering", "Zero-bundle-size server components").
+- api_style: Component API style (e.g. "Declarative JSX with hooks", "Template-based with decorators").
+- analyzed_files: List of key source files you analyzed.
+- dimensions: Rate readability, complexity, maintainability, and testability each in one sentence.
+
 Curated Assets:
 Pick up to 20 highly valuable URLs. Output them as a list of strings.
 

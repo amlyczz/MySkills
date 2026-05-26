@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import os
 import subprocess
 import sys
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator
+
+logger = logging.getLogger(__name__)
 
 class MediaGenerator(VoiceoverGenerator, BGMGenerator):
     
@@ -29,7 +32,7 @@ class MediaGenerator(VoiceoverGenerator, BGMGenerator):
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, "wb") as f:
                 f.write(b"MOCKED VOICEOVER AUDIO")
-            print(f"Warning: media_generator voiceover failed ({stderr.decode()}), fell back to mocked output.")
+            logger.warning("media_generator voiceover failed (%s), fell back to mocked output.", stderr.decode())
             
         return output_path
 
@@ -55,6 +58,6 @@ class MediaGenerator(VoiceoverGenerator, BGMGenerator):
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, "wb") as f:
                 f.write(b"MOCKED BGM AUDIO")
-            print(f"Warning: media_generator bgm failed ({stderr.decode()}), fell back to mocked output.")
+            logger.warning("media_generator bgm failed (%s), fell back to mocked output.", stderr.decode())
             
         return output_path

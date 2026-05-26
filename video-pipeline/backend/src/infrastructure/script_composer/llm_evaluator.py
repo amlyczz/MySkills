@@ -25,10 +25,10 @@ class LLMScriptEvaluator(ScriptEvaluator):
         for i, s in enumerate(script.segments):
             script_text += f"\n{i+1}. [ASSET: {s.assigned_asset}] ({s.duration_est}s)\nHOOK: {s.visual_hook}\nTEXT: {s.text}"
 
-        chain = prompt | self.llm.with_structured_output(QAResultSchema)
+        chain = prompt | self.llm.with_structured_output(QAResultSchema, method="json_mode")
         result: QAResultSchema = await chain.ainvoke({
             "script_text": script_text,
-            "source_context": source_context or "",
+            "source_context": (source_context or "") + "\n\nNote: You must respond in valid JSON format conforming to the expected schema.",
         })
 
         return QAScorecard(

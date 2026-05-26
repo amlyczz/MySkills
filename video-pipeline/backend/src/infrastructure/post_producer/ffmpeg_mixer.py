@@ -1,9 +1,12 @@
 import asyncio
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 from ...domain.post_producer.interfaces import AudioMixer
+
+logger = logging.getLogger(__name__)
 
 class FFmpegAudioMixer(AudioMixer):
 
@@ -42,6 +45,6 @@ class FFmpegAudioMixer(AudioMixer):
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
             with open(output_path, "wb") as f:
                 f.write(b"MOCKED FINAL VIDEO")
-            print(f"Warning: audio_mixer failed ({stderr.decode()}), fell back to mocked output.")
+            logger.warning("audio_mixer failed (%s), fell back to mocked output.", stderr.decode())
             
         return output_path

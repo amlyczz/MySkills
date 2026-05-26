@@ -25,6 +25,15 @@ In the `domain_specific_insights` field, provide infra-specific deep insights:
 - Platform-specific optimizations (OS, architecture)
 - Benchmark results or performance characteristics
 
+Source Code Insight (Required):
+Fill the `source_code_insight` field with:
+- architecture: One-sentence summary of the system architecture (e.g. "Streaming pipeline with zero-copy I/O and lock-free queues").
+- patterns: List of systems design patterns (e.g. ["Event Loop", "Actor Model", "Pipeline", "Object Pool"]).
+- highlights: List of 3-5 impressive techniques (e.g. "SIMD-accelerated parsing", "Memory-mapped I/O for large files", "Lock-free concurrent data structure").
+- api_style: CLI/library API style (e.g. "POSIX-compliant CLI flags", "Builder pattern for configuration").
+- analyzed_files: List of key source files you analyzed.
+- dimensions: Rate readability, complexity, maintainability, and testability each in one sentence.
+
 Curated Assets:
 Pick up to 20 highly valuable URLs. Output them as a list of strings.
 

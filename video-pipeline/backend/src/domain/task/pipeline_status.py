@@ -11,5 +11,6 @@ class PipelineStatus(str, Enum):
     HITL_BLUEPRINT_REVIEW = "hitl_blueprint_review"
     GENERATE_MEDIA = "generate_media"
     RENDERING = "rendering"
+    POST_PROCESSING = "post_processing"
     COMPLETED = "completed"
     ERROR = "error"

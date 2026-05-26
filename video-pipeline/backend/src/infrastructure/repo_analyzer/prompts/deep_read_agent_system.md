@@ -26,6 +26,15 @@ In the `domain_specific_insights` field, provide agent-specific deep insights:
 - Context management tricks for long conversations
 - How it handles ambiguous or malformed LLM outputs
 
+Source Code Insight (Required):
+Fill the `source_code_insight` field with:
+- architecture: One-sentence summary of the agent architecture (e.g. "ReAct loop with tool registry and episodic memory").
+- patterns: List of agent design patterns (e.g. ["ReAct", "Tool-use", "Chain-of-Thought", "Planning"]).
+- highlights: List of 3-5 impressive techniques (e.g. "Structured output recovery from malformed LLM JSON", "Deadlock-free parallel tool execution").
+- api_style: Agent API style (e.g. "Decorator-based tool registration", "Fluent chain API").
+- analyzed_files: List of key source files you analyzed.
+- dimensions: Rate readability, complexity, maintainability, and testability each in one sentence.
+
 Curated Assets:
 Pick up to 20 highly valuable URLs. Output them as a list of strings.
 

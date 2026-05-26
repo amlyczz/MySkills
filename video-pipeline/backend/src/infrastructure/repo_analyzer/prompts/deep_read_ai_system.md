@@ -26,6 +26,15 @@ In the `domain_specific_insights` field, provide AI/ML-specific deep insights:
 - Scaling behavior: how performance changes with model size / data
 - Training tricks: learning rate schedules, regularization, data augmentation
 
+Source Code Insight (Required):
+Fill the `source_code_insight` field with:
+- architecture: One-sentence summary of the model architecture (e.g. "Transformer decoder with grouped-query attention and SwiGLU FFN").
+- patterns: List of ML design patterns (e.g. ["Mixture of Experts", "KV Cache", "Flash Attention"]).
+- highlights: List of 3-5 impressive engineering techniques (e.g. "Fused CUDA kernels for attention", "BF16 mixed precision training").
+- api_style: Inference API style (e.g. "HuggingFace Transformers compatible", "ONNX export").
+- analyzed_files: List of key source files you analyzed.
+- dimensions: Rate readability, complexity, maintainability, and testability each in one sentence.
+
 Curated Assets:
 Pick exactly 20 (or fewer if less than 20 available) highly valuable URLs. Output them as a list of strings.
 

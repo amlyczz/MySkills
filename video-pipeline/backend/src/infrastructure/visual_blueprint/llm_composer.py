@@ -236,7 +236,7 @@ class LLMBlueprintComposer(BlueprintComposer):
         segments_repr = self._serialize_segments(script)
         content_title = content.content.title if content.content else "Untitled"
         content_tagline = content.content.tagline if content.content else ""
-        content_points = ", ".join(content.content.points[:6]) if content.content and content.content.points else ""
+        content_points = content.content.use_cases if content.content else ""
 
         feedback_section = ""
         if qa_feedback:
@@ -249,7 +249,7 @@ class LLMBlueprintComposer(BlueprintComposer):
         narrative_angle = domain_analysis.narrative.angle if domain_analysis else ""
         technical_depth = domain_analysis.technical_depth if domain_analysis else "moderate"
 
-        chain = prompt | self.llm.with_structured_output(Blueprint)
+        chain = prompt | self.llm.with_structured_output(Blueprint, method="json_mode")
         blueprint: Blueprint = await chain.ainvoke({
             "script_title": content_title,
             "script_duration": script.total_duration_est,
@@ -262,7 +262,7 @@ class LLMBlueprintComposer(BlueprintComposer):
             "audience_expertise": audience_expertise,
             "narrative_angle": narrative_angle,
             "technical_depth": technical_depth,
-            "feedback_section": feedback_section,
+            "feedback_section": feedback_section + "\n\nNote: You must respond in valid JSON format conforming to the expected schema.",
         })
 
         # Recalculate startFrames to ensure sequential layout
@@ -281,7 +281,7 @@ class LLMBlueprintComposer(BlueprintComposer):
     ) -> SceneConfig:
         """Step 2: Fill element tree for a single scene via focused LLM call."""
         content_title = content.content.title if content.content else ""
-        content_points = ", ".join(content.content.points[:6]) if content.content and content.content.points else ""
+        content_points = content.content.use_cases if content.content else ""
 
         # Build per-scene user prompt from template
         user_prompt = f"""Scene {scene.id}:
@@ -296,14 +296,14 @@ class LLMBlueprintComposer(BlueprintComposer):
             user_prompt += f"- Visual Hook: {segment.visual_hook}\n"
 
         user_prompt += f"\nProject: {content_title}\nPoints: {content_points}\n"
-        user_prompt += "\nOutput a complete SceneConfig with rich elements and animations."
+        user_prompt += "\nOutput a complete SceneConfig with rich elements and animations. Respond in valid JSON format conforming to the expected schema."
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", load_prompt("visual_blueprint", "step2_elements_system.md")),
             ("user", "{scene_context}"),
         ])
 
-        chain = prompt | self.llm.with_structured_output(SceneConfig)
+        chain = prompt | self.llm.with_structured_output(SceneConfig, method="json_mode")
         filled: SceneConfig = await chain.ainvoke({"scene_context": user_prompt})
 
         # Preserve skeleton fields that shouldn't change

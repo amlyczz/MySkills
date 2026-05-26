@@ -18,8 +18,9 @@ class RawTrendingRepo(BaseModel):
     watchers: int = 0
     dependents_count: int = 0
     recent_stars_7d: int = 0
+    star_velocity: float = 0.0  # stars per day since creation (upward trend proxy)
     author_followers: int = 0
-    author_company: str = ""
+    author_company: str | None = None
     readme_snippet: str = ""
     base_heat_score: int = 0
     impact_score: int = 0

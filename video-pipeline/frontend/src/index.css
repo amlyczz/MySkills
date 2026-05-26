@@ -2,67 +2,97 @@
 
 @theme {
   --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "JetBrains Mono", "Courier New", Courier, monospace;
+  --font-serif: "Georgia", "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
 
-  --color-dark-bg: #0B0E14;
-  --color-glass: rgba(255, 255, 255, 0.05);
-  --color-glass-border: rgba(255, 255, 255, 0.1);
-  --color-accent: #00F0FF;
-  --color-accent-purple: #7000FF;
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #8A92A6;
-  --color-text-muted: #4A5166;
-  
-  --color-status-success: #10B981;
-  --color-status-error: #EF4444;
-  --color-status-warn: #F59E0B;
+  /* Surfaces — parchment & paper */
+  --color-bg: #F5F2EB;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #FAF9F6;
+  --color-border: #E2DED6;
+  --color-border-strong: #CCC7BD;
+
+  /* Ink — text hierarchy */
+  --color-ink: #1C1917;
+  --color-ink-secondary: #57534E;
+  --color-ink-muted: #A8A29E;
+
+  /* Accent: deep burgundy — Marx's dialectical tension */
+  --color-accent: #7C2D2D;
+  --color-accent-hover: #652424;
+  --color-accent-light: #FBF1F1;
+
+  /* Secondary: deep indigo — Lacan's symbolic order */
+  --color-indigo: #1E3A5F;
+  --color-indigo-light: #EEF2F7;
+
+  /* Tertiary: antique gold — Hegel's absolute */
+  --color-gold: #8B6914;
+  --color-gold-light: #FDF8EC;
+
+  /* Status */
+  --color-status-success: #166534;
+  --color-status-error: #991B1B;
+  --color-status-warn: #92400E;
 }
 
 body {
-  background-color: var(--color-dark-bg);
-  background-image: radial-gradient(circle at 50% -20%, rgba(112, 0, 255, 0.15) 0%, rgba(11, 14, 20, 1) 50%);
-  background-attachment: fixed;
-  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Glassmorphism utility */
-.glass-panel {
-  background: var(--color-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--color-glass-border);
-  border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+/* Paper card — replaces glassmorphism */
+.paper {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-/* Glowing text utility */
-.glow-text {
-  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+.paper:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* Custom Scrollbar for terminal */
+/* Terminal block — dark inset for logs */
+.terminal {
+  background: #1A1814;
+  border: 1px solid #2A2722;
+  border-radius: 6px;
+  color: #C8C4BC;
+  font-family: var(--font-mono);
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-glass-border);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  width: 6px;
+  height: 6px;
 }
 
-/* Gradient text */
-.bg-clip-text {
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* Accent link */
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
