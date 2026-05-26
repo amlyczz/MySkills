@@ -5,6 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from ..repo_analyzer.entities import ContentModel, MaterialManifest, Script
+from ..repo_analyzer.domain_analysis import DomainAnalysis
 from ..visual_blueprint.entities import Blueprint
 from ..github_trending.entities import ScoredRepo
 from .pipeline_status import PipelineStatus
@@ -22,6 +23,8 @@ class PipelineTask(BaseModel):
     script: Optional[Script] = None
     blueprint: Optional[Blueprint] = None
     trending_repos: Optional[list[ScoredRepo]] = None
+    domain_analysis: Optional[DomainAnalysis] = None
+    project_category: Optional[str] = "github"
 
     # Strictly-typed QA scorecards
     qa_script: Optional[QAScorecard] = None
@@ -29,6 +32,8 @@ class PipelineTask(BaseModel):
     qa_video: Optional[QAScorecard] = None
 
     # Local output file paths
+    voiceover_path: Optional[str] = None
+    bgm_path: Optional[str] = None
     video_mp4_path: Optional[str] = None
     final_mp4_path: Optional[str] = None
 

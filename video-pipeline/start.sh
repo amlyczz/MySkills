@@ -4,8 +4,6 @@
 #       ./start.sh backend   (仅启动后端)
 #       ./start.sh frontend  (仅启动前端)
 
-set -e
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # 颜色
@@ -47,7 +45,7 @@ start_backend() {
         uv sync
     fi
 
-    uv run python -m src.main
+    exec uv run python -m src.main
 }
 
 start_frontend() {
@@ -60,7 +58,7 @@ start_frontend() {
         npm install
     fi
 
-    npm run dev
+    exec npm run dev
 }
 
 case "${1:-all}" in
@@ -72,11 +70,22 @@ case "${1:-all}" in
         ;;
     all)
         log "同时启动前后端..."
-        # 后端在后台启动
-        (start_backend) &
+
+        # 清理函数：杀掉整个进程组
+        cleanup() {
+            echo ""
+            log "正在停止所有服务..."
+            kill -- -$$ 2>/dev/null
+            wait 2>/dev/null
+            log "已停止"
+            exit 0
+        }
+        trap cleanup SIGINT SIGTERM
+
+        # 直接启动（不用子 shell），用 exec 替换保证信号传递
+        start_backend &
         BACKEND_PID=$!
-        # 前端在后台启动
-        (start_frontend) &
+        start_frontend &
         FRONTEND_PID=$!
 
         echo ""
@@ -85,8 +94,6 @@ case "${1:-all}" in
         echo ""
         log "按 Ctrl+C 停止所有服务"
 
-        # 捕获退出信号，杀掉子进程
-        trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit 0" SIGINT SIGTERM
         wait
         ;;
     *)

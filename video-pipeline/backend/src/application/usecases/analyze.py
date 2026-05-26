@@ -1,7 +1,10 @@
+import logging
 import os
 import uuid
 
 from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, RepoMetadata
+
+logger = logging.getLogger(__name__)
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
@@ -21,8 +24,17 @@ class AnalyzeRepoUseCase:
         self.repository = repository
         self.collector = GitHubMaterialCollector()
 
-    async def __call__(self, state: PipelineState) -> dict[str, object]:
-        print("[UseCase] Running AnalyzeRepo")
+    async def __call__(self, state: PipelineState) -> PipelineState:
+        # Skip-if-done guard: if content_model already exists, this node was completed before
+        if state.get("content_model") is not None:
+            logger.info("[UseCase] AnalyzeRepo: skipping (content_model already in state)")
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=state["repo_url"],
+                project_category=state.get("project_category", "github"),
+            )
+
+        logger.info("[UseCase] Running AnalyzeRepo")
 
         output_dir = resolve_output_dir(state)
         screenshot_path = os.path.join(output_dir, "repo_screenshot.png")
@@ -72,15 +84,19 @@ class AnalyzeRepoUseCase:
             task.status = PipelineStatus.ANALYZING
             task.content_model = content_model
             task.material_manifest = material_manifest
+            task.domain_analysis = domain_analysis
+            task.project_category = category.value
             await self.repository.update(task)
 
-        return {
-            "content_model": content_model,
-            "material_manifest": material_manifest,
-            "project_category": category.value,
-            "domain_analysis": domain_analysis,
-            "status": PipelineStatus.ANALYZING,
-        }
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            content_model=content_model,
+            material_manifest=material_manifest,
+            project_category=category.value,
+            domain_analysis=domain_analysis,
+            status=PipelineStatus.ANALYZING,
+        )
 
     def _build_enriched_input(
         self,
@@ -161,4 +177,4 @@ class AnalyzeRepoUseCase:
                         capture=CaptureInfo(method="lazy_fetch")
                     ))
             except Exception as e:
-                print(f"[AnalyzeRepoUseCase] Failed to lazy fetch {url}: {e}")
+                logger.warning(f"[AnalyzeRepoUseCase] Failed to lazy fetch {url}: {e}")

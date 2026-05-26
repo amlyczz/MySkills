@@ -1,9 +1,12 @@
 import asyncio
+import logging
 from typing import Any, Optional
 
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.types import interrupt
+
+logger = logging.getLogger(__name__)
 
 from ..workflow.state import PipelineState
 from ..usecases.analyze import AnalyzeRepoUseCase
@@ -39,27 +42,60 @@ def route_hitl_trending(state: PipelineState) -> str:
     return "analyze_repo"
 
 
-async def hitl_trending_review_node(state: PipelineState) -> dict[str, object]:
+async def hitl_trending_review_node(state: PipelineState) -> PipelineState:
     """HITL breakpoint for Github Trending selection."""
+    repo_url = state.get("repo_url", "")
+    # Auto-approve guard: if repo_url is a real URL (not placeholder), skip interrupt
+    if repo_url and repo_url not in ("", "pending", "trending"):
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=repo_url,
+            status=PipelineStatus.PENDING,
+        )
+
     decision = interrupt({
         "reason": "trending_review",
-        "repos": [r.model_dump() for r in state.get("trending_repos", [])],
+        "repos": [r.model_dump() for r in state.get("trending_repos") or []],
         "message": "Review trending repositories. Choose: select | retry | abort",
     })
     action = decision.get("action", "abort")
 
     if action == "select":
-        return {"repo_url": decision.get("repo_url"), "hitl_trending_feedback": None, "status": PipelineStatus.PENDING}
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=decision.get("repo_url", repo_url),
+            hitl_trending_feedback=None,
+            status=PipelineStatus.PENDING,
+        )
     elif action == "retry":
-        return {"hitl_trending_feedback": decision.get("feedback"), "status": PipelineStatus.PENDING}
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=repo_url,
+            hitl_trending_feedback=decision.get("feedback"),
+            status=PipelineStatus.PENDING,
+        )
     else:
-        return {"status": PipelineStatus.ERROR, "error": "Aborted by user during trending review"}
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=repo_url,
+            status=PipelineStatus.ERROR,
+            error="Aborted by user during trending review",
+        )
 
 
-async def hitl_script_review_node(state: PipelineState) -> dict[str, object]:
+async def hitl_script_review_node(state: PipelineState) -> PipelineState:
     """HITL breakpoint for script review — always triggers after compose_script."""
-    script = state.get("script")
+    # Auto-approve guard: only skip when script exists AND feedback exists
+    # (meaning user approved → regenerate was triggered). Otherwise always require human review.
+    if state.get("script") is not None and state.get("qa_script_feedback") is not None:
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            script=state["script"],
+            status=PipelineStatus.COMPOSING,
+        )
 
+    script = state.get("script")
     decision = interrupt({
         "reason": "script_review",
         "message": "Review the generated script. Approve or reject with feedback.",
@@ -81,23 +117,42 @@ async def hitl_script_review_node(state: PipelineState) -> dict[str, object]:
     action = decision.get("action", "approve")
 
     if action == "approve":
-        return {"status": PipelineStatus.COMPOSING}
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            script=script,
+            status=PipelineStatus.COMPOSING,
+        )
     elif action == "reject":
         feedback = decision.get("feedback", "")
-        return {
-            "qa_script_feedback": feedback,
-            "status": PipelineStatus.COMPOSING,
-        }
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            script=script,
+            qa_script_feedback=feedback,
+            status=PipelineStatus.COMPOSING,
+        )
     else:
-        return {"status": PipelineStatus.ERROR, "error": "Aborted by user during script review"}
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            status=PipelineStatus.ERROR,
+            error="Aborted by user during script review",
+        )
 
 
-async def hitl_blueprint_review_node(state: PipelineState) -> dict[str, object]:
-    """HITL breakpoint for blueprint review — always triggers after generate_blueprint.
+async def hitl_blueprint_review_node(state: PipelineState) -> PipelineState:
+    """HITL breakpoint for blueprint review — always triggers after generate_blueprint."""
+    # Auto-approve guard: only skip when blueprint exists AND feedback exists
+    # (meaning user approved → regenerate was triggered). Otherwise always require human review.
+    if state.get("blueprint") is not None and state.get("qa_blueprint_feedback") is not None:
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            blueprint=state["blueprint"],
+            status=PipelineStatus.BLUEPRINTING,
+        )
 
-    Writes the blueprint JSON to the Remotion project's public folder for preview
-    and returns the Remotion Studio URL.
-    """
     import json
     import os
 
@@ -115,7 +170,7 @@ async def hitl_blueprint_review_node(state: PipelineState) -> dict[str, object]:
                 json.dump(blueprint.model_dump(exclude_none=True, by_alias=True), f, ensure_ascii=False, indent=2)
             preview_url = "http://localhost:31200/"
         except Exception as e:
-            print(f"[Graph] Warning: Failed to write preview.json: {e}")
+            logger.warning("Failed to write preview.json: %s", e)
 
     total_frames = sum(s.durationInFrames for s in blueprint.scenes) if blueprint and blueprint.scenes else 0
     total_seconds = total_frames / 30
@@ -131,15 +186,28 @@ async def hitl_blueprint_review_node(state: PipelineState) -> dict[str, object]:
     action = decision.get("action", "approve")
 
     if action == "approve":
-        return {"status": PipelineStatus.BLUEPRINTING}
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            blueprint=blueprint,
+            status=PipelineStatus.BLUEPRINTING,
+        )
     elif action == "reject":
         feedback = decision.get("feedback", "")
-        return {
-            "qa_blueprint_feedback": feedback,
-            "status": PipelineStatus.BLUEPRINTING,
-        }
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            blueprint=blueprint,
+            qa_blueprint_feedback=feedback,
+            status=PipelineStatus.BLUEPRINTING,
+        )
     else:
-        return {"status": PipelineStatus.ERROR, "error": "Aborted by user during blueprint review"}
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            status=PipelineStatus.ERROR,
+            error="Aborted by user during blueprint review",
+        )
 
 
 def compile_workflow(
@@ -154,19 +222,7 @@ def compile_workflow(
     semaphore: asyncio.Semaphore,
     checkpointer: Optional[BaseCheckpointSaver] = None,
 ) -> Any:
-    """Compiles the LangGraph StateGraph with DDD-injected services and HITL support.
-
-    DAG:
-        github_trending → analyze_repo → compose_script → hitl_script_review
-                                                            ├─ approve → generate_diagrams → generate_blueprint → hitl_blueprint_review
-                                                            └─ reject → compose_script (retry)
-                                                            └─ abort → END
-
-        hitl_blueprint_review
-            ├─ approve → audio_design → render_compose → END
-            ├─ reject → generate_blueprint (retry)
-            └─ abort → END
-    """
+    """Compiles the LangGraph StateGraph with DDD-injected services and HITL support."""
     analyze_repo_uc = AnalyzeRepoUseCase(analyzer, repository)
     compose_script_uc = ComposeScriptUseCase(composer, repository)
     generate_diagrams_uc = GenerateDiagramsUseCase(repository)
@@ -178,6 +234,7 @@ def compile_workflow(
 
     # Nodes
     workflow.add_node("github_trending", GithubTrendingUseCase(repository))
+    workflow.add_node("hitl_trending_review", hitl_trending_review_node)
     workflow.add_node("analyze_repo", analyze_repo_uc)
     workflow.add_node("compose_script", compose_script_uc)
     workflow.add_node("hitl_script_review", hitl_script_review_node)

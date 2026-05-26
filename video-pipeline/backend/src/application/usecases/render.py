@@ -1,11 +1,15 @@
 import asyncio
+import logging
 import os
 import uuid
+
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.visual_blueprint.interfaces import VideoRenderer
 from ..workflow.state import PipelineState
 from .output_dir import resolve_output_dir
+
+logger = logging.getLogger(__name__)
 
 
 class RenderVideoUseCase:
@@ -20,15 +24,15 @@ class RenderVideoUseCase:
         self.repository = repository
         self.semaphore = semaphore
 
-    async def __call__(self, state: PipelineState) -> dict[str, object]:
-        print("[UseCase] Waiting for rendering slot...")
+    async def __call__(self, state: PipelineState) -> PipelineState:
+        logger.info("[UseCase] Waiting for rendering slot...")
+
+        blueprint = state.get("blueprint")
+        if not blueprint:
+            raise ValueError("Blueprint is missing in state.")
 
         async with self.semaphore:
-            print("[UseCase] Acquired slot. Invoking VideoRenderer...")
-
-            blueprint = state.get("blueprint")
-            if not blueprint:
-                raise ValueError("Blueprint is missing in state.")
+            logger.info("[UseCase] Acquired slot. Invoking VideoRenderer...")
 
             output_dir = resolve_output_dir(state)
             video_path = os.path.join(output_dir, "video.mp4")
@@ -42,7 +46,9 @@ class RenderVideoUseCase:
                 task.video_mp4_path = video_path
                 await self.repository.update(task)
 
-            return {
-                "video_mp4_path": video_path,
-                "status": PipelineStatus.RENDERING,
-            }
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=state["repo_url"],
+                video_mp4_path=video_path,
+                status=PipelineStatus.RENDERING,
+            )

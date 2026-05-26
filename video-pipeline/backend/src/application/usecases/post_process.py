@@ -1,11 +1,15 @@
 import json
+import logging
 import os
 import uuid
+
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator, AudioMixer
 from ..workflow.state import PipelineState
 from .output_dir import resolve_output_dir
+
+logger = logging.getLogger(__name__)
 
 
 class PostProcessUseCase:
@@ -22,8 +26,8 @@ class PostProcessUseCase:
         self.audio_mixer = audio_mixer
         self.repository = repository
 
-    async def __call__(self, state: PipelineState) -> dict[str, object]:
-        print("[UseCase] Running PostProcess")
+    async def __call__(self, state: PipelineState) -> PipelineState:
+        logger.info("[UseCase] Running PostProcess")
 
         script = state.get("script")
         video_mp4_path = state.get("video_mp4_path")
@@ -91,12 +95,14 @@ class PostProcessUseCase:
             task.final_mp4_path = final_mp4_path
             await self.repository.update(task)
 
-        return {
-            "final_mp4_path": final_mp4_path,
-            "voiceover_path": voiceover_path,
-            "bgm_path": bgm_path,
-            "status": PipelineStatus.COMPLETED,
-        }
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            final_mp4_path=final_mp4_path,
+            voiceover_path=voiceover_path,
+            bgm_path=bgm_path,
+            status=PipelineStatus.COMPLETED,
+        )
 
 
 def _format_srt_time(seconds: float) -> str:

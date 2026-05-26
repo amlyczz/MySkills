@@ -24,6 +24,7 @@
 
 - **包管理器**：统一使用 `uv`（`uv sync`、`uv add`、`uv run`），禁止 `pip install` 直接安装。
 - **数据模型**：所有 dataclass / dict 换 Pydantic `BaseModel`，提供 `model_dump()` / `model_dump_json()` 和类型校验。
+- **LangGraph StateGraph 例外**：`PipelineState` 必须用 `TypedDict`（不是 Pydantic），因为 LangGraph 内部使用 dict merging 做 checkpoint/snapshot 机制，Pydantic model 无法直接参与 dict 合并。使用 TypedDict + `state.get("field")` 访问模式。
 - **依赖声明**：根目录 `pyproject.toml`，`dependency-groups.dev` 放开发依赖。
 - **虚拟环境**：`.venv/` 由 `uv sync` 自动创建，不手动管理。
 

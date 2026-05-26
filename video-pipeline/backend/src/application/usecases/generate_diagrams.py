@@ -1,6 +1,9 @@
 """Use case: generate diagrams from Mermaid code in script segments."""
 
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
@@ -14,12 +17,26 @@ class GenerateDiagramsUseCase:
     def __init__(self, repository: PipelineTaskRepository) -> None:
         self.repository = repository
 
-    async def __call__(self, state: PipelineState) -> dict[str, object]:
-        print("[UseCase] Running GenerateDiagrams")
+    async def __call__(self, state: PipelineState) -> PipelineState:
+        # Skip-if-done guard: if blueprint exists, diagrams were already generated
+        if state.get("blueprint") is not None:
+            logger.info("[UseCase] GenerateDiagrams: skipping (blueprint already exists)")
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=state["repo_url"],
+                script=state.get("script"),
+                status=PipelineStatus.BLUEPRINTING,
+            )
+
+        logger.info("[UseCase] Running GenerateDiagrams")
 
         script = state.get("script")
-        if not script or not script.segments:
-            return {"status": PipelineStatus.BLUEPRINTING}
+        if script is None or not script.segments:
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=state["repo_url"],
+                status=PipelineStatus.BLUEPRINTING,
+            )
 
         output_dir = resolve_output_dir(state)
 
@@ -27,7 +44,7 @@ class GenerateDiagramsUseCase:
         generated = await generator.generate(script)
 
         if generated:
-            print(f"[UseCase] Generated {len(generated)} diagrams")
+            logger.info(f"[UseCase] Generated {len(generated)} diagrams")
 
         # Synchronize DB state
         task_id = uuid.UUID(state["task_id"])
@@ -36,7 +53,9 @@ class GenerateDiagramsUseCase:
             task.status = PipelineStatus.BLUEPRINTING
             await self.repository.update(task)
 
-        return {
-            "script": script,
-            "status": PipelineStatus.BLUEPRINTING,
-        }
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            script=script,
+            status=PipelineStatus.BLUEPRINTING,
+        )

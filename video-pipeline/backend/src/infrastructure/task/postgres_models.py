@@ -21,6 +21,8 @@ class PipelineTaskDB(Base):
     # JSONB column for local domain model (Blueprint)
     blueprint = Column(JSONB, nullable=True)
     trending_repos = Column(JSONB, nullable=True)
+    domain_analysis = Column(JSONB, nullable=True)
+    project_category = Column(String, nullable=True, default="github")
 
     # QA Scorecards stored as JSONB
     qa_script = Column(JSONB, nullable=True)

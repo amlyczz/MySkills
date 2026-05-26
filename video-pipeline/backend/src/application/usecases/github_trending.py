@@ -1,10 +1,12 @@
 import json
+import logging
 import os
 import uuid
-from pydantic import BaseModel
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_deepseek import ChatDeepSeek
+
+logger = logging.getLogger(__name__)
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.github_trending.entities import ScoredRepo, TrendingResponse, RawTrendingRepo
@@ -17,43 +19,69 @@ class GithubTrendingUseCase:
 
     def __init__(self, repository: PipelineTaskRepository):
         api_key = os.getenv("DEEPSEEK_V4_API_KEY")
-        api_base = os.getenv("DEEPSEEK_V4_API_BASE", "https://api.deepseek.com")
-        self.llm = ChatOpenAI(
-            model="deepseek-chat",
+        self.llm = ChatDeepSeek(
+            model=os.getenv("LLM_MODEL_FAST", "deepseek-chat"),
             api_key=api_key,
-            base_url=api_base,
             temperature=0.2,
+            max_retries=2,
         )
         self.repository = repository
 
-    async def __call__(self, state: PipelineState) -> dict[str, object]:
-        repo_url = state.get("repo_url")
-        if repo_url and repo_url != "pending" and repo_url != "trending":
-            return {}
+    async def __call__(self, state: PipelineState) -> PipelineState:
+        repo_url = state.get("repo_url", "")
+        if repo_url and repo_url not in ("pending", "trending", ""):
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=repo_url,
+                status=state.get("status", PipelineStatus.PENDING),
+            )
 
-        print("[Graph] GithubTrendingUseCase: Fetching top trending repos autonomously...")
+        logger.info("[Graph] GithubTrendingUseCase: Fetching top trending repos autonomously...")
 
         try:
             from ...infrastructure.github.tools import fetch_trending_repos
-            raw_repos = await fetch_trending_repos(limit=20)
+            logger.info("[Graph] GithubTrendingUseCase: Calling fetch_trending_repos...")
+
+            exclude_urls: set[str] = set()
+            try:
+                exclude_urls = await self.repository.get_completed_repo_urls()
+            except Exception:
+                await self.repository.session.rollback()
+
+            raw_repos = await fetch_trending_repos(limit=30, exclude_urls=exclude_urls)
+            logger.info(f"[Graph] GithubTrendingUseCase: Got {len(raw_repos)} repos")
 
             if not raw_repos:
-                return {"status": PipelineStatus.ERROR, "error": "No trending repositories found."}
+                task_id = uuid.UUID(state["task_id"])
+                task = await self.repository.get_by_id(task_id)
+                if task:
+                    task.status = PipelineStatus.ERROR
+                    await self.repository.update(task)
+                return PipelineState(
+                    task_id=state["task_id"],
+                    repo_url=state.get("repo_url", ""),
+                    status=PipelineStatus.ERROR,
+                    error="No trending repositories found.",
+                )
 
             # Objective scoring
             for r in raw_repos:
-                stars = r.stars
-                stars_score = 5 if stars > 20000 else (4 if stars > 5000 else (3 if stars > 1000 else (2 if stars > 100 else 1)))
+                vel = r.star_velocity
+                velocity_score = 5 if vel > 100 else (4 if vel > 30 else (3 if vel > 10 else (2 if vel > 3 else 1)))
 
-                recent = r.recent_stars_7d
-                growth = (recent / stars) if stars > 0 else 0
-                growth_score = 5 if growth > 0.02 else (4 if growth > 0.01 else (3 if growth > 0.005 else (2 if growth > 0.001 else 1)))
+                stars = r.stars
+                if stars > 50000:
+                    stars_score = 1
+                elif stars > 10000:
+                    stars_score = 3
+                else:
+                    stars_score = 5 if stars > 2000 else (4 if stars > 500 else (3 if stars > 100 else 2))
 
                 forks = r.forks
                 fork_ratio = (forks / stars) if stars > 0 else 0
-                fork_score = 5 if fork_ratio > 0.1 else (4 if fork_ratio > 0.05 else (3 if fork_ratio > 0.02 else (2 if fork_ratio > 0.01 else 1)))
+                fork_score = 5 if fork_ratio > 0.1 else (4 if fork_ratio > 0.05 else (3 if fork_ratio > 0.02 else 2))
 
-                r.base_heat_score = int((stars_score + growth_score + fork_score) / 3)
+                r.base_heat_score = int(round((velocity_score * 6 + stars_score * 2 + fork_score) / 9))
 
                 deps = r.dependents_count
                 deps_score = 5 if deps > 1000 else (4 if deps > 100 else (3 if deps > 10 else (2 if deps > 0 else 1)))
@@ -66,28 +94,40 @@ class GithubTrendingUseCase:
             # Subjective scoring via LLM
             prompt = ChatPromptTemplate.from_messages([
                 ("system", load_prompt("github", "score_trending_system.md")),
-                ("user", "Repos Data:\n{repos_data}"),
+                ("user", "项目数据：\n{repos_data}"),
             ])
 
-            chain = prompt | self.llm.with_structured_output(TrendingResponse)
-            print("[Graph] GithubTrendingUseCase: Sending to LLM for subjective scoring...")
+            chain = prompt | self.llm.with_structured_output(TrendingResponse, include_raw=True)
+            logger.info("[Graph] GithubTrendingUseCase: Sending to LLM for subjective scoring...")
 
             simplified_data = [
-                {
-                    "owner": r.owner,
-                    "name": r.name,
-                    "description": r.description,
-                    "language": r.language,
-                    "readme_snippet": r.readme_snippet,
-                    "base_heat_score": r.base_heat_score,
-                    "impact_score": r.impact_score,
-                }
+                r.model_dump(include={
+                    "owner", "name", "description", "language", "stars",
+                    "recent_stars_7d", "star_velocity", "base_heat_score", "impact_score",
+                }) | {"readme_snippet": r.readme_snippet[:200]}
                 for r in raw_repos
             ]
 
-            llm_res: TrendingResponse = await chain.ainvoke({
+            raw_result = await chain.ainvoke({
                 "repos_data": json.dumps(simplified_data, ensure_ascii=False),
             })
+
+            llm_res: TrendingResponse | None = raw_result.get("parsed")
+            if llm_res is None:
+                raw_msg = raw_result.get("raw")
+                if raw_msg and hasattr(raw_msg, "content") and raw_msg.content:
+                    try:
+                        import re
+                        content = raw_msg.content
+                        content = re.sub(r'^```(?:json)?\s*\n?', '', content.strip())
+                        content = re.sub(r'\n?```\s*$', '', content.strip())
+                        llm_res = TrendingResponse.model_validate_json(content)
+                        logger.info("[Graph] GithubTrendingUseCase: Recovered via raw content fallback")
+                    except Exception as fb_err:
+                        logger.warning(f"[Graph] GithubTrendingUseCase: Raw fallback also failed: {fb_err}")
+                        raise ValueError(f"LLM structured output failed: {raw_result.get('parsing_error')}")
+                else:
+                    raise ValueError("LLM returned no structured output and no raw content")
 
             # Merge and calculate final score
             final_repos: list[ScoredRepo] = []
@@ -97,7 +137,7 @@ class GithubTrendingUseCase:
                     continue
 
                 content_score = (sr.tech_depth + sr.video_friendly + sr.topic_heat + sr.onboarding_exp) / 4
-                final_score = round(((raw.base_heat_score * 3) + (raw.impact_score * 3) + (content_score * 2)) / 8, 1)
+                final_score = round(((raw.base_heat_score * 6) + (content_score * 2) + raw.impact_score) / 9, 1)
 
                 final_repos.append(ScoredRepo(
                     owner=sr.owner,
@@ -120,9 +160,12 @@ class GithubTrendingUseCase:
                     one_liner=sr.one_liner,
                 ))
 
-            final_repos.sort(key=lambda x: x.final_score, reverse=True)
+            final_repos.sort(key=lambda x: (x.recent_stars_7d > 0, x.recent_stars_7d, x.final_score), reverse=True)
+            final_repos = final_repos[:20]
 
-            print("[Graph] GithubTrendingUseCase: Evaluation complete. Proceeding to HITL.")
+            logger.info(f"[Graph] GithubTrendingUseCase: Evaluation complete. Top repo: "
+                  f"{final_repos[0].owner}/{final_repos[0].name} "
+                  f"(score={final_repos[0].final_score}, 7d_stars={final_repos[0].recent_stars_7d})")
 
             task_id = uuid.UUID(state["task_id"])
             task = await self.repository.get_by_id(task_id)
@@ -131,10 +174,26 @@ class GithubTrendingUseCase:
                 task.trending_repos = final_repos
                 await self.repository.update(task)
 
-            return {
-                "trending_repos": final_repos,
-                "status": PipelineStatus.HITL_TRENDING,
-            }
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=state.get("repo_url", ""),
+                trending_repos=final_repos,
+                status=PipelineStatus.HITL_TRENDING,
+            )
 
         except Exception as e:
-            return {"status": PipelineStatus.ERROR, "error": str(e)}
+            logger.exception(f"[Graph] GithubTrendingUseCase ERROR: {e}")
+            try:
+                task_id = uuid.UUID(state["task_id"])
+                task = await self.repository.get_by_id(task_id)
+                if task:
+                    task.status = PipelineStatus.ERROR
+                    await self.repository.update(task)
+            except Exception:
+                pass
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=state.get("repo_url", ""),
+                status=PipelineStatus.ERROR,
+                error=str(e),
+            )

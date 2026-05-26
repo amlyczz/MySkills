@@ -1,15 +1,13 @@
 """Audio Design use case — generates TTS voiceover per segment (with actual durations),
 BGM, and precise Timeline/SRT based on real audio timing.
-
-This runs BEFORE video rendering so that actual audio durations can calibrate
-Blueprint frame positions.
 """
 
-import json
+import logging
 import os
 import subprocess
-import sys
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from ...domain.repo_analyzer.entities import Script, ScriptSegment
 from ...domain.post_producer.audio_timeline import AudioTimeline, AudioTimelineSegment
@@ -48,12 +46,6 @@ def _format_srt_time(seconds: float) -> str:
 
 
 class AudioDesignUseCase:
-    """Generate voiceover per segment with actual durations, BGM, Timeline, and SRT.
-
-    Key design: TTS is done SEGMENT BY SEGMENT so we get real audio durations
-    for each segment. These actual durations drive the Timeline and SRT, replacing
-    the old approach of blindly using estimated duration_est values.
-    """
 
     def __init__(
         self,
@@ -65,11 +57,16 @@ class AudioDesignUseCase:
         self.bgm_gen = bgm_gen
         self.repository = repository
 
-    async def __call__(self, state: PipelineState) -> dict[str, object]:
-        print("[AudioDesign] Starting audio generation with per-segment TTS")
+    async def __call__(self, state: PipelineState) -> PipelineState:
+        # Skip-if-done guard: if voiceover already exists, skip
+        if state.get("voiceover_path"):
+            logger.info("[AudioDesign] Skipping (voiceover already exists)")
+            return PipelineState(task_id=state["task_id"], repo_url=state["repo_url"])
+
+        logger.info("[AudioDesign] Starting audio generation with per-segment TTS")
 
         script = state.get("script")
-        if not script:
+        if script is None:
             raise ValueError("Script is missing in state for audio design.")
 
         output_dir = resolve_output_dir(state)
@@ -89,12 +86,11 @@ class AudioDesignUseCase:
             )
 
             actual_dur = _get_audio_duration(seg_path)
-            # Fallback: if ffprobe fails, use estimated duration
             if actual_dur <= 0:
                 actual_dur = seg.duration_est
             segment_durations.append(actual_dur)
             segment_paths.append(seg_path)
-            print(f"[AudioDesign] Segment {i}: est={seg.duration_est:.1f}s actual={actual_dur:.1f}s")
+            logger.info(f"[AudioDesign] Segment {i}: est={seg.duration_est:.1f}s actual={actual_dur:.1f}s")
 
         total_actual_duration = sum(segment_durations)
 
@@ -127,27 +123,28 @@ class AudioDesignUseCase:
         task = await self.repository.get_by_id(task_id)
         if task:
             task.status = PipelineStatus.GENERATE_MEDIA
+            task.voiceover_path = voiceover_path
+            task.bgm_path = bgm_path
             await self.repository.update(task)
 
-        return {
-            "voiceover_path": voiceover_path,
-            "bgm_path": bgm_path,
-            "segment_actual_durations": segment_durations,
-            "status": PipelineStatus.GENERATE_MEDIA,
-        }
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            voiceover_path=voiceover_path,
+            bgm_path=bgm_path,
+            segment_actual_durations=segment_durations,
+            status=PipelineStatus.GENERATE_MEDIA,
+        )
 
     async def _concat_audio(self, segment_paths: list[str], output_path: str) -> None:
-        """Concatenate segment audio files into a single voiceover track."""
         if not segment_paths:
             return
 
         if len(segment_paths) == 1:
-            # Simple copy for single segment
             import shutil
             shutil.copy2(segment_paths[0], output_path)
             return
 
-        # Use ffmpeg concat demuxer for multiple segments
         list_path = output_path + ".concat.txt"
         with open(list_path, "w", encoding="utf-8") as f:
             for p in segment_paths:
@@ -162,18 +159,15 @@ class AudioDesignUseCase:
         )
         stdout, stderr = await process.communicate()
 
-        # Cleanup concat list
         if os.path.exists(list_path):
             os.remove(list_path)
 
         if process.returncode != 0:
-            # Fallback: just use the first segment
             import shutil
             shutil.copy2(segment_paths[0], output_path)
-            print(f"[AudioDesign] Warning: concat failed, using first segment only")
+            logger.warning("[AudioDesign] Warning: concat failed, using first segment only")
 
     def _build_timeline(self, script: Script, actual_durations: list[float]) -> AudioTimeline:
-        """Build timeline with actual audio durations."""
         segments: list[AudioTimelineSegment] = []
         current_time = 0.0
         for i, seg in enumerate(script.segments):
@@ -196,7 +190,6 @@ class AudioDesignUseCase:
         )
 
     def _build_srt(self, script: Script, actual_durations: list[float]) -> str:
-        """Build SRT content with actual audio durations."""
         srt = ""
         current_time = 0.0
         for i, seg in enumerate(script.segments):

@@ -1,8 +1,12 @@
+import logging
 import uuid
+
+logger = logging.getLogger(__name__)
 from ...domain.task.entities import PipelineStatus
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.script_composer.interfaces import ScriptComposer
 from ..workflow.state import PipelineState
+
 
 class ComposeScriptUseCase:
 
@@ -14,22 +18,30 @@ class ComposeScriptUseCase:
         self.composer = composer
         self.repository = repository
 
-    async def __call__(self, state: PipelineState) -> dict[str, object]:
-        print("[UseCase] Running ComposeScript")
+    async def __call__(self, state: PipelineState) -> PipelineState:
+        # Skip-if-done guard: if script exists and no QA feedback, skip
+        # (script was produced in a previous run — preserve it, don't re-run)
+        if state.get("script") is not None and state.get("qa_script_feedback") is None:
+            logger.info("[UseCase] ComposeScript: skipping (script already in state)")
+            return PipelineState(
+                task_id=state["task_id"],
+                repo_url=state["repo_url"],
+                script=state["script"],
+                status=PipelineStatus.COMPOSING,
+            )
 
-        content_model = state.get("content_model")
-        if not content_model:
+        logger.info("[UseCase] Running ComposeScript")
+
+        if state.get("content_model") is None:
             raise ValueError("ContentModel is missing in state.")
 
         # Generate script from ContentModel via ScriptComposer interface
         # Pass QA feedback from previous failed attempt if available
-        qa_feedback = state.get("qa_script_feedback")
-        domain_analysis = state.get("domain_analysis")
         script = await self.composer.compose_script(
-            content_model,
+            state["content_model"],
             target_duration=0,
-            domain_analysis=domain_analysis,
-            qa_feedback=qa_feedback
+            domain_analysis=state.get("domain_analysis"),
+            qa_feedback=state.get("qa_script_feedback"),
         )
 
         # Synchronize DB state
@@ -40,7 +52,9 @@ class ComposeScriptUseCase:
             task.script = script
             await self.repository.update(task)
 
-        return {
-            "script": script,
-            "status": PipelineStatus.COMPOSING,
-        }
+        return PipelineState(
+            task_id=state["task_id"],
+            repo_url=state["repo_url"],
+            script=script,
+            status=PipelineStatus.COMPOSING,
+        )
