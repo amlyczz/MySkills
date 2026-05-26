@@ -2,16 +2,18 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 import uuid
 
-from src.domain.analyzer.entities import ContentModel, NormalizedContent, Script, ScriptSegment, GitHubSourceMeta, MaterialManifest
-from src.domain.analyzer.entities import DomainAnalysis, ProjectCategory
-from src.domain.blueprint.entities import Blueprint, BlueprintMeta, SceneConfig, GlobalSettings
+from src.domain.repo_analyzer.entities import ContentModel, Script, ScriptSegment, GitHubSourceMeta, MaterialManifest
+from src.domain.repo_analyzer.entities import DomainAnalysis, ProjectCategory
+from src.domain.visual_blueprint.entities import Blueprint, BlueprintMeta, SceneConfig, GlobalSettings
 from src.domain.task.entities import PipelineTask, PipelineStatus
 from src.domain.task.interfaces import PipelineTaskRepository
-from src.domain.analyzer.interfaces import RepoAnalyzer
-from src.domain.blueprint.interfaces import BlueprintComposer
+from src.domain.repo_analyzer.interfaces import RepoAnalyzer
+from src.domain.visual_blueprint.interfaces import BlueprintComposer
 from src.application.usecases.analyze import AnalyzeRepoUseCase
 from src.application.usecases.blueprint import GenerateBlueprintUseCase
 
+
+from src.domain.repo_analyzer.project_encyclopedia import ProjectEncyclopedia
 
 def _make_content_model() -> ContentModel:
     """Helper to create a minimal ContentModel for testing."""
@@ -25,16 +27,17 @@ def _make_content_model() -> ContentModel:
             stars=100,
             forks=20,
         ),
-        content=NormalizedContent(
+        content=ProjectEncyclopedia(
             title="Test Repo",
             tagline="A great test repo",
-            summary="This is a test repository",
-            points=["Feature 1", "Feature 2"],
+            quick_start="pip install test",
+            use_cases="Some test cases",
+            usage_intro="import test",
         ),
         script=Script(
             full_text="This is a test narration.",
             segments=[
-                ScriptSegment(text="Intro segment", duration_est=5.0, visual_type="intro"),
+                ScriptSegment(text="Intro segment", duration_est=5.0, visual_type="intro", visual_hook="zoom in"),
             ],
             total_duration_est=5.0,
         ),
@@ -48,7 +51,7 @@ async def test_analyze_repo_usecase() -> None:
 
     mock_analyzer = MagicMock(spec=RepoAnalyzer)
     mock_analyzer.analyze_repo = AsyncMock(return_value=content_model)
-    mock_analyzer.classify_category = AsyncMock(return_value=ProjectCategory.EDUCATIONAL)
+    mock_analyzer.classify_category = AsyncMock(return_value=ProjectCategory.TECH_EDU)
     mock_domain_analysis = DomainAnalysis(architecture_pattern="Clean Architecture")
     mock_analyzer.analyze_domain = AsyncMock(return_value=mock_domain_analysis)
 
@@ -66,11 +69,11 @@ async def test_analyze_repo_usecase() -> None:
 
     with patch("src.application.usecases.analyze.GitHubMaterialCollector") as MockCollector:
         mock_collector_instance = MockCollector.return_value
+        from src.domain.repo_analyzer.repo_metadata import RepoMetadata
         mock_collector_instance.collect = AsyncMock(return_value=(
             "README content",  # readme_text
             mock_manifest,     # material_manifest
-            {"full_name": "user/repo", "language": "Python", "stargazers_count": 100},  # repo_metadata
-            {"language": "Python", "frameworks": [], "key_deps": []},  # dependency_summary
+            RepoMetadata(full_name="user/repo", language="Python", stargazers_count=100),  # repo_metadata
         ))
 
         # 2. Act
@@ -78,7 +81,7 @@ async def test_analyze_repo_usecase() -> None:
         state = {
             "task_id": str(task.id),
             "repo_url": task.repo_url,
-            "project_category": "educational",
+            "project_category": "tech_edu",
             "status": PipelineStatus.PENDING,
             "qa_script_retry_count": 0,
             "qa_blueprint_retry_count": 0,
@@ -107,7 +110,7 @@ async def test_analyze_repo_usecase() -> None:
 
     assert result["content_model"] == content_model
     assert result["material_manifest"] == mock_manifest
-    assert result["project_category"] == "educational"
+    assert result["project_category"] == "tech_edu"
     assert result["domain_analysis"] == mock_domain_analysis
     assert result["status"] == PipelineStatus.ANALYZING
 
@@ -144,7 +147,7 @@ async def test_generate_blueprint_usecase() -> None:
 
     script = Script(
         full_text="Test narration",
-        segments=[ScriptSegment(text="Intro segment", duration_est=3.0, visual_type="intro")],
+        segments=[ScriptSegment(text="Intro segment", duration_est=3.0, visual_type="intro", visual_hook="zoom in")],
         total_duration_est=3.0,
     )
     content_model = _make_content_model()
@@ -154,7 +157,7 @@ async def test_generate_blueprint_usecase() -> None:
     state = {
         "task_id": str(task.id),
         "repo_url": task.repo_url,
-        "project_category": "educational",
+        "project_category": "tech_edu",
         "status": PipelineStatus.COMPOSING,
         "qa_script_retry_count": 0,
         "qa_blueprint_retry_count": 0,

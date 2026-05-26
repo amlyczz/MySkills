@@ -1,7 +1,7 @@
 from typing import Optional, Any, Union
 
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, GitHubSourceMeta, ProjectEncyclopedia, Script, SourceCodeInsight, MaterialManifest, ProjectCategory, TechDomain, RepoMetadata
 from ...domain.repo_analyzer.project_encyclopedia import ChartDataPoint
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
@@ -53,6 +53,15 @@ class LLMRepoAnalyzer(RepoAnalyzer):
         class DomainWrapper(BaseModel):
             domain: Optional[TechDomain] = None
             tech_domain: Optional[TechDomain] = None
+
+            @model_validator(mode="before")
+            @classmethod
+            def normalize_fields(cls, data: Any) -> Any:
+                if isinstance(data, dict):
+                    for k, v in list(data.items()):
+                        if isinstance(v, str):
+                            data[k] = v.upper().replace("-", "_")
+                return data
 
             @property
             def resolved_domain(self) -> TechDomain:
