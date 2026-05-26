@@ -116,22 +116,28 @@ async def list_project_tasks(
         raise HTTPException(status_code=400, detail="Invalid project ID format.")
 
     stmt = (
-        select(PipelineTaskDB)
+        select(
+            PipelineTaskDB.id,
+            PipelineTaskDB.repo_url,
+            PipelineTaskDB.status,
+            PipelineTaskDB.created_at,
+            PipelineTaskDB.updated_at,
+        )
         .where(PipelineTaskDB.project_id == uid)
         .order_by(PipelineTaskDB.created_at.desc())
     )
     result = await session.execute(stmt)
-    tasks = result.scalars().all()
+    tasks = result.all()
 
     return [
         TaskListItem(
-            task_id=str(t.id),
-            repo_url=t.repo_url or "",
-            status=t.status.value if t.status else "pending",
-            created_at=t.created_at.isoformat() if t.created_at else None,
-            updated_at=t.updated_at.isoformat() if t.updated_at else None,
+            task_id=str(row.id),
+            repo_url=row.repo_url or "",
+            status=row.status.value if row.status else "pending",
+            created_at=row.created_at.isoformat() if row.created_at else None,
+            updated_at=row.updated_at.isoformat() if row.updated_at else None,
         )
-        for t in tasks
+        for row in tasks
     ]
 
 

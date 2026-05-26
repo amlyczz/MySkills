@@ -45,10 +45,23 @@ class LLMRepoAnalyzer(RepoAnalyzer):
     def __init__(self) -> None:
         self.llm = get_llm_client()
 
+    async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
+        import logging
+        logger = logging.getLogger(__name__)
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                return await chain.ainvoke(kwargs)
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Structured output failed (attempt {attempt + 1}/{max_retries}): {e}")
+        if last_error:
+            raise last_error
+
     async def classify_tech_domain(self, enriched_input: str) -> TechDomain:
         prompt = ChatPromptTemplate.from_messages([
             ("system", load_prompt("repo_analyzer", "classify_domain_system.md")),
-            ("user", "Determine the tech domain of this repository based on the following input:\n\n{input}\n\nRespond in JSON format conforming to the expected schema.")
+            ("user", "Determine the tech domain of this repository based on the following input:\n\n{input}\n\nRespond in strictly valid JSON format conforming to the expected schema. Ensure all double quotes inside strings are properly escaped.")
         ])
         class DomainWrapper(BaseModel):
             domain: Optional[TechDomain] = None
@@ -68,7 +81,7 @@ class LLMRepoAnalyzer(RepoAnalyzer):
                 return self.domain or self.tech_domain or TechDomain.GENERAL
 
         chain = prompt | self.llm.with_structured_output(DomainWrapper, method="json_mode")
-        result = await chain.ainvoke({"input": enriched_input})
+        result = await self._invoke_with_retry(chain, {"input": enriched_input})
         return result.resolved_domain
 
     async def analyze_repo(
@@ -86,11 +99,11 @@ class LLMRepoAnalyzer(RepoAnalyzer):
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", load_prompt("repo_analyzer", sys_prompt_file)),
-            ("user", "Analyze this repository:\n\nURL: {url}\n\nCandidate Materials (JSON):\n{candidate_materials}\n\nEnriched Input:\n{enriched_input}\n\nRespond in JSON format."),
+            ("user", "Analyze this repository:\n\nURL: {url}\n\nCandidate Materials (JSON):\n{candidate_materials}\n\nEnriched Input:\n{enriched_input}\n\nRespond in strictly valid JSON format. IMPORTANT: Ensure all double quotes within strings are correctly escaped (e.g., \\\"word\\\")."),
         ])
 
         chain = prompt | self.llm.with_structured_output(LLMContentResponse, method="json_mode")
-        flat_res: LLMContentResponse = await chain.ainvoke({
+        flat_res: LLMContentResponse = await self._invoke_with_retry(chain, {
             "url": repo_url,
             "candidate_materials": candidate_materials,
             "enriched_input": enriched_input,
@@ -165,7 +178,7 @@ class LLMRepoAnalyzer(RepoAnalyzer):
     ) -> DomainAnalysis:
         prompt = ChatPromptTemplate.from_messages([
             ("system", load_prompt("repo_analyzer", "analyze_domain_system.md")),
-            ("user", load_prompt("repo_analyzer", "analyze_domain_user.md") + "\n\nRespond in JSON format conforming to the expected schema."),
+            ("user", load_prompt("repo_analyzer", "analyze_domain_user.md") + "\n\nRespond in strictly valid JSON format conforming to the expected schema. Ensure all double quotes inside strings are properly escaped."),
         ])
 
         chain = prompt | self.llm.with_structured_output(DomainAnalysis, method="json_mode")
@@ -187,7 +200,7 @@ class LLMRepoAnalyzer(RepoAnalyzer):
             "directory_tree": self._format_directory_tree(repo_metadata),
         }
 
-        domain_analysis: DomainAnalysis = await chain.ainvoke(invoke_vars)
+        domain_analysis: DomainAnalysis = await self._invoke_with_retry(chain, invoke_vars)
         return domain_analysis
 
     @staticmethod

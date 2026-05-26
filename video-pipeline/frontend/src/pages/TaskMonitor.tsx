@@ -274,19 +274,129 @@ export default function TaskMonitor() {
         const status: string = data.status || 'pending'
         setPipelineStatus(status)
 
-        const progress = STATUS_TO_PROGRESS[status] || { completed: [] }
+        // Detect trending mode from repo_url
+        const repoUrl: string = data.repo_url || ''
+        const isTrending = repoUrl === 'trending' || (status === 'hitl_trending' && !!data.trending_repos)
+        if (isTrending) {
+          isTrendingMode.current = true
+          setActiveTab('trending')
+        } else if (repoUrl && repoUrl !== 'pending') {
+          setActiveTab('url')
+          setUrl(repoUrl)
+        }
 
-        // Restore DAG progress
-        setCompletedNodes(new Set(progress.completed))
-        setCurrentNode(progress.current || null)
+        // Reconstruct DAG progress dynamically based on status and presence of data fields
+        const completed = new Set<string>()
+        const failed = new Set<string>()
+        let current: string | null = null
+
+        // github_trending
+        if (isTrending) {
+          if (data.trending_repos || data.content_model || data.script || data.blueprint || status !== 'pending') {
+            completed.add('github_trending')
+          }
+        }
+
+        // hitl_trending_review
+        if (isTrending) {
+          if (completed.has('github_trending')) {
+            if (status === 'hitl_trending') {
+              current = 'hitl_trending_review'
+            } else if (data.content_model || data.script || data.blueprint || status !== 'pending') {
+              completed.add('hitl_trending_review')
+            }
+          }
+        }
+
+        // analyze_repo
+        if (data.content_model || data.script || data.blueprint || data.voiceover_path || data.video_mp4_path || status === 'completed') {
+          completed.add('analyze_repo')
+        } else if (status === 'analyzing') {
+          current = 'analyze_repo'
+        }
+
+        // compose_script
+        if (data.script || data.blueprint || data.voiceover_path || data.video_mp4_path || status === 'completed') {
+          completed.add('compose_script')
+        } else if (status === 'composing') {
+          current = 'compose_script'
+        }
+
+        // hitl_script_review
+        if (completed.has('compose_script')) {
+          if (status === 'hitl_script_review') {
+            current = 'hitl_script_review'
+          } else if (data.blueprint || data.voiceover_path || data.video_mp4_path || status === 'completed') {
+            completed.add('hitl_script_review')
+          }
+        }
+
+        // generate_diagrams
+        if (data.blueprint || data.voiceover_path || data.video_mp4_path || status === 'completed') {
+          completed.add('generate_diagrams')
+        } else if (status === 'blueprinting') {
+          current = 'generate_diagrams'
+        }
+
+        // generate_blueprint
+        if (completed.has('generate_diagrams')) {
+          if (data.blueprint && status !== 'blueprinting') {
+            completed.add('generate_blueprint')
+          } else if (status === 'blueprinting') {
+            current = 'generate_blueprint'
+          }
+        }
+
+        // hitl_blueprint_review
+        if (completed.has('generate_blueprint')) {
+          if (status === 'hitl_blueprint_review') {
+            current = 'hitl_blueprint_review'
+          } else if (data.voiceover_path || data.video_mp4_path || status === 'completed') {
+            completed.add('hitl_blueprint_review')
+          }
+        }
+
+        // audio_design
+        if (data.voiceover_path || data.video_mp4_path || status === 'completed') {
+          completed.add('audio_design')
+        } else if (status === 'generate_media') {
+          current = 'audio_design'
+        }
+
+        // render_compose
+        if (status === 'completed' || data.final_mp4_path) {
+          completed.add('render_compose')
+        } else if (status === 'rendering' || status === 'post_processing') {
+          current = 'render_compose'
+        }
+
+        // Deduce precise failed node if status is error
+        if (status === 'error') {
+          const failedNode = DAG_NODES.find(node => {
+            if (!isTrending && (node === 'github_trending' || node === 'hitl_trending_review')) {
+              return false
+            }
+            return !completed.has(node)
+          })
+          if (failedNode) {
+            failed.add(failedNode)
+          }
+        }
+
+        setCompletedNodes(completed)
+        setFailedNodes(failed)
+        setCurrentNode(current)
 
         // Build log entries from progress
         const restoreLogs: string[] = [`> Task restored (status: ${status})`]
-        for (const node of progress.completed) {
-          restoreLogs.push(`> [${NODE_META[node]?.label || node}] COMPLETED`)
+        for (const node of DAG_NODES) {
+          if (!isTrending && (node === 'github_trending' || node === 'hitl_trending_review')) continue
+          if (completed.has(node)) {
+            restoreLogs.push(`> [${NODE_META[node]?.label || node}] COMPLETED`)
+          }
         }
-        if (progress.current) {
-          restoreLogs.push(`> [${NODE_META[progress.current]?.label || progress.current}] IN PROGRESS...`)
+        if (current) {
+          restoreLogs.push(`> [${NODE_META[current]?.label || current}] IN PROGRESS...`)
         }
         if (status === 'completed') {
           restoreLogs.push('> PIPELINE COMPLETED.')
@@ -295,16 +405,6 @@ export default function TaskMonitor() {
           restoreLogs.push('> ERROR: Task failed.')
         }
         setLogs(restoreLogs)
-
-        // Detect trending mode from repo_url
-        const repoUrl: string = data.repo_url || ''
-        if (repoUrl === 'trending') {
-          isTrendingMode.current = true
-          setActiveTab('trending')
-        } else if (repoUrl && repoUrl !== 'pending') {
-          setActiveTab('url')
-          setUrl(repoUrl)
-        }
 
         // Restore HITL state for paused tasks
         if (status === 'hitl_trending' && data.trending_repos) {
@@ -326,6 +426,13 @@ export default function TaskMonitor() {
           setHitlEvent({ reason: 'blueprint_review', message: 'Review the blueprint.' })
           restoreLogs.push('> PAUSED: Awaiting blueprint review.')
           setLogs([...restoreLogs])
+        }
+
+        // Auto-reconnect WebSocket for active running tasks
+        const isTerminal = status === 'completed' || status === 'error'
+        const isHitl = status === 'hitl_trending' || status === 'hitl_script_review' || status === 'hitl_blueprint_review'
+        if (!isTerminal && !isHitl && taskId) {
+          connectWebSocket(taskId, repoUrl)
         }
       } catch {
         setLogs(['> Failed to restore task state.'])
