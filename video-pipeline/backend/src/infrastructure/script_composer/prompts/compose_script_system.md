@@ -61,3 +61,17 @@
 
 ### 输出格式：
 输出一个包含所有元素的严格 JSON 结构，符合预定义的 Pydantic Schema。
+你必须输出一个有效的 JSON 对象，而不是数组。格式如下：
+
+{{
+  "full_text": "完整的口播文案（合并所有 segment）",
+  "segments": [
+    {{
+      "text": "本段口的具体文本",
+      "duration_est": 15.5,
+      "assigned_asset": "素材路径、Mermaid 代码，或者留空",
+      "visual_hook": "视觉提示要求"
+    }}
+  ],
+  "total_duration_est": 120.5
+}}
