@@ -14,13 +14,15 @@ router = APIRouter(prefix="/api/v1/task", tags=["task"])
 
 @router.post("/submit", response_model=TaskSubmitResponse)
 async def submit_task(req: TaskSubmitRequest, session: AsyncSession = Depends(get_db_session)) -> TaskSubmitResponse:
-    """Submits a repository URL to register a pipeline task in the database."""
+    """Submits a URL to register a pipeline task in the database."""
     repo = PostgresPipelineTaskRepository(session)
     task_id = uuid.uuid4()
 
+    repo_url = req.repo_url or req.twitter_url or ""
+
     task = PipelineTask(
         id=task_id,
-        repo_url=req.repo_url or "",
+        repo_url=repo_url,
         status=PipelineStatus.PENDING,
     )
     await repo.save(task)
@@ -50,6 +52,7 @@ async def get_task_status(task_id: str, session: AsyncSession = Depends(get_db_s
         failed_node=task.failed_node,
         node_error=task.node_error,
         content_model=task.content_model.model_dump() if task.content_model else None,
+        twitter_content=task.twitter_content if task.twitter_content else None,
         material_manifest=task.material_manifest.model_dump() if task.material_manifest else None,
         script=task.script.model_dump() if task.script else None,
         blueprint=task.blueprint.model_dump() if task.blueprint else None,

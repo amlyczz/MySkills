@@ -15,8 +15,10 @@ class PipelineState(TypedDict):
     """
     task_id: str
     repo_url: str
-    project_category: str
     status: PipelineStatus
+
+    # Source type for DAG routing: "github_trending" | "github_url" | "twitter"
+    source_type: str
 
     # Trending HITL
     trending_repos: Optional[list[ScoredRepo]]
@@ -26,6 +28,9 @@ class PipelineState(TypedDict):
     content_model: Optional[ContentModel]
     material_manifest: Optional[MaterialManifest]
     script: Optional[Script]
+
+    # Twitter-specific content
+    twitter_content: Optional[dict]
 
     # Visual blueprint
     blueprint: Optional[Blueprint]

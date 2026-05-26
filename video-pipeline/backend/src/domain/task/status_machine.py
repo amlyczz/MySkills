@@ -18,6 +18,7 @@ NODE_TO_STATUS: dict[str, PipelineStatus] = {
     "github_trending":       PipelineStatus.FETCHING_TRENDING,
     "hitl_trending_review":  PipelineStatus.HITL_TRENDING,
     "analyze_repo":          PipelineStatus.ANALYZING,
+    "analyze_twitter":       PipelineStatus.ANALYZING,
     "compose_script":        PipelineStatus.COMPOSING,
     "hitl_script_review":    PipelineStatus.HITL_SCRIPT_REVIEW,
     "generate_diagrams":     PipelineStatus.GENERATING_DIAGRAMS,

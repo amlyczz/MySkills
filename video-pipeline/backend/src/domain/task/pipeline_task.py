@@ -19,12 +19,12 @@ class PipelineTask(BaseModel):
 
     # Domain entities (local to video-pipeline)
     content_model: Optional[ContentModel] = None
+    twitter_content: Optional[dict] = None
     material_manifest: Optional[MaterialManifest] = None
     script: Optional[Script] = None
     blueprint: Optional[Blueprint] = None
     trending_repos: Optional[list[ScoredRepo]] = None
     domain_analysis: Optional[DomainAnalysis] = None
-    project_category: Optional[str] = "github"
 
     # Strictly-typed QA scorecards
     qa_script: Optional[QAScorecard] = None

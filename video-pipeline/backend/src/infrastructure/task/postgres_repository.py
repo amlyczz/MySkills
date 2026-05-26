@@ -23,6 +23,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             repo_url=task.repo_url,
             status=task.status,
             content_model=task.content_model.model_dump() if task.content_model else None,
+            twitter_content=task.twitter_content,
             material_manifest=task.material_manifest.model_dump() if task.material_manifest else None,
             script=task.script.model_dump() if task.script else None,
             blueprint=task.blueprint.model_dump() if task.blueprint else None,
@@ -30,7 +31,6 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             qa_script=task.qa_script.model_dump() if task.qa_script else None,
             qa_blueprint=task.qa_blueprint.model_dump() if task.qa_blueprint else None,
             domain_analysis=task.domain_analysis.model_dump() if task.domain_analysis else None,
-            project_category=task.project_category,
             voiceover_path=task.voiceover_path,
             bgm_path=task.bgm_path,
             video_mp4_path=task.video_mp4_path,
@@ -68,6 +68,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             repo_url=db_task.repo_url,
             status=db_task.status,
             content_model=content_model,
+            twitter_content=db_task.twitter_content,
             material_manifest=material_manifest,
             script=script,
             blueprint=blueprint,
@@ -75,7 +76,6 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             qa_script=qa_script,
             qa_blueprint=qa_blueprint,
             domain_analysis=domain_analysis,
-            project_category=db_task.project_category,
             voiceover_path=db_task.voiceover_path,
             bgm_path=db_task.bgm_path,
             video_mp4_path=db_task.video_mp4_path,
@@ -106,6 +106,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
         if db_task:
             db_task.status = task.status
             db_task.content_model = task.content_model.model_dump() if task.content_model else None
+            db_task.twitter_content = task.twitter_content
             db_task.material_manifest = task.material_manifest.model_dump() if task.material_manifest else None
             db_task.script = task.script.model_dump() if task.script else None
             db_task.blueprint = task.blueprint.model_dump() if task.blueprint else None
@@ -113,7 +114,6 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             db_task.qa_script = task.qa_script.model_dump() if task.qa_script else None
             db_task.qa_blueprint = task.qa_blueprint.model_dump() if task.qa_blueprint else None
             db_task.domain_analysis = task.domain_analysis.model_dump() if task.domain_analysis else None
-            db_task.project_category = task.project_category
             db_task.voiceover_path = task.voiceover_path
             db_task.bgm_path = task.bgm_path
             db_task.video_mp4_path = task.video_mp4_path

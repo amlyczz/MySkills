@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Globe } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { createProject } from '../lib/api'
 
 export default function NewProject() {
@@ -13,10 +13,7 @@ export default function NewProject() {
     if (!name.trim()) return
     setCreating(true)
     try {
-      const project = await createProject({
-        name: name.trim(),
-        source_type: 'github_repo',
-      })
+      const project = await createProject({ name: name.trim() })
       navigate(`/project/${project.id}`)
     } catch {
       alert('Failed to create project. Is the backend running?')
@@ -41,18 +38,6 @@ export default function NewProject() {
       </p>
 
       <form onSubmit={handleCreate} className="space-y-5">
-        {/* Type */}
-        <div>
-          <label className="block text-xs font-medium text-[var(--color-ink-secondary)] uppercase tracking-wider mb-1.5">
-            Type
-          </label>
-          <div className="flex items-center gap-2.5 border border-[var(--color-border)] rounded-md px-4 py-3 bg-[var(--color-surface)]">
-            <Globe className="w-4 h-4 text-[var(--color-accent)]" />
-            <span className="text-sm font-medium text-[var(--color-ink)]">GitHub Repo</span>
-            <span className="text-xs text-[var(--color-ink-muted)] ml-1">— generate video from a repository</span>
-          </div>
-        </div>
-
         {/* Name */}
         <div>
           <label htmlFor="project-name" className="block text-xs font-medium text-[var(--color-ink-secondary)] uppercase tracking-wider mb-1.5">

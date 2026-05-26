@@ -13,12 +13,7 @@ def _to_entity(row: ProjectDB) -> Project:
     return Project(
         id=row.id,
         name=row.name,
-        source_type=row.source_type,
-        repo_url=row.repo_url,
         description=row.description,
-        language=row.language,
-        stars=row.stars,
-        thumbnail_url=row.thumbnail_url,
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -33,12 +28,7 @@ class PostgresProjectRepository(ProjectRepository):
         row = ProjectDB(
             id=project.id,
             name=project.name,
-            source_type=project.source_type,
-            repo_url=project.repo_url,
             description=project.description,
-            language=project.language,
-            stars=project.stars,
-            thumbnail_url=project.thumbnail_url,
         )
         self._session.add(row)
         await self._session.flush()

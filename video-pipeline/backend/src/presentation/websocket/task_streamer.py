@@ -14,6 +14,8 @@ from ...infrastructure.task.connection import _get_session_maker
 from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
 from ...infrastructure.repo_analyzer.llm_analyzer import LLMRepoAnalyzer
 from ...infrastructure.script_composer.llm_composer import LLMScriptComposer
+from ...infrastructure.twitter_analyzer.agent_scraper import OpenCLITwitterScraper
+from ...infrastructure.twitter_analyzer.llm_analyzer import LLMTwitterAnalyzer
 from ...infrastructure.visual_blueprint.llm_composer import LLMBlueprintComposer
 from ...infrastructure.visual_blueprint.remotion_renderer import RemotionVideoRenderer
 from ...infrastructure.post_producer.media_generator import MediaGenerator
@@ -343,7 +345,6 @@ def _extract_detail(node_name: str, output: dict) -> str:
     if node_name == "analyze_repo":
         cm = _get_field(output, "content_model")
         title = ""
-        category = _get_field(output, "project_category", "")
         if cm:
             content = _get_field(cm, "content")
             if content:
@@ -352,12 +353,15 @@ def _extract_detail(node_name: str, output: dict) -> str:
                 source = _get_field(cm, "source")
                 if source:
                     title = f"{_get_field(source, 'owner', '')}/{_get_field(source, 'repo_name', '')}"
-        parts = []
-        if title:
-            parts.append(title)
-        if category:
-            parts.append(f"category={category}")
-        return " | ".join(parts) if parts else "Analysis complete"
+        return title if title else "Analysis complete"
+
+    if node_name == "analyze_twitter":
+        tc = _get_field(output, "twitter_content")
+        if tc:
+            author = _get_field(tc, "author", "")
+            title = _get_field(tc, "title", "")
+            return f"AUTHOR={author}, {title}" if author else title
+        return "Twitter analysis complete"
 
     if node_name == "compose_script":
         script = _get_field(output, "script")
@@ -412,6 +416,8 @@ def _compile_graph_with_services(session, checkpointer):
     repository, status_service = _build_services(session)
     analyzer = LLMRepoAnalyzer()
     composer = LLMScriptComposer()
+    twitter_scraper = OpenCLITwitterScraper()
+    twitter_analyzer = LLMTwitterAnalyzer()
     blueprint_composer = LLMBlueprintComposer()
     video_renderer = RemotionVideoRenderer()
     media_gen = MediaGenerator()
@@ -420,6 +426,8 @@ def _compile_graph_with_services(session, checkpointer):
     graph = compile_workflow(
         analyzer=analyzer,
         composer=composer,
+        twitter_scraper=twitter_scraper,
+        twitter_analyzer=twitter_analyzer,
         blueprint_composer=blueprint_composer,
         video_renderer=video_renderer,
         voiceover_gen=media_gen,
@@ -433,10 +441,21 @@ def _compile_graph_with_services(session, checkpointer):
     return graph, repository, status_service
 
 
+def _detect_source_type(repo_url: str) -> str:
+    """Detect source type from the repo_url query parameter."""
+    if repo_url == "trending":
+        return "github_trending"
+    if repo_url and ("twitter.com" in repo_url or "x.com" in repo_url):
+        return "twitter"
+    return "github_url"
+
+
 @router.websocket("/stream/{task_id}")
-async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project_type: str = "educational") -> None:
+async def stream_task(websocket: WebSocket, task_id: str, repo_url: str) -> None:
     """WebSocket endpoint that compiles the StateGraph and streams steps live."""
     await websocket.accept()
+
+    source_type = _detect_source_type(repo_url)
 
     session_maker = _get_session_maker()
     async with session_maker() as session:
@@ -456,7 +475,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
             state_input = {
                 "task_id": task_id,
                 "repo_url": repo_url,
-                "project_category": project_type,
+                "source_type": source_type,
                 "status": PipelineStatus.PENDING,
                 "qa_script_retry_count": 0,
                 "qa_blueprint_retry_count": 0,
@@ -465,6 +484,7 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str, project
                 "domain_analysis": None,
                 "script": None,
                 "blueprint": None,
+                "twitter_content": None,
                 "qa_script": None,
                 "qa_blueprint": None,
                 "segment_actual_durations": [],
@@ -535,10 +555,11 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
                     await websocket.close()
                     return
 
+                source_type = _detect_source_type(db_task.repo_url)
                 db_state: dict[str, Any] = {
                     "task_id": task_id,
                     "repo_url": db_task.repo_url,
-                    "project_category": db_task.project_category or "github",
+                    "source_type": source_type,
                     "status": db_task.status,
                     "trending_repos": db_task.trending_repos,
                     "content_model": db_task.content_model,
@@ -609,10 +630,11 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
             )
 
             # 5. Reconstruct PipelineState dict from DB fields
+            source_type = _detect_source_type(task.repo_url)
             state_input: dict[str, Any] = {
                 "task_id": task_id,
                 "repo_url": task.repo_url,
-                "project_category": task.project_category or "github",
+                "source_type": source_type,
                 "status": PipelineStatus.PENDING,
                 "trending_repos": task.trending_repos,
                 "hitl_trending_feedback": None,

@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Trash2, ExternalLink, Clock, Globe, CheckCircle2, Activity, AlertTriangle, Pause, Loader2 } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Clock } from 'lucide-react'
 import { getProject, deleteProject, deleteTask, listProjectTasks, type ProjectData, type TaskItem } from '../lib/api'
 
 type StatusCategory = 'completed' | 'error' | 'hitl' | 'active' | 'pending'
 
 const STATUS_CONFIG: Record<string, { label: string; category: StatusCategory }> = {
   pending:                 { label: 'Pending',          category: 'pending' },
+  fetching_trending:       { label: 'Fetching Trending', category: 'active' },
   hitl_trending:           { label: 'Trending Review',  category: 'hitl' },
   analyzing:               { label: 'Analyzing',        category: 'active' },
   composing:               { label: 'Composing',        category: 'active' },
   hitl_script_review:      { label: 'Script Review',    category: 'hitl' },
+  generating_diagrams:     { label: 'Gen. Diagrams',    category: 'active' },
   blueprinting:            { label: 'Blueprinting',     category: 'active' },
   hitl_blueprint_review:   { label: 'Blueprint Review', category: 'hitl' },
   generate_media:          { label: 'Generating Media', category: 'active' },
   rendering:               { label: 'Rendering',        category: 'active' },
-  post_processing:         { label: 'Post Processing',  category: 'active' },
   completed:               { label: 'Completed',        category: 'completed' },
   error:                   { label: 'Error',            category: 'error' },
 }
@@ -122,12 +123,6 @@ export default function ProjectDetail() {
             <h1 className="text-xl font-bold tracking-tight text-[var(--color-ink)] truncate" style={{ fontFamily: 'var(--font-serif)' }}>
               {project.name}
             </h1>
-            {project.repo_url && (
-              <a href={project.repo_url} target="_blank" rel="noopener noreferrer"
-                className="text-sm text-[var(--color-accent)] hover:underline flex items-center gap-1 mt-1">
-                {project.repo_url} <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
             {project.description && (
               <p className="text-sm text-[var(--color-ink-secondary)] mt-2">{project.description}</p>
             )}
@@ -147,11 +142,6 @@ export default function ProjectDetail() {
 
         {/* Meta */}
         <div className="flex items-center gap-3 mt-4 text-xs text-[var(--color-ink-muted)]">
-          <span className="flex items-center gap-1 text-[var(--color-ink-secondary)]">
-            <Globe className="w-3 h-3" /> {project.source_type}
-          </span>
-          {project.language && <span>{project.language}</span>}
-          {project.stars !== null && <span>{'★'} {project.stars?.toLocaleString()}</span>}
           <span className="ml-auto flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {project.created_at ? new Date(project.created_at).toLocaleDateString() : ''}

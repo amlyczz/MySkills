@@ -24,12 +24,7 @@ def _project_to_response(p: Project, task_count: int = 0) -> ProjectResponse:
     return ProjectResponse(
         id=str(p.id),
         name=p.name,
-        source_type=p.source_type.value,
-        repo_url=p.repo_url,
         description=p.description,
-        language=p.language,
-        stars=p.stars,
-        thumbnail_url=p.thumbnail_url,
         task_count=task_count,
         created_at=p.created_at,
         updated_at=p.updated_at,
@@ -42,11 +37,7 @@ async def create_project(
     session: AsyncSession = Depends(get_db_session),
 ) -> ProjectResponse:
     repo = PostgresProjectRepository(session)
-    project = Project(
-        name=req.name,
-        source_type=req.source_type,
-        repo_url=req.repo_url,
-    )
+    project = Project(name=req.name)
     saved = await repo.save(project)
     await session.commit()
     return _project_to_response(saved)
@@ -175,14 +166,14 @@ async def submit_task_in_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
 
-    repo_url = req.repo_url or project.repo_url
-    if not repo_url and project.source_type.value != "trending":
-        raise HTTPException(status_code=400, detail="repo_url is required for github_repo projects.")
+    repo_url = req.repo_url or req.twitter_url
+    if not repo_url:
+        raise HTTPException(status_code=400, detail="repo_url or twitter_url is required.")
 
     task_id = uuid.uuid4()
     task = PipelineTask(
         id=task_id,
-        repo_url=repo_url or "",
+        repo_url=repo_url,
         status=PipelineStatus.PENDING,
     )
 
@@ -197,3 +188,4 @@ async def submit_task_in_project(
     await session.commit()
 
     return {"task_id": str(task_id), "project_id": str(uid), "status": "created"}
+

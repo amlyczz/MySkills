@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Trash2, Globe, FolderOpen } from 'lucide-react'
+import { Plus, Search, Trash2, FolderOpen } from 'lucide-react'
 import { listProjects, deleteProject, type ProjectData } from '../lib/api'
 
 export default function ProjectList() {
@@ -129,16 +129,11 @@ export default function ProjectList() {
               </h3>
 
               <p className="text-sm text-[var(--color-ink-secondary)] mt-0.5 line-clamp-1">
-                {p.description || p.repo_url || 'No description'}
+                {p.description || 'No description'}
               </p>
 
               <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-ink-muted)]">
                 <span>{p.task_count} task{p.task_count !== 1 ? 's' : ''}</span>
-                {p.language && (
-                  <span className="text-[var(--color-indigo)] bg-[var(--color-indigo-light)] px-1.5 py-0.5 rounded">
-                    {p.language}
-                  </span>
-                )}
                 <span className="ml-auto">
                   {p.updated_at ? new Date(p.updated_at).toLocaleDateString() : ''}
                 </span>

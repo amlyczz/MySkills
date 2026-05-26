@@ -5,12 +5,7 @@ const API_BASE = 'http://localhost:18274/api/v1'
 export interface ProjectData {
   id: string
   name: string
-  source_type: string
-  repo_url: string | null
   description: string | null
-  language: string | null
-  stars: number | null
-  thumbnail_url: string | null
   task_count: number
   created_at: string | null
   updated_at: string | null
@@ -41,8 +36,6 @@ export async function getProject(id: string): Promise<ProjectData> {
 
 export async function createProject(data: {
   name: string
-  source_type: string
-  repo_url?: string
 }): Promise<ProjectData> {
   const res = await fetch(`${API_BASE}/projects`, {
     method: 'POST',
@@ -60,7 +53,7 @@ export async function deleteProject(id: string): Promise<void> {
 
 export async function submitTaskInProject(
   projectId: string,
-  data: { repo_url?: string; project_type?: string }
+  data: { repo_url?: string; twitter_url?: string }
 ): Promise<{ task_id: string; project_id: string; status: string }> {
   const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`, {
     method: 'POST',

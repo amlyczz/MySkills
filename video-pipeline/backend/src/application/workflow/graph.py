@@ -15,13 +15,28 @@ from ..usecases.generate_diagrams import GenerateDiagramsUseCase
 from ..usecases.blueprint import GenerateBlueprintUseCase
 from ..usecases.audio_design import AudioDesignUseCase
 from ..usecases.render_compose import RenderComposeUseCase
+from ..usecases.analyze_twitter import AnalyzeTwitterUseCase
 from ..usecases.github_trending import GithubTrendingUseCase
 from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
+from ...domain.twitter_analyzer.interfaces import TwitterScraper, TwitterAnalyzer
 from ...domain.script_composer.interfaces import ScriptComposer
 from ...domain.visual_blueprint.interfaces import BlueprintComposer, VideoRenderer
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator, AudioMixer
+
+
+def route_source(state: PipelineState) -> str:
+    """Route to the correct entry node based on source_type."""
+    source_type = state.get("source_type", "github_trending")
+    status = state.get("status")
+    if status == PipelineStatus.ERROR:
+        return END
+    if source_type == "twitter":
+        return "analyze_twitter"
+    if source_type == "github_url":
+        return "analyze_repo"
+    return "github_trending"
 
 
 def route_trending(state: PipelineState) -> str:
@@ -215,6 +230,8 @@ async def hitl_blueprint_review_node(state: PipelineState) -> PipelineState:
 def compile_workflow(
     analyzer: RepoAnalyzer,
     composer: ScriptComposer,
+    twitter_scraper: TwitterScraper,
+    twitter_analyzer: TwitterAnalyzer,
     blueprint_composer: BlueprintComposer,
     video_renderer: VideoRenderer,
     voiceover_gen: VoiceoverGenerator,
@@ -227,6 +244,7 @@ def compile_workflow(
 ) -> Any:
     """Compiles the LangGraph StateGraph with DDD-injected services and HITL support."""
     analyze_repo_uc = AnalyzeRepoUseCase(analyzer, repository, status_service)
+    analyze_twitter_uc = AnalyzeTwitterUseCase(twitter_scraper, twitter_analyzer, repository, status_service)
     compose_script_uc = ComposeScriptUseCase(composer, repository, status_service)
     generate_diagrams_uc = GenerateDiagramsUseCase(repository, status_service)
     generate_blueprint_uc = GenerateBlueprintUseCase(blueprint_composer, repository, status_service)
@@ -239,6 +257,7 @@ def compile_workflow(
     workflow.add_node("github_trending", GithubTrendingUseCase(repository, status_service))
     workflow.add_node("hitl_trending_review", hitl_trending_review_node)
     workflow.add_node("analyze_repo", analyze_repo_uc)
+    workflow.add_node("analyze_twitter", analyze_twitter_uc)
     workflow.add_node("compose_script", compose_script_uc)
     workflow.add_node("hitl_script_review", hitl_script_review_node)
     workflow.add_node("generate_diagrams", generate_diagrams_uc)
@@ -248,10 +267,11 @@ def compile_workflow(
     workflow.add_node("render_compose", render_compose_uc)
 
     # Edges
-    workflow.set_entry_point("github_trending")
+    workflow.set_conditional_entry_point(route_source)
     workflow.add_conditional_edges("github_trending", route_trending)
     workflow.add_conditional_edges("hitl_trending_review", route_hitl_trending)
     workflow.add_edge("analyze_repo", "compose_script")
+    workflow.add_edge("analyze_twitter", "compose_script")
     workflow.add_edge("compose_script", "hitl_script_review")
     workflow.add_conditional_edges("hitl_script_review", lambda state: (
         END if state.get("status") == PipelineStatus.ERROR

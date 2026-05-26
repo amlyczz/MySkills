@@ -35,7 +35,6 @@ class AnalyzeRepoUseCase:
             return PipelineState(
                 task_id=state["task_id"],
                 repo_url=state["repo_url"],
-                project_category=state.get("project_category", "github"),
             )
 
         task_id = uuid.UUID(state["task_id"])
@@ -96,7 +95,6 @@ class AnalyzeRepoUseCase:
                 "content_model": content_model,
                 "material_manifest": material_manifest,
                 "domain_analysis": domain_analysis,
-                "project_category": category.value,
             },
         )
 
@@ -105,7 +103,6 @@ class AnalyzeRepoUseCase:
             repo_url=state["repo_url"],
             content_model=content_model,
             material_manifest=material_manifest,
-            project_category=category.value,
             domain_analysis=domain_analysis,
             status=PipelineStatus.ANALYZING,
         )

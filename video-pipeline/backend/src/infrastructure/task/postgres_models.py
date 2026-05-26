@@ -15,6 +15,7 @@ class PipelineTaskDB(Base):
 
     # JSONB columns for domain models (from contracts)
     content_model = Column(JSONB, nullable=True)
+    twitter_content = Column(JSONB, nullable=True)
     material_manifest = Column(JSONB, nullable=True)
     script = Column(JSONB, nullable=True)
 
@@ -22,7 +23,6 @@ class PipelineTaskDB(Base):
     blueprint = Column(JSONB, nullable=True)
     trending_repos = Column(JSONB, nullable=True)
     domain_analysis = Column(JSONB, nullable=True)
-    project_category = Column(String, nullable=True, default="github")
 
     # QA Scorecards stored as JSONB
     qa_script = Column(JSONB, nullable=True)

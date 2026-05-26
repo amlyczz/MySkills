@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 class TaskSubmitRequest(BaseModel):
     repo_url: str | None = None
-    project_type: str = "educational"
+    twitter_url: str | None = None
 
 
 class TaskSubmitResponse(BaseModel):
@@ -34,6 +34,7 @@ class TaskStatusResponse(BaseModel):
 
     # Domain data
     content_model: Optional[dict] = None
+    twitter_content: Optional[dict] = None
     material_manifest: Optional[dict] = None
     script: Optional[dict] = None
     blueprint: Optional[dict] = None

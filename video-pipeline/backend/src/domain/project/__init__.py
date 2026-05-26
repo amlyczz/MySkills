@@ -1,3 +1,3 @@
-from .entities import Project, SourceType
+from .entities import Project
 
-__all__ = ["Project", "SourceType"]
+__all__ = ["Project"]
