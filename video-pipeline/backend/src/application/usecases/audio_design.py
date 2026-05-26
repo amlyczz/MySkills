@@ -69,7 +69,7 @@ class AudioDesignUseCase:
         # Skip-if-done guard: if voiceover already exists, skip
         if state.get("voiceover_path"):
             logger.info("[AudioDesign] Skipping (voiceover already exists)")
-            return PipelineState(task_id=state["task_id"], repo_url=state["repo_url"])
+            return {**state}
 
         task_id = uuid.UUID(state["task_id"])
 
@@ -158,7 +158,7 @@ class AudioDesignUseCase:
 
         if len(segment_paths) == 1:
             import shutil
-            shutil.copy2(segment_paths[0], output_path)
+            await asyncio.to_thread(shutil.copy2, segment_paths[0], output_path)
             return
 
         list_path = output_path + ".concat.txt"
@@ -180,7 +180,7 @@ class AudioDesignUseCase:
 
         if process.returncode != 0:
             import shutil
-            shutil.copy2(segment_paths[0], output_path)
+            await asyncio.to_thread(shutil.copy2, segment_paths[0], output_path)
             logger.warning("[AudioDesign] Warning: concat failed, using first segment only")
 
     def _build_timeline(self, script: Script, actual_durations: list[float]) -> AudioTimeline:

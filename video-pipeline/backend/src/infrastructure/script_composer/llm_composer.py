@@ -4,50 +4,83 @@ from langchain_core.prompts import ChatPromptTemplate
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis
 from ...domain.script_composer.entities import Script
 from ...domain.script_composer.interfaces import ScriptComposer
-from ..llm.client import get_llm_client
+from ..llm.client import get_json_client
 from ..llm.prompt_loader import load_prompt
 
 class LLMScriptComposer(ScriptComposer):
 
     def __init__(self) -> None:
-        self.llm = get_llm_client()
+        self.llm = get_json_client()
 
     async def compose_script(
         self,
-        content: ContentModel,
-        target_duration: int,
+        content: Optional[ContentModel] = None,
+        target_duration: int = 0,
         domain_analysis: Optional[DomainAnalysis] = None,
         qa_feedback: Optional[str] = None,
+        twitter_content: Optional[dict] = None,
     ) -> Script:
         prompt = ChatPromptTemplate.from_messages([
             ("system", load_prompt("script_composer", "compose_script_system.md")),
             ("user", load_prompt("script_composer", "compose_script_user.md")),
         ])
 
-        encyclopedia = content.content
-        name = encyclopedia.title if encyclopedia else "Unknown Project"
-        summary = encyclopedia.tagline if encyclopedia else ""
-        quick_start = encyclopedia.quick_start if encyclopedia else ""
-        use_cases = encyclopedia.use_cases if encyclopedia else ""
-        usage_intro = encyclopedia.usage_intro if encyclopedia else ""
-        architecture = encyclopedia.architecture_breakdown if encyclopedia else ""
-        domain_specific_insights = encyclopedia.domain_specific_insights if encyclopedia else ""
+        if content is not None:
+            # GitHub repo flow
+            encyclopedia = content.content
+            name = encyclopedia.title if encyclopedia else "Unknown Project"
+            summary = encyclopedia.tagline if encyclopedia else ""
+            quick_start = encyclopedia.quick_start if encyclopedia else ""
+            use_cases = encyclopedia.use_cases if encyclopedia else ""
+            usage_intro = encyclopedia.usage_intro if encyclopedia else ""
+            architecture = encyclopedia.architecture_breakdown if encyclopedia else ""
+            domain_specific_insights = encyclopedia.domain_specific_insights if encyclopedia else ""
 
-        # Supplement with source code insight if available
-        if content.source_code_insight:
-            sci = content.source_code_insight
-            if sci.architecture and not architecture:
-                architecture = sci.architecture
-            if sci.highlights:
-                extra = "\n\nSource Code Highlights: " + "; ".join(sci.highlights)
-                domain_specific_insights = (domain_specific_insights + extra).strip()
+            if content.source_code_insight:
+                sci = content.source_code_insight
+                if sci.architecture and not architecture:
+                    architecture = sci.architecture
+                if sci.highlights:
+                    extra = "\n\nSource Code Highlights: " + "; ".join(sci.highlights)
+                    domain_specific_insights = (domain_specific_insights + extra).strip()
 
-        # Format curated materials
-        curated_materials_text = (
-            "\n".join(content.curated_materials)
-            if content.curated_materials
-            else "No explicit assets provided. Use Mermaid diagrams for architecture visualization."
-        )
+            curated_materials_text = (
+                "\n".join(content.curated_materials)
+                if content.curated_materials
+                else "No explicit assets provided."
+            )
+        elif twitter_content is not None:
+            # Twitter flow — build context from twitter_content dict
+            tc = twitter_content
+            name = tc.get("title", "Twitter Thread")
+            author = tc.get("author", "")
+            handle = tc.get("handle", "")
+            summary = tc.get("summary", "")
+            main_text = tc.get("main_tweet_text", "")
+            thread_flow = tc.get("thread_context", {})
+            sentiment = tc.get("community_sentiment", {})
+            domain = tc.get("tech_domain", "")
+
+            quick_start = ""
+            use_cases = ""
+            usage_intro = ""
+            architecture = ""
+            domain_specific_insights = (
+                f"Author: @{handle} ({author})\n"
+                f"Tech domain: {domain}\n"
+                f"Community tone: {sentiment.get('overall_tone', 'neutral')}\n"
+                f"Thread narrative: {thread_flow.get('narrative_flow', '')[:500]}"
+            )
+            curated_materials_text = f"Main tweet content:\n{main_text[:2000]}"
+        else:
+            name = "Unknown"
+            summary = ""
+            quick_start = ""
+            use_cases = ""
+            usage_intro = ""
+            architecture = ""
+            domain_specific_insights = ""
+            curated_materials_text = "No content available."
 
         audience_primary = domain_analysis.audience.primary if domain_analysis else "General Developers"
         audience_expertise = domain_analysis.audience.expertise_level if domain_analysis else "Intermediate"

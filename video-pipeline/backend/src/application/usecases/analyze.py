@@ -29,15 +29,20 @@ class AnalyzeRepoUseCase:
         self.collector = GitHubMaterialCollector()
 
     async def __call__(self, state: PipelineState) -> PipelineState:
-        # Skip-if-done guard: if content_model already exists, this node was completed before
         if state.get("content_model") is not None:
             logger.info("[UseCase] AnalyzeRepo: skipping (content_model already in state)")
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-            )
+            return {**state}
 
         task_id = uuid.UUID(state["task_id"])
+
+        repo_url = state.get("repo_url", "")
+
+        # Guard: refuse to analyze placeholder URLs (happens on retry of old tasks)
+        if not repo_url or repo_url in ("pending", "trending", ""):
+            raise ValueError(
+                f"Cannot analyze repo with URL '{repo_url}'. "
+                f"Delete this task and create a new one with a real GitHub URL."
+            )
 
         # ① Enter node: mark active immediately
         await self.status_service.transition(
@@ -51,7 +56,7 @@ class AnalyzeRepoUseCase:
 
         # 1. Collect materials via GitHub API + Playwright
         readme_text, material_manifest, repo_metadata = await self.collector.collect(
-            repo_url=state["repo_url"],
+            repo_url=repo_url,
             output_dir=output_dir,
             screenshot_path=screenshot_path,
         )

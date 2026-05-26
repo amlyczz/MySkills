@@ -15,10 +15,11 @@ import json
 import logging
 import os
 import re
-import subprocess
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+from ...infrastructure.config.app_config import settings
 
 from ...domain.repo_analyzer.entities import (
     MaterialManifest,
@@ -33,16 +34,18 @@ from ...domain.repo_analyzer.entities import (
 )
 
 
-def _run_gh_api(repo_full_name: str, endpoint: str) -> Optional[dict]:
-    """Call `gh api` for a GitHub REST API endpoint."""
+async def _run_gh_api(repo_full_name: str, endpoint: str) -> Optional[dict]:
+    """Call `gh api` asynchronously."""
     try:
-        result = subprocess.run(
-            ["gh", "api", f"/repos/{repo_full_name}/{endpoint}"],
-            capture_output=True, text=True, timeout=30,
+        proc = await asyncio.create_subprocess_exec(
+            "gh", "api", f"/repos/{repo_full_name}/{endpoint}",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        if result.returncode == 0:
-            return json.loads(result.stdout)
-    except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+        if proc.returncode == 0:
+            return json.loads(stdout.decode("utf-8", errors="replace"))
+    except (asyncio.TimeoutError, FileNotFoundError, json.JSONDecodeError, OSError):
         pass
     return None
 
@@ -86,8 +89,23 @@ _MAX_SOURCE_FILES = 30
 _MAX_CHARS_PER_FILE = 4000
 
 
+def _playwright_launch_args() -> list[str]:
+    """Get browser launch args with proxy if configured."""
+    args: list[str] = ["--no-sandbox"]
+    proxy = (settings.http_proxy or settings.https_proxy)
+    if proxy:
+        # Port 10808 is typically SOCKS5 (Clash), Chrome needs socks5:// scheme
+        proxy_arg = proxy.replace("http://", "socks5://") if "10808" in proxy else proxy
+        args.append(f"--proxy-server={proxy_arg}")
+        logger.info("Playwright using proxy: %s", proxy_arg)
+    else:
+        logger.info("Playwright running without proxy")
+    return args
+
+
 class GitHubMaterialCollector:
     """Collects real materials from a GitHub repository via API + Playwright."""
+
 
     async def collect(
         self,
@@ -108,7 +126,7 @@ class GitHubMaterialCollector:
         materials: list[Material] = []
 
         # ── 1. Repository metadata ──
-        repo_meta = _run_gh_api(repo_full_name, "")
+        repo_meta = await _run_gh_api(repo_full_name, "")
         metadata = RepoMetadata()
         if repo_meta:
             metadata = RepoMetadata(
@@ -155,7 +173,7 @@ class GitHubMaterialCollector:
     async def _fetch_readme(
         self, repo_full_name: str, output_dir: str, materials: list[Material]
     ) -> str:
-        data = _run_gh_api(repo_full_name, "readme")
+        data = await _run_gh_api(repo_full_name, "readme")
         if not data:
             return ""
 
@@ -182,7 +200,7 @@ class GitHubMaterialCollector:
         return readme_text
 
     async def _fetch_directory_tree(self, repo_full_name: str) -> list[DirectoryEntry]:
-        data = _run_gh_api(repo_full_name, "git/trees/HEAD?recursive=1")
+        data = await _run_gh_api(repo_full_name, "git/trees/HEAD?recursive=1")
         if not data:
             return []
 
@@ -256,7 +274,7 @@ class GitHubMaterialCollector:
 
         collected: list[CoreFile] = []
         for rel_path in candidates:
-            data = _run_gh_api(repo_full_name, f"contents/{rel_path}")
+            data = await _run_gh_api(repo_full_name, f"contents/{rel_path}")
             if not data or data.get("type") != "file":
                 continue
 
@@ -333,7 +351,7 @@ class GitHubMaterialCollector:
         all_targets = list(dict.fromkeys(asset_paths + list(readme_images.keys())))
 
         for rel_path in all_targets[:30]:
-            data = _run_gh_api(repo_full_name, f"contents/{rel_path}")
+            data = await _run_gh_api(repo_full_name, f"contents/{rel_path}")
             if not data or data.get("type") != "file":
                 continue
 
@@ -359,7 +377,7 @@ class GitHubMaterialCollector:
         try:
             from playwright.async_api import async_playwright
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                browser = await p.chromium.launch(headless=True, args=_playwright_launch_args())
                 page = await browser.new_page(viewport={"width": 1920, "height": 1080})
                 await page.goto(repo_url, wait_until="networkidle", timeout=30000)
                 await page.screenshot(path=screenshot_path, full_page=True)
@@ -383,7 +401,7 @@ class GitHubMaterialCollector:
         try:
             from playwright.async_api import async_playwright
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                browser = await p.chromium.launch(headless=True, args=_playwright_launch_args())
                 page = await browser.new_page()
                 await page.goto(repo_url)
                 readme_el = await page.query_selector("article")

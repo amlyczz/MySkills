@@ -21,16 +21,9 @@ class ComposeScriptUseCase:
         self.status_service = status_service
 
     async def __call__(self, state: PipelineState) -> PipelineState:
-        # Skip-if-done guard: if script exists and no QA feedback, skip
-        # (script was produced in a previous run — preserve it, don't re-run)
         if state.get("script") is not None and state.get("qa_script_feedback") is None:
             logger.info("[UseCase] ComposeScript: skipping (script already in state)")
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-                script=state["script"],
-                status=PipelineStatus.COMPOSING,
-            )
+            return {**state}
 
         task_id = uuid.UUID(state["task_id"])
 
@@ -41,16 +34,33 @@ class ComposeScriptUseCase:
 
         logger.info("[UseCase] Running ComposeScript")
 
-        if state.get("content_model") is None:
-            raise ValueError("ContentModel is missing in state.")
+        content_model = state.get("content_model")
+        twitter_content = state.get("twitter_content")
 
-        # Generate script from ContentModel via ScriptComposer interface
+        if content_model is None and twitter_content is None:
+            raise ValueError("Neither ContentModel nor twitter_content is available in state.")
+
+        # Guard: if twitter_content came from a failed scrape, warn but proceed
+        if twitter_content and content_model is None:
+            main_text = twitter_content.get("main_tweet_text", "")
+            if not main_text or len(main_text.strip()) < 20:
+                scrape_err = twitter_content.get("scrape_error", "unknown")
+                raise ValueError(
+                    f"Twitter scrape failed: {scrape_err}. "
+                    f"No usable tweet content to compose script from."
+                )
+            if twitter_content.get("scrape_error"):
+                logger.warning("[ComposeScript] Twitter scrape had errors but proceeding with %d chars of raw text",
+                    len(main_text))
+
+        # Generate script from ContentModel or TwitterContent via ScriptComposer interface
         # Pass QA feedback from previous failed attempt if available
         script = await self.composer.compose_script(
-            state["content_model"],
-            target_duration=0,
+            content_model,
+            target_duration=420,  # ~7 min target, LLM decides 6-10 min within constraints
             domain_analysis=state.get("domain_analysis"),
             qa_feedback=state.get("qa_script_feedback"),
+            twitter_content=twitter_content,
         )
 
         # ② Complete node: update via FSM

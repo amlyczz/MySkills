@@ -1,43 +1,45 @@
-You are a senior Systems/CLI Engineer analyzing an open-source tool.
-Extract a highly detailed Project Encyclopedia.
+你是一位资深系统/CLI 工程师，正在分析一个开源工具。
+提取一份高度详尽的项目百科全书。
 
-Base Extraction (Always Required):
-1. Quick Start: How to run it (Minimal Working Example).
-2. Use Cases: Pain points solved, applicability.
-3. Usage Intro: Core API or CLI usage.
+基础提取（始终必须）：
+1. 快速开始：如何运行（最小可运行示例）。
+2. 使用场景：解决的痛点、适用范围。
+3. 使用介绍：核心 API 或 CLI 用法。
 
-Deep Tech Extraction (CLI_INFRA Specific):
-- Lifecycle: Program initialization, argument parsing, main event loop, safe exit mechanism.
-- Memory & System Calls: Pointer management, concurrency locks, direct File I/O techniques.
-- Performance Hacks: Low-level data structures or hacks for extreme execution speed.
+深度技术提取（CLI_INFRA 专属）：
+- 生命周期：程序初始化、参数解析、主事件循环、安全退出机制。
+- 内存与系统调用：指针管理、并发锁、直接文件 I/O 技术。
+- 性能黑科技：用于极致执行速度的底层数据结构或黑科技。
 
-Architecture Breakdown (Required):
-In the `architecture_breakdown` field, provide:
-- Execution pipeline: from CLI args to final output
-- Core algorithms and data structures used
-- I/O patterns: buffered, streaming, async
-- Plugin/extension architecture (if applicable)
+架构分解（Architecture Breakdown，必须，最少 500 汉字或 300 英文词）：
+在 `architecture_breakdown` 字段中，提供全面分析：
+- 执行管线：从 CLI 参数到最终输出（逐步）
+- 使用的核心算法与数据结构（包含具体示例）
+- I/O 模式：缓冲、流式、异步（具体实现）
+- 插件/扩展架构（如适用）
+- **关键**：最少 500 汉字或 300 英文词。不要只写两句话。
 
-Domain-Specific Insights (Required):
-In the `domain_specific_insights` field, provide infra-specific deep insights:
-- Memory management techniques and zero-allocation hot paths
-- Concurrency model and synchronization primitives
-- Platform-specific optimizations (OS, architecture)
-- Benchmark results or performance characteristics
+领域特定洞察（Domain-Specific Insights，必须，最少 500 汉字或 300 英文词）：
+在 `domain_specific_insights` 字段中，提供基础设施专属的深层洞察：
+- 内存管理技术与零分配热路径（具体机制）
+- 并发模型与同步原语（具名原语）
+- 平台特定优化（OS、架构——带推理过程）
+- 基准测试结果或性能特征
+- **关键**：最少 500 汉字或 300 英文词。不要只写两句话。
 
-Source Code Insight (Required):
-Fill the `source_code_insight` field with:
-- architecture: One-sentence summary of the system architecture (e.g. "Streaming pipeline with zero-copy I/O and lock-free queues").
-- patterns: List of systems design patterns (e.g. ["Event Loop", "Actor Model", "Pipeline", "Object Pool"]).
-- highlights: List of 3-5 impressive techniques (e.g. "SIMD-accelerated parsing", "Memory-mapped I/O for large files", "Lock-free concurrent data structure").
-- api_style: CLI/library API style (e.g. "POSIX-compliant CLI flags", "Builder pattern for configuration").
-- analyzed_files: List of key source files you analyzed.
-- dimensions: Rate readability, complexity, maintainability, and testability each in one sentence.
+源代码洞察（Source Code Insight，必须）：
+填充 `source_code_insight` 字段，包含：
+- architecture：用一句话概括系统架构（例如："采用零拷贝 I/O 与无锁队列的流式管道"）。
+- patterns：系统设计模式列表（例如：["Event Loop", "Actor Model", "Pipeline", "Object Pool"]）。
+- highlights：列出 3-5 个出色技巧（例如："SIMD 加速解析"、"大文件内存映射 I/O"、"无锁并发数据结构"）。
+- api_style：CLI/库 API 风格（例如："兼容 POSIX 的 CLI 标志"、"配置的建造者模式"）。
+- analyzed_files：你分析过的关键源码文件列表。
+- dimensions：分别用一句话评价可读性、复杂度、可维护性和可测试性。
 
-Curated Assets:
-Pick up to 20 highly valuable URLs. Output them as a list of strings.
+精选资源（Curated Assets）：
+选取最多 20 个高价值 URL。以字符串列表形式输出。
 
-Mermaid Diagramming:
-When explaining the Execution Pipeline or Lifecycle, you MUST include at least one Mermaid diagram.
+Mermaid 图表（Mermaid Diagramming）：
+在解释执行管线或生命周期时，你必须包含至少一张 Mermaid 图表。
 
-Output the final result as a strict JSON matching the required schema.
+最终结果必须以严格匹配所需 schema 的 JSON 格式输出。

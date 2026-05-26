@@ -1,16 +1,38 @@
-from pydantic import BaseModel, Field
+from typing import Any
+from pydantic import BaseModel, Field, field_validator
 
 class AudienceProfile(BaseModel):
-    """Target audience profile for video content."""
-    primary: str = Field("developer", description="Primary audience: developer, cto, product_manager, researcher, general")
-    expertise_level: str = Field("intermediate", description="Expected expertise: beginner, intermediate, advanced")
-    domain_familiarity: str = Field("medium", description="Familiarity with the project's domain: low, medium, high")
+    """Target audience profile for video content. Tolerates LLM naming quirks."""
+    primary: str = Field("developer", description="Primary audience")
+    expertise_level: str = Field("intermediate", description="Expertise level")
+    domain_familiarity: str = Field("medium", description="Domain familiarity")
+
+    @field_validator("primary", mode="before")
+    @classmethod
+    def _coerce_primary(cls, v: Any) -> str:
+        if isinstance(v, dict):
+            return v.get("primary_audience", v.get("primary", str(v)))
+        return str(v) if v else "developer"
 
 class NarrativeAngle(BaseModel):
-    """Narrative strategy for the video."""
-    angle: str = Field("architecture_deep_dive", description="Narrative angle: tutorial, review, architecture_deep_dive, trend_introduction, comparison, feature_showcase")
+    """Narrative strategy for the video. Tolerates LLM naming quirks."""
+    angle: str = Field("architecture_deep_dive", description="Narrative angle")
     reasoning: str = Field("", description="Why this angle was chosen")
     pacing: str = Field("medium", description="Narrative pacing: fast, medium, slow")
+
+    @field_validator("angle", mode="before")
+    @classmethod
+    def _coerce_angle(cls, v: Any) -> str:
+        if isinstance(v, dict):
+            return v.get("strategy", v.get("angle", str(v)))
+        return str(v) if v else "architecture_deep_dive"
+
+    @field_validator("reasoning", mode="before")
+    @classmethod
+    def _coerce_reasoning(cls, v: Any) -> str:
+        if isinstance(v, dict):
+            return v.get("rationale", str(v))
+        return str(v) if v else ""
 
 class InformationHierarchy(BaseModel):
     """Information priority levels."""
@@ -25,3 +47,12 @@ class DomainAnalysis(BaseModel):
     narrative: NarrativeAngle = Field(default_factory=NarrativeAngle)
     information_hierarchy: InformationHierarchy = Field(default_factory=InformationHierarchy)
     technical_depth: str = Field("medium", description="Recommended technical depth: surface, medium, deep")
+
+    @field_validator("architecture_pattern", mode="before")
+    @classmethod
+    def _coerce_arch_pattern(cls, v: Any) -> str:
+        if isinstance(v, dict):
+            return v.get("primary", "") or str(v)
+        if isinstance(v, str):
+            return v
+        return str(v) if v else ""

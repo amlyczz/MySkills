@@ -34,13 +34,9 @@ class AnalyzeTwitterUseCase:
         self.status_service = status_service
 
     async def __call__(self, state: PipelineState) -> PipelineState:
-        # Skip-if-done guard: if twitter_content already exists, skip
         if state.get("twitter_content") is not None:
             logger.info("[UseCase] AnalyzeTwitter: skipping (twitter_content already in state)")
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-            )
+            return {**state}
 
         task_id = uuid.UUID(state["task_id"])
         repo_url = state.get("repo_url", "")

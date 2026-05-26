@@ -30,12 +30,13 @@ class GithubTrendingUseCase:
 
     async def __call__(self, state: PipelineState) -> PipelineState:
         repo_url = state.get("repo_url", "")
+        # Skip if already completed in a prior run (retry guard)
         if repo_url and repo_url not in ("pending", "trending", ""):
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=repo_url,
-                status=state.get("status", PipelineStatus.PENDING),
-            )
+            logger.info("[UseCase] GithubTrending: skipping (repoUrl already selected)")
+            return {**state}  # pass through all state unchanged
+        if state.get("trending_repos"):
+            logger.info("[UseCase] GithubTrending: skipping (trending_repos already in state)")
+            return {**state}
 
         task_id = uuid.UUID(state["task_id"])
 

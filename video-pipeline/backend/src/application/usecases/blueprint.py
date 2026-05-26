@@ -25,12 +25,7 @@ class GenerateBlueprintUseCase:
         # (blueprint was produced in a previous run — preserve it)
         if state.get("blueprint") is not None and state.get("qa_blueprint_feedback") is None:
             logger.info("[UseCase] GenerateBlueprint: skipping (blueprint already in state)")
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-                blueprint=state["blueprint"],
-                status=PipelineStatus.BLUEPRINTING,
-            )
+            return {**state}
 
         task_id = uuid.UUID(state["task_id"])
 
@@ -43,11 +38,31 @@ class GenerateBlueprintUseCase:
 
         script = state.get("script")
         content_model = state.get("content_model")
-        if script is None or content_model is None:
-            raise ValueError("Script or ContentModel is missing in state.")
+        twitter_content = state.get("twitter_content")
+
+        if script is None:
+            raise ValueError("Script is missing in state.")
+        if content_model is None and twitter_content is None:
+            raise ValueError("Neither ContentModel nor twitter_content is available in state.")
+
+        # For Twitter tasks: build a minimal ContentModel from twitter_content
+        if content_model is None and twitter_content is not None:
+            from ...domain.repo_analyzer.entities import ContentModel, ProjectEncyclopedia
+            tc = twitter_content
+            content_model = ContentModel(
+                content=ProjectEncyclopedia(
+                    title=tc.get("title", ""),
+                    tagline=tc.get("summary", ""),
+                    quick_start="",
+                    usage_intro="",
+                    use_cases=tc.get("main_tweet_text", "")[:500],
+                    architecture_breakdown=tc.get("thread_context", {}).get("narrative_flow", ""),
+                    domain_specific_insights=tc.get("community_sentiment", {}).get("overall_tone", ""),
+                ),
+                curated_materials=tc.get("media_urls", []),
+            )
 
         # AI Agent visual orchestration → full Remotion Blueprint
-        # Pass QA feedback from previous failed attempt if available
         blueprint = await self.composer.compose_blueprint(
             script,
             content_model,

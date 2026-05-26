@@ -18,25 +18,25 @@ export interface ProjectListResponse {
   page_size: number
 }
 
-// ── API calls ──
+// ── API calls (all support AbortSignal for request cancellation) ──
 
-export async function listProjects(page = 1, search?: string): Promise<ProjectListResponse> {
+export async function listProjects(
+  page = 1, search?: string, signal?: AbortSignal,
+): Promise<ProjectListResponse> {
   const params = new URLSearchParams({ page: String(page), page_size: '20' })
   if (search) params.set('search', search)
-  const res = await fetch(`${API_BASE}/projects?${params}`)
+  const res = await fetch(`${API_BASE}/projects?${params}`, { signal })
   if (!res.ok) throw new Error(`Failed to fetch projects: ${res.status}`)
   return res.json()
 }
 
-export async function getProject(id: string): Promise<ProjectData> {
-  const res = await fetch(`${API_BASE}/projects/${id}`)
+export async function getProject(id: string, signal?: AbortSignal): Promise<ProjectData> {
+  const res = await fetch(`${API_BASE}/projects/${id}`, { signal })
   if (!res.ok) throw new Error(`Failed to fetch project: ${res.status}`)
   return res.json()
 }
 
-export async function createProject(data: {
-  name: string
-}): Promise<ProjectData> {
+export async function createProject(data: { name: string }): Promise<ProjectData> {
   const res = await fetch(`${API_BASE}/projects`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -53,7 +53,7 @@ export async function deleteProject(id: string): Promise<void> {
 
 export async function submitTaskInProject(
   projectId: string,
-  data: { repo_url?: string; twitter_url?: string }
+  data: { repo_url?: string; twitter_url?: string },
 ): Promise<{ task_id: string; project_id: string; status: string }> {
   const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`, {
     method: 'POST',
@@ -77,14 +77,59 @@ export interface TaskItem {
   updated_at: string | null
 }
 
-export async function listProjectTasks(projectId: string): Promise<TaskItem[]> {
-  const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`)
+export async function listProjectTasks(
+  projectId: string, signal?: AbortSignal,
+): Promise<TaskItem[]> {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/tasks`, { signal })
   if (!res.ok) throw new Error(`Failed to list tasks: ${res.status}`)
   return res.json()
 }
 
-export async function getTaskStatus(taskId: string): Promise<Record<string, unknown>> {
-  const res = await fetch(`${API_BASE}/task/${taskId}`)
+export async function getTaskStatus(
+  taskId: string, signal?: AbortSignal,
+): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API_BASE}/task/${taskId}`, { signal })
   if (!res.ok) throw new Error(`Failed to get task: ${res.status}`)
+  return res.json()
+}
+
+// ── DAG Types ──
+
+export interface DagNodeSnapshot {
+  id: string
+  label: string
+  icon: string
+  type: string
+  position: { x: number; y: number }
+  state: string
+  status_label: string
+}
+
+export interface DagEdgeSnapshot {
+  id: string
+  source: string
+  target: string
+}
+
+export interface DagSnapshot {
+  task_id: string
+  nodes: DagNodeSnapshot[]
+  edges: DagEdgeSnapshot[]
+  active_path_nodes: string[]
+  pipeline_status: string
+  source_type: string
+}
+
+export async function fetchTaskDag(
+  taskId: string, signal?: AbortSignal,
+): Promise<DagSnapshot> {
+  const res = await fetch(`${API_BASE}/task/${taskId}/dag`, { signal })
+  if (!res.ok) throw new Error(`Failed to fetch DAG: ${res.status}`)
+  return res.json()
+}
+
+export async function fetchDefaultDag(signal?: AbortSignal): Promise<DagSnapshot> {
+  const res = await fetch(`${API_BASE}/task/dag`, { signal })
+  if (!res.ok) throw new Error(`Failed to fetch default DAG: ${res.status}`)
   return res.json()
 }

@@ -22,7 +22,7 @@ from ...domain.twitter_analyzer.entities import (
     ExternalLink,
 )
 from ...domain.twitter_analyzer.interfaces import TwitterAnalyzer
-from ..llm.client import get_llm_client
+from ..llm.client import get_json_client
 from ..llm.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class LLMTwitterAnalyzer(TwitterAnalyzer):
     """LLM-powered analyzer that transforms raw Twitter scrape data into structured content."""
 
     def __init__(self) -> None:
-        self.llm = get_llm_client(temperature=0.3)
+        self.llm = get_json_client(temperature=0.3)
 
     async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
         last_error = None
@@ -167,7 +167,7 @@ Analyze the tweet content and return a JSON object with these fields:
 - top_endorsements: Array of insightful endorsements or agreements from replies (max 3)
 - top_corrections: Array of valuable corrections or counterarguments from replies (max 3)
 - toxicity_level: "low", "medium", or "high"
-- external_links: Array of {url, title, description} objects from links in the tweet
+- external_links: Array of {{url, title, description}} objects from links in the tweet
 - tech_domain: If the tweet is about technology, classify as: "ai_model", "ai_agent", "web_backend", "frontend_ui", "cli_infra", "general" (or null if not tech-related)
 - estimated_views: Estimated view count (integer, 0 if not available)
 - estimated_likes: Estimated like count (integer)

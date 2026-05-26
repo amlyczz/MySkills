@@ -1,174 +1,104 @@
-"""Agent Scraper for Twitter — LLM-driven autonomous scraper using opencli.
+"""Agent Scraper for Twitter — yt-dlp primary + Playwright fallback.
 
-Strategy:
-1. Use opencli to navigate the Twitter/X URL and extract tweet text/thread/replies.
-2. Fall back to Playwright screenshot if opencli fails.
-3. Save raw content to output_dir for reproducibility.
+Uses shared media_downloader (fetch_metadata + download_media) for text,
+images, and videos. Falls back to Playwright screenshot on failure.
 """
 
 import asyncio
-import json
 import logging
 import os
 import re
-from typing import Optional
 
+from ...infrastructure.config.app_config import settings
+from ...infrastructure.media_generator.media_downloader import download_media, fetch_metadata
 from ...domain.twitter_analyzer.entities import RawScrapeResult
 
 logger = logging.getLogger(__name__)
 
 
-def _safe_json_parse(raw: str) -> Optional[dict]:
-    """Try to extract and parse a JSON object from mixed text."""
-    # Find first { and last }
-    start = raw.find("{")
-    end = raw.rfind("}")
-    if start >= 0 and end > start:
-        candidate = raw[start:end+1]
-        try:
-            return json.loads(candidate)
-        except json.JSONDecodeError:
-            pass
-    return None
-
-
 class OpenCLITwitterScraper:
-    """Twitter scraper using opencli for autonomous browsing."""
+    """Twitter scraper — yt-dlp primary, Playwright screenshot fallback."""
 
     def __init__(self, timeout: int = 120) -> None:
         self.timeout = timeout
 
     async def scrape(self, url: str, output_dir: str) -> RawScrapeResult:
-        """Scrape a Twitter/X URL using opencli.
-
-        Uses opencli to navigate the page, extract tweet text, thread tweets,
-        replies, quoted tweets, and media URLs.
-        """
         logger.info("[TwitterScraper] Scraping: %s", url)
-
         os.makedirs(output_dir, exist_ok=True)
 
-        # Step 1: Try opencli to read tweet content
-        raw_result = await self._try_opencli(url, output_dir)
+        # ── Step 1: yt-dlp (primary — gets text + downloads media) ──
+        result = await self._try_ytdlp(url, output_dir)
+        if result is not None and (result.main_tweet_text or result.media_urls):
+            self._save_result(result, output_dir)
+            return result
 
-        # Step 2: Save raw result for debugging
-        raw_path = os.path.join(output_dir, "raw_scrape_result.json")
+        # ── Step 2: Playwright screenshot only ──
+        logger.info("[TwitterScraper] yt-dlp failed, Playwright screenshot only...")
+        screenshot_paths = await self._capture_screenshot(url, output_dir)
+        fallback = RawScrapeResult(screenshot_paths=screenshot_paths, error="All methods failed")
+        self._save_result(fallback, output_dir)
+        return fallback
+
+    # ── yt-dlp (shared media_downloader) ──
+
+    async def _try_ytdlp(self, url: str, output_dir: str) -> RawScrapeResult | None:
         try:
-            with open(raw_path, "w", encoding="utf-8") as f:
-                f.write(raw_result.model_dump_json(indent=2))
-        except Exception as e:
-            logger.warning("[TwitterScraper] Failed to save raw result: %s", e)
-
-        return raw_result
-
-    async def _try_opencli(self, url: str, output_dir: str) -> RawScrapeResult:
-        """Use opencli to extract tweet content from the URL."""
-        try:
-            # opencli operate: navigate and extract content
-            cmd = [
-                "opencli", "operate",
-                "--url", url,
-                "--instruction", (
-                    "Extract the tweet content from this page. "
-                    "Return ONLY a JSON object with these fields: "
-                    '"main_tweet_text" (the main tweet text), '
-                    '"thread_texts" (array of thread continuation tweets, if any), '
-                    '"reply_texts" (array of top reply texts, up to 10), '
-                    '"quote_retweet_texts" (array of quoted retweet texts, if any), '
-                    '"media_urls" (array of image/video URLs in the tweet), '
-                    '"author_handle" (the @username), '
-                    '"author_name" (the display name). '
-                    "Do NOT include any text outside the JSON object."
-                ),
-                "--timeout", str(self.timeout),
-            ]
-
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=self.timeout + 10
-                )
-            except asyncio.TimeoutError:
-                process.kill()
-                await process.communicate()
-                logger.warning("[TwitterScraper] opencli timed out for %s", url)
-                return RawScrapeResult(error="opencli scrape timed out")
-
-            stdout_text = stdout.decode("utf-8", errors="replace") if stdout else ""
-            stderr_text = stderr.decode("utf-8", errors="replace") if stderr else ""
-
-            if stderr_text:
-                logger.debug("[TwitterScraper] opencli stderr: %s", stderr_text[:500])
-
-            # Try to parse JSON from opencli output
-            parsed = _safe_json_parse(stdout_text)
-            if parsed:
-                return RawScrapeResult(
-                    main_tweet_text=parsed.get("main_tweet_text", ""),
-                    thread_texts=parsed.get("thread_texts", []),
-                    reply_texts=parsed.get("reply_texts", []),
-                    quote_retweet_texts=parsed.get("quote_retweet_texts", []),
-                    media_urls=parsed.get("media_urls", []),
-                    author_handle=parsed.get("author_handle", ""),
-                    author_name=parsed.get("author_name", ""),
-                )
-            else:
-                # If JSON parsing failed, use raw text as main_tweet_text
-                logger.warning("[TwitterScraper] Could not parse JSON from opencli output, using raw text")
-                return RawScrapeResult(
-                    main_tweet_text=stdout_text[:5000],
-                    error="Could not parse structured data from opencli output",
-                )
-
-        except FileNotFoundError:
-            logger.warning("[TwitterScraper] opencli not found, falling back to basic scrape")
-            return RawScrapeResult(error="opencli not installed")
-        except Exception as e:
-            logger.error("[TwitterScraper] opencli error: %s", e)
-            return RawScrapeResult(error=f"opencli scrape failed: {str(e)}")
-
-    async def _take_screenshot(self, url: str, output_dir: str) -> Optional[str]:
-        """Fallback: take a screenshot of the tweet for visual capture."""
-        try:
-            screenshot_path = os.path.join(output_dir, "tweet_screenshot.png")
-            cmd = [
-                "opencli", "operate",
-                "--url", url,
-                "--instruction", "Take a screenshot of this tweet page.",
-                "--screenshot", screenshot_path,
-                "--timeout", "60",
-            ]
-
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=70
-                )
-            except asyncio.TimeoutError:
-                process.kill()
-                await process.communicate()
+            info = await fetch_metadata(url)
+            if info is None:
                 return None
 
-            if os.path.exists(screenshot_path):
-                return screenshot_path
+            media_dir = os.path.join(output_dir, "media")
+            media_files = await download_media(url, media_dir)
+
+            main_text = info.get("description") or info.get("title", "")
+            main_text = re.sub(r"\s+", " ", main_text).strip()
+
+            return RawScrapeResult(
+                main_tweet_text=main_text[:5000],
+                author_handle=info.get("uploader_id", ""),
+                author_name=info.get("uploader", ""),
+                media_urls=media_files,
+                screenshot_paths=[],
+            )
+        except FileNotFoundError:
+            logger.warning("[TwitterScraper] yt-dlp not found")
+            return None
+        except Exception as e:
+            logger.warning("[TwitterScraper] yt-dlp error: %s", e)
             return None
 
+    # ── Playwright ──
+
+    def _launch_args(self) -> list[str]:
+        proxy = settings.http_proxy
+        args = ["--no-sandbox"]
+        if proxy:
+            proxy_arg = proxy.replace("http://", "socks5://") if "10808" in proxy else proxy
+            args.append(f"--proxy-server={proxy_arg}")
+        return args
+
+    async def _capture_screenshot(self, url: str, output_dir: str) -> list[str]:
+        try:
+            from playwright.async_api import async_playwright
+
+            path = os.path.join(output_dir, "tweet_screenshot.png")
+            async with async_playwright() as p:
+                browser = await p.chromium.launch(headless=True, args=self._launch_args())
+                page = await browser.new_page(viewport={"width": 1920, "height": 1080})
+                await page.goto(url, wait_until="networkidle", timeout=30000)
+                await page.wait_for_timeout(3000)
+                await page.screenshot(path=path, full_page=True)
+                await browser.close()
+            return [path]
         except Exception as e:
-            logger.warning("[TwitterScraper] Screenshot fallback failed: %s", e)
-            return None
+            logger.warning("[TwitterScraper] Screenshot failed: %s", e)
+            return []
 
     @staticmethod
-    def _extract_tweet_id(url: str) -> str:
-        """Extract tweet ID from a Twitter/X URL."""
-        match = re.search(r"/status/(\d+)", url)
-        return match.group(1) if match else ""
+    def _save_result(result: RawScrapeResult, output_dir: str) -> None:
+        try:
+            path = os.path.join(output_dir, "raw_scrape_result.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(result.model_dump_json(indent=2))
+        except Exception as e:
+            logger.warning("[TwitterScraper] Save failed: %s", e)

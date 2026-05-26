@@ -22,12 +22,7 @@ class GenerateDiagramsUseCase:
         # Skip-if-done guard: if blueprint exists, diagrams were already generated
         if state.get("blueprint") is not None:
             logger.info("[UseCase] GenerateDiagrams: skipping (blueprint already exists)")
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-                script=state.get("script"),
-                status=PipelineStatus.GENERATING_DIAGRAMS,
-            )
+            return {**state}
 
         task_id = uuid.UUID(state["task_id"])
 

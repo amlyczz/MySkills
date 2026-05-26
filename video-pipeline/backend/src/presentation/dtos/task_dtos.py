@@ -49,3 +49,28 @@ class TaskResumeRequest(BaseModel):
     """Resume a paused (HITL) task with a human decision."""
     action: str  # approve | reject | abort
     feedback: Optional[str] = None
+
+
+class DagNodeResponse(BaseModel):
+    id: str
+    label: str
+    icon: str
+    type: str
+    position: dict
+    state: str
+    status_label: str
+
+
+class DagEdgeResponse(BaseModel):
+    id: str
+    source: str
+    target: str
+
+
+class DagSnapshotResponse(BaseModel):
+    task_id: str
+    nodes: list[DagNodeResponse]
+    edges: list[DagEdgeResponse]
+    active_path_nodes: list[str]
+    pipeline_status: str
+    source_type: str

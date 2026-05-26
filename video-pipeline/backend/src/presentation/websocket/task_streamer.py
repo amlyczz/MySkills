@@ -10,6 +10,7 @@ from langgraph.types import Command, Interrupt
 
 from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.status_machine import NODE_TO_STATUS
+from ...domain.task.dag_definition import compute_dag_snapshot, _detect_source_type as dag_detect_source
 from ...infrastructure.task.connection import _get_session_maker
 from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
 from ...infrastructure.repo_analyzer.llm_analyzer import LLMRepoAnalyzer
@@ -115,6 +116,37 @@ def _get_field(obj: Any, key: str, default: Any = None) -> Any:
     return getattr(obj, key, default)
 
 
+def _build_dag_snapshot_from_state(
+    task_id: str,
+    repo_url: str,
+    completed_nodes: list[str],
+    current_node: str | None,
+    failed_node: str | None,
+    pipeline_status: str,
+    source_type: str,
+) -> dict:
+    """Build a dag_snapshot from local state without hitting the DB."""
+    from ...domain.task.entities import PipelineTask, PipelineStatus as PS
+    from uuid import UUID
+
+    try:
+        status_enum = PS(pipeline_status)
+    except ValueError:
+        status_enum = PS.PENDING
+
+    task = PipelineTask(
+        id=UUID(task_id),
+        repo_url=repo_url,
+        status=status_enum,
+        completed_nodes=completed_nodes,
+        current_node=current_node,
+        failed_node=failed_node,
+    )
+    snapshot = compute_dag_snapshot(task)
+    snapshot["source_type"] = source_type
+    return snapshot
+
+
 async def _send_node_event(
     websocket: WebSocket,
     node: str,
@@ -123,6 +155,7 @@ async def _send_node_event(
     completed_nodes: list[str],
     detail: str = "",
     error: str = "",
+    dag_snapshot: dict | None = None,
 ) -> None:
     """Send a unified node_event to the WebSocket."""
     payload: dict[str, Any] = {
@@ -131,6 +164,7 @@ async def _send_node_event(
         "status": status,
         "pipeline_status": pipeline_status,
         "completed_nodes": completed_nodes,
+        "dag_snapshot": dag_snapshot,
     }
     if detail:
         payload["detail"] = detail
@@ -146,6 +180,7 @@ async def _send_hitl_event(
     reason: str,
     data: Any,
     completed_nodes: list[str],
+    dag_snapshot: dict | None = None,
 ) -> None:
     """Send a unified hitl_event to the WebSocket."""
     await websocket.send_json({
@@ -155,6 +190,7 @@ async def _send_hitl_event(
         "reason": reason,
         "data": data,
         "completed_nodes": completed_nodes,
+        "dag_snapshot": dag_snapshot,
     })
 
 
@@ -162,12 +198,14 @@ async def _send_pipeline_event(
     websocket: WebSocket,
     status: str,
     completed_nodes: list[str],
+    dag_snapshot: dict | None = None,
 ) -> None:
     """Send a pipeline_event (completed or error) to the WebSocket."""
     await websocket.send_json({
         "type": "pipeline_event",
         "status": status,
         "completed_nodes": completed_nodes,
+        "dag_snapshot": dag_snapshot,
     })
 
 
@@ -177,6 +215,8 @@ async def _stream_graph(
     config: dict,
     websocket: WebSocket,
     task_id: str,
+    source_type: str = "github_url",
+    repo_url: str = "",
 ) -> str:
     """Stream a LangGraph execution with unified event protocol.
 
@@ -187,16 +227,30 @@ async def _stream_graph(
     """
     session_maker = _get_session_maker()
     completed_nodes: list[str] = []
+    current_node: str | None = None
+    failed_node: str | None = None
+    pipeline_status_str: str = "pending"
 
     # Load initial progress from DB
     try:
         async with session_maker() as session:
-            repo = PostgresPipelineTaskRepository(session)
-            task = await repo.get_by_id(uuid.UUID(task_id))
+            repo_db = PostgresPipelineTaskRepository(session)
+            task = await repo_db.get_by_id(uuid.UUID(task_id))
             if task and task.completed_nodes:
                 completed_nodes = list(task.completed_nodes)
+            if task:
+                current_node = task.current_node
+                failed_node = task.failed_node
+                pipeline_status_str = task.status.value
     except Exception:
         pass
+
+    def _snapshot(node: str | None = None, status: str | None = None) -> dict:
+        return _build_dag_snapshot_from_state(
+            task_id, repo_url, completed_nodes,
+            node or current_node, failed_node,
+            status or pipeline_status_str, source_type,
+        )
 
     # Track which node is currently active
     last_announced_node: str | None = None
@@ -218,10 +272,27 @@ async def _stream_graph(
                         "blueprint_review": "hitl_blueprint_review",
                     }
                     hitl_node = reason_to_node.get(reason, last_announced_node or "unknown")
-                    hitl_status = NODE_TO_STATUS.get(hitl_node, PipelineStatus.PENDING).value
+                    hitl_status_enum = NODE_TO_STATUS.get(hitl_node, PipelineStatus.PENDING)
+                    hitl_status = hitl_status_enum.value
+                    current_node = hitl_node
+                    pipeline_status_str = hitl_status
+
+                    # Persist HITL state to DB via FSM so page refresh restores correctly
+                    try:
+                        async with session_maker() as db_session:
+                            repo_db4 = PostgresPipelineTaskRepository(db_session)
+                            svc = StatusTransitionService(repo_db4)
+                            await svc.transition(
+                                uuid.UUID(task_id), hitl_status_enum,
+                                node=hitl_node,
+                            )
+                            logger.info("FSM: Persisted HITL state %s for task %s", hitl_status, task_id[:8])
+                    except Exception as fsm_err:
+                        logger.error("Failed to persist HITL state: %s", fsm_err)
 
                     await _send_hitl_event(
                         websocket, hitl_node, hitl_status, reason, value, completed_nodes,
+                        dag_snapshot=_snapshot(hitl_node, hitl_status),
                     )
                 return "hitl"
 
@@ -245,25 +316,31 @@ async def _stream_graph(
 
                 if is_error:
                     logger.error("Node '%s' ERROR: %s", node_name, error_msg)
+                    failed_node = node_name
+                    pipeline_status_str = "error"
                     node_status = NODE_TO_STATUS.get(node_name, PipelineStatus.ERROR).value
                     await _send_node_event(
                         websocket, node_name, "error", "error",
                         completed_nodes, error=error_msg or str(status_val),
+                        dag_snapshot=_snapshot(node_name, "error"),
                     )
-                    await _send_pipeline_event(websocket, "error", completed_nodes)
+                    await _send_pipeline_event(websocket, "error", completed_nodes,
+                        dag_snapshot=_snapshot(node_name, "error"))
                     return "error"
 
                 # Node completed successfully
                 if node_name not in completed_nodes:
                     completed_nodes.append(node_name)
 
-                pipeline_status = NODE_TO_STATUS.get(node_name, PipelineStatus.PENDING).value
+                pipeline_status_str = NODE_TO_STATUS.get(node_name, PipelineStatus.PENDING).value
+                current_node = None
                 detail = _extract_detail(node_name, output_dict)
 
                 logger.info("Node '%s' completed. Progress: %s", node_name, completed_nodes)
                 await _send_node_event(
-                    websocket, node_name, "completed", pipeline_status,
+                    websocket, node_name, "completed", pipeline_status_str,
                     completed_nodes, detail=detail,
+                    dag_snapshot=_snapshot(None, pipeline_status_str),
                 )
 
                 last_announced_node = node_name
@@ -271,21 +348,27 @@ async def _stream_graph(
                 # Announce next node as started (from DB state refreshed by FSM)
                 try:
                     async with session_maker() as session:
-                        repo = PostgresPipelineTaskRepository(session)
-                        task = await repo.get_by_id(uuid.UUID(task_id))
-                        if task and task.current_node:
-                            next_node = task.current_node
+                        repo_db2 = PostgresPipelineTaskRepository(session)
+                        task2 = await repo_db2.get_by_id(uuid.UUID(task_id))
+                        if task2 and task2.current_node:
+                            next_node = task2.current_node
+                            current_node = next_node
                             next_status = NODE_TO_STATUS.get(next_node, PipelineStatus.PENDING).value
+                            pipeline_status_str = next_status
                             await _send_node_event(
                                 websocket, next_node, "started", next_status,
                                 completed_nodes,
+                                dag_snapshot=_snapshot(next_node, next_status),
                             )
                             last_announced_node = next_node
                 except Exception:
                     pass  # Non-critical — frontend will still work without start announcements
 
         logger.info("Pipeline finished normally (no more nodes)")
-        await _send_pipeline_event(websocket, "completed", completed_nodes)
+        pipeline_status_str = "completed"
+        current_node = None
+        await _send_pipeline_event(websocket, "completed", completed_nodes,
+            dag_snapshot=_snapshot(None, "completed"))
         return "completed"
 
     except WebSocketDisconnect:
@@ -302,21 +385,25 @@ async def _stream_graph(
         # would have marked itself as current_node in the FSM before failing.
         try:
             async with session_maker() as session:
-                repo = PostgresPipelineTaskRepository(session)
-                task = await repo.get_by_id(uuid.UUID(task_id))
-                if task and task.current_node:
-                    failed_node = task.current_node
+                repo_db3 = PostgresPipelineTaskRepository(session)
+                task3 = await repo_db3.get_by_id(uuid.UUID(task_id))
+                if task3 and task3.current_node:
+                    failed_node = task3.current_node
         except Exception:
             pass
 
+        pipeline_status_str = "error"
+        current_node = None
         err_msg = str(e) or repr(e)
         logger.error("Unhandled error in node '%s': %s", failed_node, err_msg)
         try:
             await _send_node_event(
                 websocket, failed_node, "error", "error",
                 completed_nodes, error=err_msg,
+                dag_snapshot=_snapshot(failed_node, "error"),
             )
-            await _send_pipeline_event(websocket, "error", completed_nodes)
+            await _send_pipeline_event(websocket, "error", completed_nodes,
+                dag_snapshot=_snapshot(failed_node, "error"))
         except Exception:
             pass
         return "error"
@@ -328,39 +415,70 @@ def _extract_detail(node_name: str, output: dict) -> str:
     if node_name == "github_trending":
         repos = _get_field(output, "trending_repos")
         if repos and isinstance(repos, list) and len(repos) > 0:
-            top = repos[0]
+            top3 = repos[:3]
             n = len(repos)
-            top_name = f"{_get_field(top, 'owner', '?')}/{_get_field(top, 'name', '?')}"
-            top_score = _get_field(top, "final_score", "?")
-            top_stars_7d = _get_field(top, "recent_stars_7d", 0)
-            return f"Scored {n} repos — Top: {top_name} (score={top_score}, +{top_stars_7d}/7d)"
+            lines = [f"Fetched {n} trending repos"]
+            for i, r in enumerate(top3):
+                name = f"{_get_field(r, 'owner', '?')}/{_get_field(r, 'name', '?')}"
+                score = _get_field(r, "final_score", "?")
+                stars = _get_field(r, "recent_stars_7d", 0)
+                one_liner = _get_field(r, "one_liner", "")
+                lines.append(f"  #{i+1} {name} (score={score}, +{stars}★/7d) — {one_liner}")
+            return "\n".join(lines)
         return "No trending repos found"
 
     if node_name == "hitl_trending_review":
         repo_url = _get_field(output, "repo_url")
         if repo_url:
-            return f"Selected: {repo_url}"
-        return "Trending review decision processed"
+            # Extract owner/repo from URL
+            parts = repo_url.rstrip("/").split("/")
+            short = "/".join(parts[-2:]) if len(parts) >= 2 else repo_url
+            return f"Selected repo: {short}"
+        fb = _get_field(output, "hitl_trending_feedback")
+        if fb:
+            return f"Retrying trending fetch: {fb}"
+        return "Trending review processed"
 
     if node_name == "analyze_repo":
         cm = _get_field(output, "content_model")
         title = ""
+        lang = ""
+        stars = ""
         if cm:
             content = _get_field(cm, "content")
             if content:
                 title = _get_field(content, "title", "")
+                lang = _get_field(content, "language", "")
+                stars = _get_field(content, "stars", "")
             if not title:
                 source = _get_field(cm, "source")
                 if source:
                     title = f"{_get_field(source, 'owner', '')}/{_get_field(source, 'repo_name', '')}"
-        return title if title else "Analysis complete"
+        parts = [title] if title else []
+        if lang:
+            parts.append(lang)
+        if stars:
+            parts.append(f"⭐{stars}")
+        return " | ".join(parts) if parts else "Analysis complete"
 
     if node_name == "analyze_twitter":
         tc = _get_field(output, "twitter_content")
         if tc:
             author = _get_field(tc, "author", "")
             title = _get_field(tc, "title", "")
-            return f"AUTHOR={author}, {title}" if author else title
+            tweet_count = _get_field(tc, "tweet_count", 0)
+            summary = _get_field(tc, "summary", "")
+            parts = []
+            if author:
+                parts.append(f"@{author}")
+            if title:
+                parts.append(title)
+            if tweet_count:
+                parts.append(f"{tweet_count} tweets")
+            result = " | ".join(parts)
+            if summary:
+                result += f"\n  Summary: {summary[:200]}"
+            return result
         return "Twitter analysis complete"
 
     if node_name == "compose_script":
@@ -368,17 +486,19 @@ def _extract_detail(node_name: str, output: dict) -> str:
         if script:
             n_seg = len(_get_field(script, "segments", []))
             dur = _get_field(script, "total_duration_est", 0)
-            return f"{n_seg} segments, ~{dur:.0f}s total"
+            full_text = _get_field(script, "full_text", "")
+            preview = full_text[:120] + "..." if len(full_text) > 120 else full_text
+            return f"{n_seg} segments, ~{dur:.0f}s\n  {preview}"
         return "Script composed"
 
     if node_name == "hitl_script_review":
         fb = _get_field(output, "qa_script_feedback")
         if fb:
-            return "Rejected with feedback — retrying"
-        return "Script approved"
+            return f"Script rejected: {fb}"
+        return "Script approved, proceeding to diagrams"
 
     if node_name == "generate_diagrams":
-        return "Diagrams generated"
+        return "Mermaid/architecture diagrams rendered from domain analysis"
 
     if node_name == "generate_blueprint":
         bp = _get_field(output, "blueprint")
@@ -386,27 +506,39 @@ def _extract_detail(node_name: str, output: dict) -> str:
             scenes = _get_field(bp, "scenes", [])
             total_frames = sum(_get_field(s, "durationInFrames", 0) for s in scenes)
             total_s = total_frames / 30 if total_frames else 0
-            return f"{len(scenes)} scenes, {total_s:.1f}s"
+            scene_labels = [_get_field(s, "sceneName", f"Scene {i+1}") for i, s in enumerate(scenes)]
+            return f"{len(scenes)} scenes ({total_s:.1f}s): {', '.join(scene_labels)}"
         return "Blueprint generated"
 
     if node_name == "hitl_blueprint_review":
         fb = _get_field(output, "qa_blueprint_feedback")
         if fb:
-            return "Rejected with feedback — retrying"
-        return "Blueprint approved"
+            return f"Blueprint rejected: {fb}"
+        return "Blueprint approved, proceeding to audio design"
 
     if node_name == "audio_design":
         durations = _get_field(output, "segment_actual_durations", [])
+        voiceover = _get_field(output, "voiceover_path", "")
+        bgm = _get_field(output, "bgm_path", "")
+        parts = []
         if durations:
             total = sum(durations)
-            return f"TTS {len(durations)} segments ({total:.1f}s), BGM generated"
-        return "Audio design complete"
+            parts.append(f"TTS {len(durations)} segments ({total:.1f}s)")
+        if voiceover:
+            parts.append(f"voiceover ✓")
+        if bgm:
+            parts.append(f"BGM ✓")
+        return " | ".join(parts) if parts else "Audio design complete"
 
     if node_name == "render_compose":
-        final = output.get("final_mp4_path")
+        video = output.get("video_mp4_path", "")
+        final = output.get("final_mp4_path", "")
+        parts = []
+        if video:
+            parts.append(f"render ✓")
         if final:
-            return f"Final video: {final.split('/')[-1]}"
-        return "Render & compose complete"
+            parts.append(f"mix ✓ -> {final.split('/')[-1]}")
+        return " | ".join(parts) if parts else "Render & compose complete"
 
     return ""
 
@@ -443,11 +575,7 @@ def _compile_graph_with_services(session, checkpointer):
 
 def _detect_source_type(repo_url: str) -> str:
     """Detect source type from the repo_url query parameter."""
-    if repo_url == "trending":
-        return "github_trending"
-    if repo_url and ("twitter.com" in repo_url or "x.com" in repo_url):
-        return "twitter"
-    return "github_url"
+    return dag_detect_source(repo_url)
 
 
 @router.websocket("/stream/{task_id}")
@@ -498,7 +626,8 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str) -> None
             }
 
             try:
-                result = await _stream_graph(graph, state_input, config, websocket, task_id)
+                result = await _stream_graph(graph, state_input, config, websocket, task_id,
+                    source_type=source_type, repo_url=repo_url)
                 if result == "hitl":
                     logger.info("Graph paused for HITL, keeping task %s active", task_id)
                     return
@@ -534,6 +663,20 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
         repo_url = data.get("repo_url")
 
         _active_graphs.pop(task_id, None)
+
+        # Persist selected repo_url to DB immediately (otherwise retry loses it)
+        if action == "select" and repo_url:
+            try:
+                async with _get_session_maker()() as s:
+                    r = PostgresPipelineTaskRepository(s)
+                    t = await r.get_by_id(uuid.UUID(task_id))
+                    if t:
+                        t.repo_url = repo_url
+                        await r.update(t)
+                        logger.info("Persisted selected repo_url to DB: %s", repo_url[:60])
+            except Exception as e:
+                logger.warning("Failed to persist repo_url: %s", e)
+
         logger.info("Recompiling graph for resume of task %s...", task_id)
 
         session_maker = _get_session_maker()
@@ -578,7 +721,8 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
                 resume_input = Command(resume={"action": action, "feedback": feedback, "repo_url": repo_url})
 
                 try:
-                    result = await _stream_graph(graph, resume_input, config, websocket, task_id)
+                    result = await _stream_graph(graph, resume_input, config, websocket, task_id,
+                        source_type=source_type, repo_url=db_task.repo_url)
                     if result in ("completed", "error"):
                         _active_graphs.pop(task_id, None)
                 except Exception as e:
@@ -595,8 +739,12 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
 
 
 @router.websocket("/retry/{task_id}")
-async def retry_task(websocket: WebSocket, task_id: str) -> None:
-    """WebSocket endpoint to retry a failed task from the last failed node."""
+async def retry_task(websocket: WebSocket, task_id: str, node: str = "") -> None:
+    """WebSocket endpoint to retry a failed task.
+
+    With `node` query param: retry from that specific node (keeps prior progress).
+    Without: retry entire pipeline from scratch.
+    """
     await websocket.accept()
 
     try:
@@ -604,14 +752,12 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
         async with session_maker() as session:
             repository, status_service = _build_services(session)
 
-            # 1. Load task from DB
             task = await repository.get_by_id(uuid.UUID(task_id))
             if not task:
                 await websocket.send_json({"type": "pipeline_event", "status": "error", "completed_nodes": []})
                 await websocket.close()
                 return
 
-            # 2. Verify task is in ERROR state
             if task.status != PipelineStatus.ERROR:
                 await websocket.send_json({
                     "type": "pipeline_event", "status": "error",
@@ -620,31 +766,58 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
                 await websocket.close()
                 return
 
-            # 3. Reset via FSM
-            await status_service.reset_for_retry(uuid.UUID(task_id))
+            completed = list(task.completed_nodes or [])
 
-            # 4. Send immediate pending state to frontend
-            await _send_node_event(
-                websocket, task.failed_node or "unknown", "started", "pending",
-                task.completed_nodes or [], detail="Retrying task...",
-            )
+            if node:
+                # Per-node retry: remove the failed node from completed (if it was added),
+                # keep everything else, and resume from the last checkpoint before failure.
+                logger.info("Per-node retry for '%s' on task %s", node, task_id[:8])
+                # Remove the failed node so it re-runs
+                if node in completed:
+                    completed.remove(node)
+                # Clear error markers, keep all domain entities
+                task.failed_node = None
+                task.node_error = None
+                task.status = PipelineStatus.PENDING
+                task.current_node = None
+                task.completed_nodes = completed
+                await repository.update(task)
 
-            # 5. Reconstruct PipelineState dict from DB fields
+                await _send_node_event(
+                    websocket, node, "started", "pending", completed,
+                    detail=f"Retrying node: {node}...",
+                )
+            else:
+                # Full pipeline retry
+                await status_service.reset_for_retry(uuid.UUID(task_id))
+                await _send_node_event(
+                    websocket, task.failed_node or "unknown", "started", "pending",
+                    completed, detail="Retrying entire pipeline...",
+                )
+
             source_type = _detect_source_type(task.repo_url)
+
+            # If repo_url is still "trending", try to extract the real URL from saved data
+            actual_url = task.repo_url
+            if actual_url in ("trending", "pending", ""):
+                if task.content_model:
+                    actual_url = getattr(task.content_model.source, "url", "") if task.content_model.source else ""
+                if not actual_url and task.script:
+                    actual_url = task.repo_url  # fallback, will still fail but clearer
+                logger.info("Retry: resolved repo_url from '%s' → '%s'", task.repo_url, actual_url[:60])
+
             state_input: dict[str, Any] = {
                 "task_id": task_id,
-                "repo_url": task.repo_url,
+                "repo_url": actual_url,
                 "source_type": source_type,
                 "status": PipelineStatus.PENDING,
                 "trending_repos": task.trending_repos,
-                "hitl_trending_feedback": None,
                 "content_model": task.content_model,
                 "material_manifest": task.material_manifest,
                 "script": task.script,
                 "blueprint": task.blueprint,
                 "domain_analysis": task.domain_analysis,
-                "qa_script": None,
-                "qa_blueprint": None,
+                "twitter_content": task.twitter_content,
                 "qa_script_retry_count": 0,
                 "qa_blueprint_retry_count": 0,
                 "qa_script_feedback": None,
@@ -657,7 +830,6 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
                 "error": None,
             }
 
-            # 6. Compile graph with fresh checkpointer
             checkpointer_ctx = _get_checkpointer_context()
             async with checkpointer_ctx as checkpointer:
                 if checkpointer is not None:
@@ -669,10 +841,17 @@ async def retry_task(websocket: WebSocket, task_id: str) -> None:
 
                 graph, _, _ = _compile_graph_with_services(session, checkpointer)
 
-                config = {"configurable": {"thread_id": f"{task_id}-retry"}}
+                # Use original thread_id to resume from last checkpoint (per-node retry)
+                # or fresh thread for full retry
+                config = {
+                    "configurable": {
+                        "thread_id": task_id if node else f"{task_id}-retry"
+                    }
+                }
 
                 try:
-                    await _stream_graph(graph, state_input, config, websocket, task_id)
+                    await _stream_graph(graph, state_input, config, websocket, task_id,
+                        source_type=source_type, repo_url=actual_url)
                 except WebSocketDisconnect:
                     logger.info("Retry client disconnected for task %s", task_id)
                 except Exception as e:

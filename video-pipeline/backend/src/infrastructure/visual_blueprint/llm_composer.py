@@ -10,7 +10,15 @@ This dramatically improves reliability over single-shot generation because:
 - Step 3 is deterministic (no LLM needed)
 """
 
-from typing import Optional
+import json
+import logging
+import re
+import uuid
+from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
+
+import pydantic
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, Script, ScriptSegment
@@ -22,8 +30,155 @@ from ...domain.visual_blueprint.entities import (
     GlobalAudioConfig, AudioDucking,
 )
 from ...domain.visual_blueprint.interfaces import BlueprintComposer
-from ..llm.client import get_llm_client
+from ..llm.client import get_json_client
 from ..llm.prompt_loader import load_prompt
+
+
+def _extract_json(text: str) -> dict | None:
+    """Extract JSON object from LLM output (handles markdown fences and extra text)."""
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
+    if m:
+        try:
+            return json.loads(m.group(1))
+        except json.JSONDecodeError:
+            pass
+    start = text.find("{")
+    end = text.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            return json.loads(text[start:end + 1])
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
+# ── Lenient models for LLM output fixup before strict Blueprint validation ──
+
+class _FixupElement(pydantic.BaseModel):
+    """Element that accepts missing id and string-style decorations."""
+    type: str
+    id: str = ""
+    style: Any = pydantic.Field(default_factory=dict)
+    model_config = pydantic.ConfigDict(extra="allow")
+
+    @pydantic.model_validator(mode="after")
+    def _ensure_id(self) -> "_FixupElement":
+        if not self.id:
+            self.id = f"elem_{uuid.uuid4().hex[:8]}"
+        return self
+
+    @pydantic.field_validator("style", mode="before")
+    @classmethod
+    def _coerce_style(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            # LLM outputs decoration type name as a string (e.g. "film-grain")
+            return {"decoration_type": v}
+        return v if v else {}
+
+
+class _FixupScene(pydantic.BaseModel):
+    """Scene that accepts both string and object backgrounds."""
+    id: str
+    type: str
+    startFrame: int = 0
+    durationInFrames: int
+    background: Any = pydantic.Field(default_factory=lambda: {"type": "solid-color", "color": "#0a0a0a"})
+    elements: list[_FixupElement] = []
+    model_config = pydantic.ConfigDict(extra="allow")
+
+    @pydantic.field_validator("background", mode="before")
+    @classmethod
+    def _coerce_background(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return {"type": "solid-color", "color": "#0a0a0a"}
+        return v
+
+
+class _FixupGlobalSettings(pydantic.BaseModel):
+    """GlobalSettings that accepts both list and dict motionTokens, and fixes flattened easing."""
+    motionTokens: Any = pydantic.Field(default_factory=dict)
+    model_config = pydantic.ConfigDict(extra="allow")
+
+    @pydantic.field_validator("motionTokens", mode="before")
+    @classmethod
+    def _coerce_motion_tokens(cls, v: Any) -> Any:
+        if v is None:
+            return {}
+        if isinstance(v, list):
+            # LLM outputs tokens as list of objects → convert to dict by name
+            result = {}
+            for item in v:
+                name = item.get("name", item.get("type", f"token_{len(result)}"))
+                result[name] = cls._wrap_easing(item)
+            return result
+        if isinstance(v, dict):
+            return {k: cls._wrap_easing(t) for k, t in v.items() if isinstance(t, dict)}
+        return {}
+
+    @staticmethod
+    def _wrap_easing(token: dict) -> dict:
+        """Wrap LLM's flattened token into proper {easing: {type, params/bezier}}."""
+        if "easing" in token:
+            return token  # Already correctly structured
+        # LLM puts easing fields directly on the token object
+        ttype = token.get("type", "spring")
+        if ttype == "spring":
+            return {
+                "easing": {
+                    "type": "spring",
+                    "params": {
+                        "mass": token.get("mass", 1),
+                        "damping": token.get("damping", token.get("damping", 14)),
+                        "stiffness": token.get("stiffness", 120),
+                    },
+                },
+            }
+        elif ttype == "bezier":
+            return {
+                "easing": {
+                    "type": "bezier",
+                    "bezier": token.get("bezier", [0.25, 0.1, 0.25, 1.0]),
+                },
+            }
+        else:
+            return {"easing": {"type": "linear"}}
+
+
+class _FixupBlueprint(pydantic.BaseModel):
+    """Lenient wrapper that fixes LLM output then produces strict Blueprint."""
+    globalSettings: _FixupGlobalSettings = pydantic.Field(default_factory=_FixupGlobalSettings)
+    scenes: list[_FixupScene] = []
+    meta: dict[str, Any] = pydantic.Field(
+        default_factory=lambda: {
+            "id": str(uuid.uuid4()),
+            "name": "Auto-generated Blueprint",
+            "generated_by": "deepseek",
+            "blueprint_type": "dynamic",
+            "version": "2.0",
+        },
+    )
+    model_config = pydantic.ConfigDict(extra="allow")
+
+    @pydantic.field_validator("meta", mode="before")
+    @classmethod
+    def _ensure_meta_fields(cls, v: Any) -> dict:
+        if not isinstance(v, dict):
+            v = {}
+        v.setdefault("id", str(uuid.uuid4()))
+        v.setdefault("name", "Auto-generated Blueprint")
+        return v
+
+    def to_blueprint(self) -> "Blueprint":
+        return Blueprint.model_validate(self.model_dump())
+
+
+def _fixup_blueprint(data: dict) -> "Blueprint":
+    """Parse lenient LLM output and convert to strict Blueprint via Pydantic fixup chain."""
+    return _FixupBlueprint.model_validate(data).to_blueprint()
 
 FPS = 30
 
@@ -187,7 +342,7 @@ def _is_dark_color(hex_color: str) -> bool:
 class LLMBlueprintComposer(BlueprintComposer):
 
     def __init__(self) -> None:
-        self.llm = get_llm_client()
+        self.llm = get_json_client()
 
     async def compose_blueprint(
         self,
@@ -249,21 +404,53 @@ class LLMBlueprintComposer(BlueprintComposer):
         narrative_angle = domain_analysis.narrative.angle if domain_analysis else ""
         technical_depth = domain_analysis.technical_depth if domain_analysis else "moderate"
 
-        chain = prompt | self.llm.with_structured_output(Blueprint, method="json_mode")
-        blueprint: Blueprint = await chain.ainvoke({
-            "script_title": content_title,
-            "script_duration": script.total_duration_est,
-            "script_segments": segments_repr,
-            "content_title": content_title,
-            "content_tagline": content_tagline,
-            "content_points": content_points,
-            "architecture_pattern": architecture_pattern,
-            "audience_primary": audience_primary,
-            "audience_expertise": audience_expertise,
-            "narrative_angle": narrative_angle,
-            "technical_depth": technical_depth,
-            "feedback_section": feedback_section + "\n\nNote: You must respond in valid JSON format conforming to the expected schema.",
-        })
+        # Primary: json_mode + fallback: raw JSON + fixup
+        try:
+            chain = prompt | self.llm.with_structured_output(Blueprint, method="json_mode")
+            blueprint: Blueprint = await chain.ainvoke({
+                "script_title": content_title,
+                "script_duration": script.total_duration_est,
+                "script_segments": segments_repr,
+                "content_title": content_title,
+                "content_tagline": content_tagline,
+                "content_points": content_points,
+                "architecture_pattern": architecture_pattern,
+                "audience_primary": audience_primary,
+                "audience_expertise": audience_expertise,
+                "narrative_angle": narrative_angle,
+                "technical_depth": technical_depth,
+                "feedback_section": feedback_section,
+            })
+        except Exception as fc_err:
+            logger.warning("json_mode failed (%s), falling back to raw JSON + fixup", fc_err)
+            raw_chain = prompt | self.llm
+            raw_response = await raw_chain.ainvoke({
+                "script_title": content_title,
+                "script_duration": script.total_duration_est,
+                "script_segments": segments_repr,
+                "content_title": content_title,
+                "content_tagline": content_tagline,
+                "content_points": content_points,
+                "architecture_pattern": architecture_pattern,
+                "audience_primary": audience_primary,
+                "audience_expertise": audience_expertise,
+                "narrative_angle": narrative_angle,
+                "technical_depth": technical_depth,
+                "feedback_section": feedback_section,
+            })
+            raw_text = raw_response.content if hasattr(raw_response, "content") else str(raw_response)
+            raw_data = _extract_json(raw_text)
+            if raw_data is None:
+                raise ValueError(f"Failed to parse Blueprint JSON. Raw response (first 1000 chars):\n{raw_text[:1000]}")
+            try:
+                blueprint = _fixup_blueprint(raw_data)
+            except Exception as fixup_err:
+                scene_count = len(raw_data.get("scenes", [])) if isinstance(raw_data, dict) else "N/A"
+                raise ValueError(
+                    f"Blueprint fixup failed after parsing {scene_count} raw scenes. "
+                    f"Fixup error: {fixup_err}. "
+                    f"Raw JSON keys: {list(raw_data.keys()) if isinstance(raw_data, dict) else 'not a dict'}."
+                ) from fixup_err
 
         # Recalculate startFrames to ensure sequential layout
         current_frame = 0
@@ -303,17 +490,25 @@ class LLMBlueprintComposer(BlueprintComposer):
             ("user", "{scene_context}"),
         ])
 
-        chain = prompt | self.llm.with_structured_output(SceneConfig, method="json_mode")
-        filled: SceneConfig = await chain.ainvoke({"scene_context": user_prompt})
-
-        # Preserve skeleton fields that shouldn't change
-        filled.id = scene.id
-        filled.startFrame = scene.startFrame
-        filled.durationInFrames = scene.durationInFrames
-        filled.background = scene.background
-        filled.transitionToNext = scene.transitionToNext
-
-        return filled
+        try:
+            chain = prompt | self.llm.with_structured_output(SceneConfig, method="json_mode")
+            filled: SceneConfig = await chain.ainvoke({"scene_context": user_prompt})
+        except Exception as fc_err:
+            logger.warning("Step2 json_mode failed for scene %s (%s), falling back to raw JSON",
+                scene.id, str(fc_err)[:100])
+            raw_chain = prompt | self.llm
+            raw_response = await raw_chain.ainvoke({"scene_context": user_prompt})
+            raw_text = raw_response.content if hasattr(raw_response, "content") else str(raw_response)
+            raw_data = _extract_json(raw_text)
+            if raw_data is None:
+                raise ValueError(f"Failed to parse SceneConfig JSON for scene {scene.id}. Raw (500 chars): {raw_text[:500]}")
+            raw_data["id"] = scene.id
+            raw_data.setdefault("type", scene.type)
+            raw_data.setdefault("startFrame", scene.startFrame)
+            raw_data.setdefault("durationInFrames", scene.durationInFrames)
+            if "background" not in raw_data:
+                raw_data["background"] = scene.background.model_dump() if scene.background else {"type": "solid-color", "color": "#000000"}
+            filled = SceneConfig.model_validate(raw_data)
 
     @staticmethod
     def _serialize_segments(script: Script) -> str:

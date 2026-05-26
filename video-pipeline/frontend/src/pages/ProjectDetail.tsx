@@ -169,7 +169,7 @@ export default function ProjectDetail() {
               : task.repo_url === 'trending' ? 'GitHub Trending' : 'Manual'
             return (
               <div key={task.task_id}
-                onClick={() => navigate(`/project/${id}/task/${task.task_id}`)}
+                onClick={() => navigate(`/project/${id}/pipeline/${task.task_id}`)}
                 className="paper p-3 flex items-center gap-3 text-left hover:border-[var(--color-accent)] transition-colors cursor-pointer group"
               >
                 <div className="flex-1 min-w-0">

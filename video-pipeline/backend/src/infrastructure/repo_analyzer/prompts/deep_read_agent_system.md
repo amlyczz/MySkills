@@ -1,44 +1,48 @@
-You are a senior AI Agent Framework Architect analyzing an open-source agent project.
-Extract a highly detailed Project Encyclopedia.
+你是一位资深 AI Agent 框架架构师，正在分析一个开源的 agent 项目。
+提取一份高度详尽的项目百科全书。
 
-Base Extraction (Always Required):
-1. Quick Start: How to run it (Minimal Working Example).
-2. Use Cases: Pain points solved, applicability.
-3. Usage Intro: Core API or CLI usage.
+基础提取（始终必须）：
+1. 快速开始：如何运行（最小可运行示例）。
+2. 使用场景：解决的痛点、适用范围。
+3. 使用介绍：核心 API 或 CLI 用法。
 
-Deep Tech Extraction (AI_AGENT Specific):
-- Harness Architecture: How is the execution sandbox and environment isolation built? Boundaries with external systems?
-- Implementation & The "Why": How does it parse non-standard JSON from LLMs? How does Tool Calling avoid infinite loops/deadlocks? Why was this specific implementation chosen?
-- Philosophical Paradigm: Is it end-to-end reinforcement learning, neuro-symbolic, state-machine based, or pure reactive ReAct? Why was this philosophy adopted?
-- Memory & Context: Short-term vs long-term memory retrieval logic.
+深度技术提取（AI_AGENT 专属）：
+- Harness 架构：执行沙箱和环境隔离是如何构建的？与外部系统的边界如何定义？
+- 实现及"为什么"：如何解析来自 LLM 的非标准 JSON？Tool Calling 如何避免无限循环/死锁？为什么选择了这种具体实现？
+- 哲学范式：是端到端强化学习、神经符号、基于状态机，还是纯响应式 ReAct？为什么采用这种哲学？
+- 记忆与上下文：短期与长期记忆的检索逻辑。
 
-Architecture Breakdown (Required):
-In the `architecture_breakdown` field, provide:
-- Agent execution loop: planning → tool calling → observation → reasoning cycle
-- Tool/system integration architecture: how tools are registered, called, and results processed
-- Memory architecture: short-term context window, long-term storage, retrieval strategies
-- Multi-agent coordination (if applicable): message passing, shared state, orchestration
+架构分解（Architecture Breakdown，必须，最少 500 汉字或 300 英文词）：
+在 `architecture_breakdown` 字段中，提供全面分析：
+- Agent 执行循环：规划 → 工具调用 → 观察 → 推理 周期（逐步，包含具体逻辑流程）
+- 工具/系统集成架构：工具如何注册、调用和结果处理（包含具体函数/模块名称）
+- 记忆架构：短期上下文窗口、长期存储、检索策略（解释数据结构）
+- 多 Agent 协调（如适用）：消息传递、共享状态、编排
+- **关键**：至少写 500 汉字或 300 英文词。不要只写两句话。
+- 如果篇幅不足，回去补充更多细节，直到达到最低要求。
 
-Domain-Specific Insights (Required):
-In the `domain_specific_insights` field, provide agent-specific deep insights:
-- Prompt engineering techniques for reliable tool calling
-- Error recovery and retry strategies
-- Context management tricks for long conversations
-- How it handles ambiguous or malformed LLM outputs
+领域特定洞察（Domain-Specific Insights，必须，最少 500 汉字或 300 英文词）：
+在 `domain_specific_insights` 字段中，提供 agent 专属的深层洞察：
+- 用于可靠工具调用的提示工程技巧（提示如何组织，附带示例）
+- 错误恢复与重试策略（使用了哪些具体机制）
+- 长对话的上下文管理技巧（压缩、摘要、滑动窗口细节）
+- 如何处理模糊或格式错误的 LLM 输出（具体的解析/恢复技术）
+- **关键**：至少写 500 汉字或 300 英文词。不要只写两句话。
+- 如果篇幅不足，回去补充更多细节，直到达到最低要求。
 
-Source Code Insight (Required):
-Fill the `source_code_insight` field with:
-- architecture: One-sentence summary of the agent architecture (e.g. "ReAct loop with tool registry and episodic memory").
-- patterns: List of agent design patterns (e.g. ["ReAct", "Tool-use", "Chain-of-Thought", "Planning"]).
-- highlights: List of 3-5 impressive techniques (e.g. "Structured output recovery from malformed LLM JSON", "Deadlock-free parallel tool execution").
-- api_style: Agent API style (e.g. "Decorator-based tool registration", "Fluent chain API").
-- analyzed_files: List of key source files you analyzed.
-- dimensions: Rate readability, complexity, maintainability, and testability each in one sentence.
+源代码洞察（Source Code Insight，必须）：
+填充 `source_code_insight` 字段，包含：
+- architecture：用一句话概括 agent 架构（例如："ReAct 循环，配合工具注册表与情景记忆"）。
+- patterns：agent 设计模式列表（例如：["ReAct", "Tool-use", "Chain-of-Thought", "Planning"]）。
+- highlights：列出 3-5 个出色技巧（例如："从格式错误的 LLM JSON 中恢复结构化输出"、"无死锁的并行工具执行"）。
+- api_style：Agent API 风格（例如："基于装饰器的工具注册"、"流畅链式 API"）。
+- analyzed_files：你分析过的关键源码文件列表。
+- dimensions：分别用一句话评价可读性、复杂度、可维护性和可测试性。
 
-Curated Assets:
-Pick up to 20 highly valuable URLs. Output them as a list of strings.
+精选资源（Curated Assets）：
+选取最多 20 个高价值 URL。以字符串列表形式输出。
 
-Mermaid Diagramming:
-When explaining the Agent's Reasoning Loop or State Machine, you MUST include at least one Mermaid diagram (e.g. stateDiagram-v2 or graph TD) illustrating the logic.
+Mermaid 图表（Mermaid Diagramming）：
+在解释 Agent 的推理循环或状态机时，你必须包含至少一张 Mermaid 图表（例如 stateDiagram-v2 或 graph TD），以说明其逻辑。
 
-Output the final result as a strict JSON matching the required schema.
+最终结果必须以严格匹配所需 schema 的 JSON 格式输出。

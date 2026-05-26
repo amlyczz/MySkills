@@ -2,6 +2,7 @@
 durations, renders video via Remotion, then mixes audio and burns subtitles.
 """
 
+import asyncio
 import logging
 import os
 import uuid
@@ -81,10 +82,7 @@ class RenderComposeUseCase:
         # Skip-if-done guard: if final video exists, skip
         if state.get("final_mp4_path"):
             logger.info("[RenderCompose] Skipping (final video already exists)")
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-            )
+            return {**state}
 
         import asyncio
 
@@ -130,7 +128,7 @@ class RenderComposeUseCase:
             )
         else:
             import shutil
-            shutil.copy2(video_path, final_mp4_path)
+            await asyncio.to_thread(shutil.copy2, video_path, final_mp4_path)
 
         # ② Complete node: update via FSM
         await self.status_service.mark_node_completed(

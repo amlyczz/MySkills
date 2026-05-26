@@ -30,6 +30,15 @@ fi
 
 start_backend() {
     log "启动后端 (FastAPI on :18274)..."
+
+    # 杀掉占用 18274 端口的旧进程
+    if lsof -ti:18274 >/dev/null 2>&1; then
+        log "检测到 18274 端口被占用，正在清理..."
+        lsof -ti:18274 | xargs kill -9 2>/dev/null
+        sleep 1
+        log "旧进程已清理"
+    fi
+
     cd "$SCRIPT_DIR/backend"
 
     # 检查 .env
@@ -71,12 +80,15 @@ case "${1:-all}" in
     all)
         log "同时启动前后端..."
 
-        # 清理函数：杀掉整个进程组
+        # 清理函数：杀掉子进程并退出
+        _cleaned=0
         cleanup() {
+            if [ "$_cleaned" = "1" ]; then return; fi
+            _cleaned=1
             echo ""
             log "正在停止所有服务..."
-            kill -- -$$ 2>/dev/null
-            wait 2>/dev/null
+            kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
+            wait $BACKEND_PID $FRONTEND_PID 2>/dev/null
             log "已停止"
             exit 0
         }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Trash2, FolderOpen } from 'lucide-react'
+import { Plus, Search, Trash2, FolderOpen, Globe } from 'lucide-react'
 import { listProjects, deleteProject, type ProjectData } from '../lib/api'
 
 export default function ProjectList() {
@@ -29,8 +29,12 @@ export default function ProjectList() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    setPage(1)
-    fetchProjects()
+    if (page === 1) {
+      // Already on page 1, useEffect won't fire — fetch directly
+      fetchProjects()
+    } else {
+      setPage(1) // Triggers fetchProjects via useEffect
+    }
   }
 
   const handleDelete = async (id: string, name: string) => {

@@ -1,5 +1,6 @@
 ## 🎯 编剧指引 (Directives)
-根据项目的复杂度和素材丰富程度自行决定最佳时长（3-10 分钟）。
+**输出语言：简体中文。** 所有口播文本、视觉提示必须用中文。技术名词可保留英文但解释用中文。
+根据项目的复杂度和素材丰富程度决定最佳时长（必须 6-10 分钟，不允许低于 6 分钟）。
 受众画像 (Audience Primary)：{audience_primary}
 受众水平 (Audience Expertise)：{audience_expertise}
 技术深度 (Technical Depth)：{technical_depth}
@@ -11,6 +12,12 @@
 - Deep Dive：{deep_dive_pct}
 - Climax：{climax_pct}
 - Resolution：{resolution_pct}
+
+硬性指标（必须满足，不是建议）：
+- 最少 8 个 segment，推荐 10-15 个
+- 每段 duration_est：20-60 秒
+- 中文：full_text 总字数 ≥ 总时长秒数 × 4 字（例：360s → 1440 字）
+- 英文：full_text 总词数 ≥ 总时长秒数 × 2.5 词
 
 ## 📖 可视素材库 (Curated Assets)
 以下是你可以在 `assigned_asset` 中引用的图片素材路径：

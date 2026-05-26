@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, GitHubSourceMeta, ProjectEncyclopedia, Script, SourceCodeInsight, MaterialManifest, ProjectCategory, TechDomain, RepoMetadata
 from ...domain.repo_analyzer.project_encyclopedia import ChartDataPoint
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
-from ..llm.client import get_llm_client
+from ..llm.client import get_json_client
 from ..llm.prompt_loader import load_prompt
 
 # Bulletproof DTO for LLM response to ensure JSON parsing never fails
@@ -43,7 +43,7 @@ def format_mixed_to_markdown(d: Any) -> str:
 class LLMRepoAnalyzer(RepoAnalyzer):
 
     def __init__(self) -> None:
-        self.llm = get_llm_client()
+        self.llm = get_json_client()
 
     async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
         import logging

@@ -4,12 +4,23 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...domain.task.entities import PipelineTask, PipelineStatus
+from ...domain.task.dag_definition import compute_dag_snapshot
 from ...infrastructure.task.connection import get_db_session
 from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
 from ...infrastructure.task.postgres_models import PipelineTaskDB
-from ..dtos.task_dtos import TaskSubmitRequest, TaskSubmitResponse, TaskStatusResponse
+from ..dtos.task_dtos import (
+    TaskSubmitRequest, TaskSubmitResponse, TaskStatusResponse, DagSnapshotResponse,
+)
 
 router = APIRouter(prefix="/api/v1/task", tags=["task"])
+
+
+@router.get("/dag", response_model=DagSnapshotResponse)
+async def get_default_dag() -> DagSnapshotResponse:
+    """Returns the DAG structure with all nodes idle (no task context needed)."""
+    snapshot = compute_dag_snapshot(None)
+    snapshot["task_id"] = ""
+    return DagSnapshotResponse(**snapshot)
 
 
 @router.post("/submit", response_model=TaskSubmitResponse)
@@ -82,3 +93,24 @@ async def delete_task(task_id: str, session: AsyncSession = Depends(get_db_sessi
     await session.delete(task_db)
     await session.commit()
     return {"status": "deleted"}
+
+
+@router.get("/{task_id}/dag", response_model=DagSnapshotResponse)
+async def get_task_dag(
+    task_id: str,
+    session: AsyncSession = Depends(get_db_session),
+) -> DagSnapshotResponse:
+    """Returns the full DAG structure with current node states for the frontend."""
+    try:
+        uid = uuid.UUID(task_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid task ID format.")
+
+    repo = PostgresPipelineTaskRepository(session)
+    task = await repo.get_by_id(uid)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found.")
+
+    snapshot = compute_dag_snapshot(task)
+    snapshot["task_id"] = task_id
+    return DagSnapshotResponse(**snapshot)

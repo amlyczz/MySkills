@@ -11,15 +11,18 @@ class ScriptComposer(ABC):
     @abstractmethod
     async def compose_script(
         self,
-        content: ContentModel,
+        content: Optional[ContentModel] = None,
         target_duration: int = 0,
         domain_analysis: Optional[DomainAnalysis] = None,
         qa_feedback: Optional[str] = None,
+        twitter_content: Optional[dict] = None,
     ) -> Script:
-        """Compose a narration script based on the Project Encyclopedia and Domain Analysis.
+        """Compose a narration script from ContentModel and/or Twitter content.
 
         Args:
+            content: Repo analysis content (GitHub flow). Optional if twitter_content is provided.
             target_duration: 0 means let LLM decide duration (3-10 min range).
+            twitter_content: Twitter analysis output (Twitter flow). Optional if content is provided.
         """
         pass
 
