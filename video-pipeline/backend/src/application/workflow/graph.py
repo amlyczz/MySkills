@@ -243,6 +243,7 @@ def compile_workflow(
     semaphore: asyncio.Semaphore,
     status_service: StatusTransitionService,
     checkpointer: Optional[BaseCheckpointSaver] = None,
+    trending_scorer: Optional[object] = None,
 ) -> Any:
     """Compiles the LangGraph StateGraph with DDD-injected services and HITL support."""
     analyze_repo_uc = AnalyzeRepoUseCase(analyzer, repository, status_service)
@@ -256,7 +257,7 @@ def compile_workflow(
     workflow = StateGraph(PipelineState)
 
     # Nodes
-    workflow.add_node("github_trending", GithubTrendingUseCase(repository, status_service))
+    workflow.add_node("github_trending", GithubTrendingUseCase(repository, status_service, trending_scorer=trending_scorer))
     workflow.add_node("hitl_trending_review", hitl_trending_review_node)
     workflow.add_node("analyze_repo", analyze_repo_uc)
     workflow.add_node("analyze_twitter", analyze_twitter_uc)

@@ -148,11 +148,14 @@ class GitHubMaterialCollector:
         dir_tree = await self._fetch_directory_tree(repo_full_name)
         metadata.directory_tree = dir_tree
 
-        # ── 4. Core source files (up to 30) ──
-        core_files = await self._fetch_core_source_files(
-            repo_full_name, dir_tree, output_dir, materials,
-        )
-        metadata.core_files = core_files
+        # ── 4. Core source files — SKIPPED when using CodeAgent ──
+        # Claude Code reads files on its own; no need to pre-fetch.
+        # If LLMRepoAnalyzer (DeepSeek) is used, uncomment the block below.
+        #
+        # core_files = await self._fetch_core_source_files(
+        #     repo_full_name, dir_tree, output_dir, materials,
+        # )
+        # metadata.core_files = core_files
 
         # ── 5. Asset discovery ──
         await self._discover_assets(repo_full_name, output_dir, materials)

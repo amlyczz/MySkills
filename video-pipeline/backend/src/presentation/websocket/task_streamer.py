@@ -14,6 +14,11 @@ from ...domain.task.dag_definition import compute_dag_snapshot, _detect_source_t
 from ...infrastructure.task.connection import _get_session_maker
 from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
 from ...infrastructure.repo_analyzer.llm_analyzer import LLMRepoAnalyzer
+from ...infrastructure.code_agent.repo_analyzer import CodeAgentRepoAnalyzer
+from ...infrastructure.code_agent.trending_scorer import CodeAgentTrendingScorer
+from ...infrastructure.code_agent.script_composer import CodeAgentScriptComposer
+from ...infrastructure.code_agent.blueprint_composer import CodeAgentBlueprintComposer
+from ...infrastructure.code_agent.twitter_analyzer import CodeAgentTwitterAnalyzer
 from ...infrastructure.script_composer.llm_composer import LLMScriptComposer
 from ...infrastructure.twitter_analyzer.agent_scraper import OpenCLITwitterScraper
 from ...infrastructure.twitter_analyzer.llm_analyzer import LLMTwitterAnalyzer
@@ -221,11 +226,16 @@ async def _stream_graph(
     task_id: str,
     source_type: str = "github_url",
     repo_url: str = "",
+    progress_queue: asyncio.Queue | None = None,
 ) -> str:
     """Stream a LangGraph execution with unified event protocol.
 
     The StatusTransitionService inside each UseCase node handles DB updates.
     This function only reads DB state for progress and sends WebSocket events.
+
+    Args:
+        progress_queue: Optional asyncio.Queue receiving (node_name, line) tuples
+            from Claude Code stderr. Drained and forwarded as WebSocket events.
 
     Returns: "completed" | "hitl" | "error"
     """
@@ -270,6 +280,29 @@ async def _stream_graph(
 
     # Track which node is currently active
     last_announced_node: str | None = None
+
+    # Drain Claude Code progress events from the queue and send as WebSocket events
+    async def _drain_progress():
+        _last_send = 0.0
+        _min_interval = 0.5  # max 2 events/sec to avoid flooding the frontend
+        while True:
+            try:
+                node_name, line = await progress_queue.get()
+                now = asyncio.get_event_loop().time()
+                if now - _last_send < _min_interval:
+                    continue  # drop to avoid flooding
+                _last_send = now
+                await _send_node_event(
+                    websocket, node_name, "started", pipeline_status_str,
+                    completed_nodes, detail=line,
+                    dag_snapshot=_snapshot(node_name, pipeline_status_str),
+                )
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                break
+
+    drain_task = asyncio.create_task(_drain_progress()) if progress_queue else None
 
     try:
         async for chunk in graph.astream(state_input, config=config, stream_mode="updates"):
@@ -438,6 +471,13 @@ async def _stream_graph(
         except Exception:
             pass
         return "error"
+    finally:
+        if drain_task:
+            drain_task.cancel()
+            try:
+                await drain_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
 
 def _extract_detail(node_name: str, output: dict) -> str:
@@ -574,16 +614,79 @@ def _extract_detail(node_name: str, output: dict) -> str:
     return ""
 
 
-def _compile_graph_with_services(session, checkpointer, ws_callback: Any = None):
-    """Compile the workflow graph with all injected services."""
-    from ...infrastructure.config.app_config import settings
+def _compile_graph_with_services(
+    session,
+    checkpointer,
+    ws_callback: Any = None,
+    progress_queue: Any = None,
+):
+    """Compile the workflow graph with all injected services.
+
+    Agent selection per node via NODE_AGENT_CONFIG env var.
+    Format: "analyze_repo=claude_code:900,compose_script=deepseek"
+    Timeout (seconds) is optional, appended after colon.
+    Unset nodes fall back to CODE_AGENT_TYPE (default: claude_code).
+
+    Args:
+        progress_queue: Optional asyncio.Queue for Claude Code progress events.
+            CodeAgent implementations push stderr lines to this queue,
+            and the caller drains it to send WebSocket events.
+    """
+    from ...infrastructure.config.app_config import settings, get_node_timeout
 
     repository, status_service = _build_services(session, ws_callback=ws_callback)
-    analyzer = LLMRepoAnalyzer()
-    composer = LLMScriptComposer()
+    nc = settings.node_agent_config
+    default = settings.code_agent_type
+
+    def _agent(node: str) -> str:
+        return nc.get(node, default)
+
+    def _progress(node_name: str):
+        """Create an on_progress callback for a CodeAgent that pushes to the shared queue."""
+        if progress_queue is None:
+            return None
+        def _push(line: str):
+            try:
+                progress_queue.put_nowait((node_name, line))
+            except Exception:
+                pass
+        return _push
+
+    # Repo analyzer
+    analyzer = (
+        CodeAgentRepoAnalyzer(timeout=get_node_timeout("analyze_repo"), on_progress=_progress("analyze_repo"))
+        if _agent("analyze_repo") == "claude_code"
+        else LLMRepoAnalyzer()
+    )
+
+    # Trending scorer
+    trending_scorer = (
+        CodeAgentTrendingScorer(timeout=get_node_timeout("github_trending"), on_progress=_progress("github_trending"))
+        if _agent("github_trending") == "claude_code"
+        else None
+    )
+
+    # Script composer
+    composer = (
+        CodeAgentScriptComposer(timeout=get_node_timeout("compose_script"), on_progress=_progress("compose_script"))
+        if _agent("compose_script") == "claude_code"
+        else LLMScriptComposer()
+    )
+
+    # Twitter (scraper is always OpenCLI, only analyzer switches)
     twitter_scraper = OpenCLITwitterScraper()
-    twitter_analyzer = LLMTwitterAnalyzer()
-    blueprint_composer = LLMBlueprintComposer()
+    twitter_analyzer = (
+        CodeAgentTwitterAnalyzer(timeout=get_node_timeout("analyze_twitter"), on_progress=_progress("analyze_twitter"))
+        if _agent("analyze_twitter") == "claude_code"
+        else LLMTwitterAnalyzer()
+    )
+
+    # Blueprint composer
+    blueprint_composer = (
+        CodeAgentBlueprintComposer(timeout=get_node_timeout("generate_blueprint"), on_progress=_progress("generate_blueprint"))
+        if _agent("generate_blueprint") == "claude_code"
+        else LLMBlueprintComposer()
+    )
     video_renderer = RemotionVideoRenderer()
 
     # TTS chain: MiMo (首选) → MiniMax → Omnivoice
@@ -609,6 +712,7 @@ def _compile_graph_with_services(session, checkpointer, ws_callback: Any = None)
         repository=repository,
         semaphore=global_render_semaphore,
         status_service=status_service,
+        trending_scorer=trending_scorer,
         checkpointer=checkpointer,
     )
     return graph, repository, status_service
@@ -702,14 +806,17 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str) -> None
                 except Exception:
                     pass
 
-            graph, repository, status_service = _compile_graph_with_services(session, checkpointer, ws_callback=ws_callback)
+            progress_queue: asyncio.Queue = asyncio.Queue()
+            graph, repository, status_service = _compile_graph_with_services(
+                session, checkpointer, ws_callback=ws_callback, progress_queue=progress_queue,
+            )
             _active_graphs[task_id] = graph
 
             config = {"configurable": {"thread_id": task_id}}
 
             try:
                 result = await _stream_graph(graph, state_input, config, websocket, task_id,
-                    source_type=source_type, repo_url=repo_url)
+                    source_type=source_type, repo_url=repo_url, progress_queue=progress_queue)
                 if result == "hitl":
                     logger.info("Graph paused for HITL, keeping task %s active", task_id)
                     return
@@ -783,7 +890,10 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
                     except Exception:
                         pass
 
-                graph, repository, status_service = _compile_graph_with_services(session, checkpointer, ws_callback=ws_callback)
+                progress_queue: asyncio.Queue = asyncio.Queue()
+                graph, repository, status_service = _compile_graph_with_services(
+                    session, checkpointer, ws_callback=ws_callback, progress_queue=progress_queue,
+                )
 
                 db_task = await repository.get_by_id(uuid.UUID(task_id))
                 if db_task is None:
@@ -815,7 +925,7 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
 
                 try:
                     result = await _stream_graph(graph, resume_input, config, websocket, task_id,
-                        source_type=source_type, repo_url=db_task.repo_url)
+                        source_type=source_type, repo_url=db_task.repo_url, progress_queue=progress_queue)
                     if result in ("completed", "error"):
                         _active_graphs.pop(task_id, None)
                 except Exception as e:
@@ -943,7 +1053,10 @@ async def retry_task(websocket: WebSocket, task_id: str, node: str = "") -> None
                     except Exception:
                         pass
 
-                graph, _, _ = _compile_graph_with_services(session, checkpointer, ws_callback=ws_callback)
+                progress_queue: asyncio.Queue = asyncio.Queue()
+                graph, _, _ = _compile_graph_with_services(
+                    session, checkpointer, ws_callback=ws_callback, progress_queue=progress_queue,
+                )
 
                 # Use original thread_id to resume from last checkpoint (per-node retry)
                 # or fresh thread for full retry
@@ -955,7 +1068,7 @@ async def retry_task(websocket: WebSocket, task_id: str, node: str = "") -> None
 
                 try:
                     await _stream_graph(graph, state_input, config, websocket, task_id,
-                        source_type=source_type, repo_url=actual_url)
+                        source_type=source_type, repo_url=actual_url, progress_queue=progress_queue)
                 except WebSocketDisconnect:
                     logger.info("Retry client disconnected for task %s", task_id)
                 except Exception as e:

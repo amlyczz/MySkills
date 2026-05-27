@@ -106,7 +106,7 @@ function DagProcessNode({ data }: NodeProps) {
     containerCls = 'node-active'
     accentNode = (
       <div className="radar-pulse">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB]" />
       </div>
     )
   } else if (state === 'error') {
@@ -115,7 +115,7 @@ function DagProcessNode({ data }: NodeProps) {
   }
 
   const statusCls = state === 'completed' ? 'text-[#166534]' :
-    state === 'active' ? 'text-[#E11D48] font-bold' :
+    state === 'active' ? 'text-[#2563EB] font-bold' :
     state === 'error' ? 'text-[#DC2626] font-extrabold' : 'text-[#A8A29E]'
 
   return (
@@ -185,7 +185,7 @@ function DagSourceNode({ data }: NodeProps) {
   }
 
   const statusCls = state === 'completed' ? 'text-[#166534]' :
-    state === 'active' ? 'text-[#E11D48] font-bold' : 'text-[#A8A29E]'
+    state === 'active' ? 'text-[#2563EB] font-bold' : 'text-[#A8A29E]'
 
   return (
     <div className={`relative rounded-lg border ${containerCls} min-w-[110px] transition-all duration-500`}>

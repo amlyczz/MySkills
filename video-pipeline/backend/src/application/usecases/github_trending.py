@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from typing import Optional
 
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -16,8 +17,14 @@ from ...infrastructure.llm.prompt_loader import load_prompt
 class GithubTrendingUseCase:
     """LangGraph Node: Fetches trending repos and uses LLM to score subjective dimensions."""
 
-    def __init__(self, repository: PipelineTaskRepository, status_service: StatusTransitionService):
-        self.llm = get_llm(LLMRole.SCORING)
+    def __init__(
+        self,
+        repository: PipelineTaskRepository,
+        status_service: StatusTransitionService,
+        trending_scorer: Optional[object] = None,  # CodeAgentTrendingScorer or None for LLM
+    ):
+        self.llm = get_llm(LLMRole.SCORING) if trending_scorer is None else None
+        self.trending_scorer = trending_scorer
         self.repository = repository
         self.status_service = status_service
 
@@ -92,15 +99,6 @@ class GithubTrendingUseCase:
 
                 r.impact_score = int((deps_score + author_score) / 2)
 
-            # Subjective scoring via LLM
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", load_prompt("github", "score_trending_system.md")),
-                ("user", "项目数据：\n{repos_data}"),
-            ])
-
-            chain = structured_chain(prompt, self.llm, TrendingResponse, include_raw=True)
-            logger.info("[Graph] GithubTrendingUseCase: Sending to LLM for subjective scoring...")
-
             simplified_data = [
                 r.model_dump(include={
                     "owner", "name", "description", "language", "stars",
@@ -109,32 +107,44 @@ class GithubTrendingUseCase:
                 for r in raw_repos
             ]
 
-            raw_result = await chain.ainvoke({
-                "repos_data": json.dumps(simplified_data, ensure_ascii=False),
-            })
+            # Subjective scoring via LLM or CodeAgent
+            if self.trending_scorer is not None:
+                logger.info("[Graph] GithubTrendingUseCase: Sending to CodeAgent for subjective scoring...")
+                llm_res = await self.trending_scorer.score(simplified_data)
+            else:
+                prompt = ChatPromptTemplate.from_messages([
+                    ("system", load_prompt("github", "score_trending_system.md")),
+                    ("user", "项目数据：\n{repos_data}"),
+                ])
 
-            llm_res: TrendingResponse | None = raw_result.get("parsed")
-            if llm_res is None:
-                raw_msg = raw_result.get("raw")
-                if raw_msg and hasattr(raw_msg, "content") and raw_msg.content:
-                    try:
-                        import re
-                        content = raw_msg.content
-                        content = re.sub(r'^```(?:json)?\s*\n?', '', content.strip())
-                        content = re.sub(r'\n?```\s*$', '', content.strip())
-                        
-                        parsed_data = json.loads(content)
-                        # If the LLM returned a raw array, wrap it in the expected object structure
-                        if isinstance(parsed_data, list):
-                            parsed_data = {"repos": parsed_data}
-                            
-                        llm_res = TrendingResponse.model_validate(parsed_data)
-                        logger.info("[Graph] GithubTrendingUseCase: Recovered via raw content fallback")
-                    except Exception as fb_err:
-                        logger.warning(f"[Graph] GithubTrendingUseCase: Raw fallback also failed: {fb_err}")
-                        raise ValueError(f"LLM structured output failed: {fb_err}")
-                else:
-                    raise ValueError("LLM returned no structured output and no raw content")
+                chain = structured_chain(prompt, self.llm, TrendingResponse, include_raw=True)
+                logger.info("[Graph] GithubTrendingUseCase: Sending to LLM for subjective scoring...")
+
+                raw_result = await chain.ainvoke({
+                    "repos_data": json.dumps(simplified_data, ensure_ascii=False),
+                })
+
+                llm_res: TrendingResponse | None = raw_result.get("parsed")
+                if llm_res is None:
+                    raw_msg = raw_result.get("raw")
+                    if raw_msg and hasattr(raw_msg, "content") and raw_msg.content:
+                        try:
+                            import re
+                            content = raw_msg.content
+                            content = re.sub(r'^```(?:json)?\s*\n?', '', content.strip())
+                            content = re.sub(r'\n?```\s*$', '', content.strip())
+
+                            parsed_data = json.loads(content)
+                            if isinstance(parsed_data, list):
+                                parsed_data = {"repos": parsed_data}
+
+                            llm_res = TrendingResponse.model_validate(parsed_data)
+                            logger.info("[Graph] GithubTrendingUseCase: Recovered via raw content fallback")
+                        except Exception as fb_err:
+                            logger.warning(f"[Graph] GithubTrendingUseCase: Raw fallback also failed: {fb_err}")
+                            raise ValueError(f"LLM structured output failed: {fb_err}")
+                    else:
+                        raise ValueError("LLM returned no structured output and no raw content")
 
             # Merge and calculate final score
             final_repos: list[ScoredRepo] = []

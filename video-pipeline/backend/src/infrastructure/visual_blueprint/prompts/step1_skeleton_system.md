@@ -49,8 +49,8 @@
 - 排版（标题字体、正文字体）
 - 音频闪避配置（旁白激活时 BGM 音量降低）
 - 动效令牌（motion tokens），至少定义 3 个预设：
-  - `snappy`: { type: "spring", params: { mass: 1, damping: 14, stiffness: 120 } }
-  - `cinematic`: { type: "spring", params: { mass: 1.5, damping: 20, stiffness: 60 } }
-  - `overshoot`: { type: "spring", params: { mass: 1.2, damping: 10, stiffness: 100 } }
+  - `snappy`: {{ type: "spring", params: {{ mass: 1, damping: 14, stiffness: 120 }} }}
+  - `cinematic`: {{ type: "spring", params: {{ mass: 1.5, damping: 20, stiffness: 60 }} }}
+  - `overshoot`: {{ type: "spring", params: {{ mass: 1.2, damping: 10, stiffness: 100 }} }}
 
 关键要求：输出完整的 Blueprint，其中场景包含 id、narrativePhase、type、startFrame、durationInFrames、background、transitionToNext，以及 **decoration 层 elements**（film-grain/dot-grid-bg/mesh-gradient-bg 等）。内容型 elements（text/image/code 等）留空或 None——它们将在 Step 2 中填充。voiceover、subtitles、sfx 也保留为空。

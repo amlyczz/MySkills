@@ -11,7 +11,12 @@ from ..llm.prompt_loader import load_prompt
 class LLMScriptComposer(ScriptComposer):
 
     def __init__(self) -> None:
-        self.llm = get_llm(LLMRole.EXTRACTION)
+        # CREATIVE role: low reasoning_effort — lets the model briefly plan the narrative arc
+        # (segment structure, pacing, story beats) before writing, without the token exhaustion
+        # of max thinking mode. EXTRACTION (reasoning_effort=max) was burning 20-40k tokens
+        # on chain-of-thought and leaving no budget for the actual JSON script output.
+        self.llm = get_llm(LLMRole.CREATIVE)
+
 
     async def compose_script(
         self,
@@ -101,14 +106,17 @@ class LLMScriptComposer(ScriptComposer):
         import logging
         logger = logging.getLogger(__name__)
 
+        from ..llm.prompt_loader import load_prompt as _lp
+        _lp.cache_clear()  # pick up edited prompt files without restart
+
         chain = structured_chain(prompt, self.llm, Script)
         
         script: Script = await chain.ainvoke({
-            "target_duration": "180-600 (3-10 minutes), decide based on project complexity and depth of content",
+            "target_duration": "360-600 (6-10 minutes), decide based on project complexity and depth of content",
             "hook_pct": "~5-8%",
             "context_pct": "~10-15%",
-            "deep_dive_pct": "~55-70%",
-            "climax_pct": "~8-12%",
+            "deep_dive_pct": "~55-65%",
+            "climax_pct": "~10-15%",
             "resolution_pct": "~3-5%",
             "audience_primary": audience_primary,
             "audience_expertise": audience_expertise,
@@ -125,3 +133,4 @@ class LLMScriptComposer(ScriptComposer):
             "feedback_section": feedback_section,
         })
         return script
+

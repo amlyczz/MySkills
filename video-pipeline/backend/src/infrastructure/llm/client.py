@@ -33,19 +33,31 @@ _DEEPSEEK_BETA_BASE = "https://api.deepseek.com/beta"
 
 class LLMRole(str, enum.Enum):
     """Semantic roles that map to concrete LLM configurations."""
-    EXTRACTION = "extraction"      # Strict tool_calls, pro model, thinking enabled
-    REASONING = "reasoning"        # Deep thinking / analysis
+    EXTRACTION = "extraction"      # Strict tool_calls, pro model, thinking enabled (max)
+    REASONING = "reasoning"        # Deep thinking / analysis (max)
     SCORING = "scoring"            # Lightweight classification / scoring (fast model)
     QA = "qa"                      # Critical review with higher temperature
-    GENERATION = "generation"      # Free-form generation (scripts, etc.)
+    GENERATION = "generation"      # Free-form generation, no thinking overhead
+    CREATIVE = "creative"          # Structured creative generation: low reasoning_effort
+                                   # Gets brief structural planning without token exhaustion
 
 
-def _thinking_effort(model: str) -> str | None:
-    if "pro" in model.lower():
-        return "max"
+def _thinking_effort(model: str, level: str = "max") -> str | None:
+    """Map model type + desired level to a reasoning_effort string.
+
+    Per DeepSeek docs, only two meaningful tiers exist:
+    - "high": default for normal requests; low/medium are both remapped here internally
+    - "max":  unlimited thinking; used for complex agent/extraction tasks
+
+    Use "high" for creative/generation tasks, "max" for extraction/reasoning tasks.
+    """
+    if "pro" in model.lower() or "reasoner" in model.lower():
+        return level
     elif "flash" in model.lower():
-        return "high"
+        # flash model: cap at high regardless of requested level
+        return "high" if level in ("high", "max") else "high"
     return None
+
 
 
 def _build(model_name: str, temperature: float, **kwargs) -> ChatDeepSeek:
@@ -59,7 +71,7 @@ def _build(model_name: str, temperature: float, **kwargs) -> ChatDeepSeek:
         "api_key": api_key,
         "api_base": base_url,
         "max_retries": 2,
-        "max_tokens": 50000,
+        "max_tokens": 32000,
     }
     config.update(kwargs)
     return ChatDeepSeek(**config)
@@ -68,9 +80,44 @@ def _build(model_name: str, temperature: float, **kwargs) -> ChatDeepSeek:
 # ── Role → config mapping ────────────────────────────────────────────
 
 def _build_extraction(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
-    """Strict tool_calls — beta endpoint for server-side schema enforcement.
+    """Strict tool_calls — beta endpoint + max thinking for complex data extraction."""
+    model_name = model or settings.llm_model_pro
+    api_key = settings.openai_api_key or os.getenv("DEEPSEEK_API_KEY", "mock-key")
+    return ChatDeepSeek(
+        model=model_name,
+        temperature=temperature,
+        api_key=api_key,
+        api_base=_DEEPSEEK_BETA_BASE,
+        max_retries=2,
+        max_tokens=32000,
+        reasoning_effort=_thinking_effort(model_name, "max"),
+    )
 
-    Uses ``structured_chain()`` for structured output (thinking-compatible).
+
+def _build_reasoning(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
+    """Thinking mode (max) — for deep logical analysis tasks."""
+    model_name = model or settings.llm_model_pro
+    return _build(model_name, temperature, reasoning_effort=_thinking_effort(model_name, "max"))
+
+
+def _build_scoring(temperature: float = 0.2) -> ChatDeepSeek:
+    """Fast model for scoring/classification — no thinking needed.
+
+    Scoring tasks (trending repo ranking, sentiment labels) are simple
+    input→number/label mappings. Thinking overhead adds latency with no
+    accuracy benefit for these tasks.
+    """
+    return _build(settings.llm_model_fast, temperature)
+
+
+def _build_creative(model: str | None = None, temperature: float = 0.6) -> ChatDeepSeek:
+    """Structured creative generation with high reasoning_effort.
+
+    Per DeepSeek docs, low/medium both map to high internally — "high" is the
+    lighter thinking tier (vs "max" which is unlimited). Gives the model enough
+    thinking budget to plan narrative arc and segment structure without exhausting
+    the token budget needed for the actual JSON output.
+    Ideal for long-form script generation tasks.
     """
     model_name = model or settings.llm_model_pro
     api_key = settings.openai_api_key or os.getenv("DEEPSEEK_API_KEY", "mock-key")
@@ -80,20 +127,10 @@ def _build_extraction(model: str | None = None, temperature: float = 0.2) -> Cha
         api_key=api_key,
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
-        max_tokens=50000,
-        reasoning_effort=_thinking_effort(model_name),
+        max_tokens=32000,
+        reasoning_effort=_thinking_effort(model_name, "high"),
     )
 
-
-def _build_reasoning(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
-    """Thinking mode — reasoning_effort with no JSON constraints."""
-    model_name = model or settings.llm_model_pro
-    return _build(model_name, temperature, reasoning_effort=_thinking_effort(model_name))
-
-
-def _build_scoring(temperature: float = 0.2) -> ChatDeepSeek:
-    """Fast model for lightweight tasks."""
-    return _build(settings.llm_model_fast, temperature, reasoning_effort=_thinking_effort(settings.llm_model_fast))
 
 
 def _build_qa(temperature: float = 0.7) -> ChatDeepSeek:
@@ -103,7 +140,14 @@ def _build_qa(temperature: float = 0.7) -> ChatDeepSeek:
 
 
 def _build_generation(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
-    """Plain pro model for free-form generation."""
+    """Plain generation — no thinking, no structured output constraints.
+
+    Use when you need simple free-form text output with no JSON schema
+    and no narrative planning (e.g. short summaries, one-liners, fill-in-the-blank).
+    For structured JSON output → use EXTRACTION or CREATIVE.
+    For long-form script writing → use CREATIVE (has thinking for narrative planning).
+    Currently only referenced via the legacy get_llm_client() alias.
+    """
     model_name = model or settings.llm_model_pro
     return _build(model_name, temperature)
 
@@ -114,6 +158,7 @@ _ROLE_BUILDERS = {
     LLMRole.SCORING: _build_scoring,
     LLMRole.QA: _build_qa,
     LLMRole.GENERATION: _build_generation,
+    LLMRole.CREATIVE: _build_creative,
 }
 
 

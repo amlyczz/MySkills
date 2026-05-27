@@ -19,6 +19,7 @@
 - 中文：full_text 总字数 ≥ 总时长秒数 × 4 字（例：360s → 1440 字）
 - 英文：full_text 总词数 ≥ 总时长秒数 × 2.5 词
 
+
 ## 📖 可视素材库 (Curated Assets)
 以下是你可以在 `assigned_asset` 中引用的图片素材路径：
 {curated_materials}

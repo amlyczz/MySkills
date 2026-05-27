@@ -21,6 +21,47 @@ def get_auto_proxy() -> str | None:
         pass
     return None
 
+def _parse_node_agent_config() -> dict[str, str]:
+    """Parse NODE_AGENT_CONFIG env var.
+
+    Format: "analyze_repo=claude_code:900,github_trending=deepseek"
+    Timeout (seconds) is optional, appended after colon.
+    Unset nodes fall back to CODE_AGENT_TYPE.
+    """
+    raw = os.getenv("NODE_AGENT_CONFIG", "")
+    if not raw:
+        return {}
+    config = {}
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            config[k.strip()] = v.strip()
+    return config
+
+
+def get_node_timeout(node: str) -> int:
+    """Get timeout for a specific node from NODE_AGENT_CONFIG.
+
+    Format: "analyze_repo=claude_code:900" → 900s for analyze_repo.
+    Falls back to CODE_AGENT_TIMEOUT env var, then 600s default.
+    """
+    raw = os.getenv("NODE_AGENT_CONFIG", "")
+    default = int(os.getenv("CODE_AGENT_TIMEOUT", "600"))
+    if not raw:
+        return default
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            if k.strip() == node and ":" in v:
+                try:
+                    return int(v.split(":")[1].strip())
+                except ValueError:
+                    pass
+    return default
+
+
 class AppConfig(BaseModel):
     database_url: str = Field(
         default_factory=lambda: os.getenv(
@@ -67,6 +108,12 @@ class AppConfig(BaseModel):
     )
     mimo_tts_voice: str = Field(
         default_factory=lambda: os.getenv("MIMO_TTS_VOICE", "苏打")
+    )
+    code_agent_type: str = Field(
+        default_factory=lambda: os.getenv("CODE_AGENT_TYPE", "claude_code")
+    )
+    node_agent_config: dict[str, str] = Field(
+        default_factory=lambda: _parse_node_agent_config()
     )
 
 settings = AppConfig()
