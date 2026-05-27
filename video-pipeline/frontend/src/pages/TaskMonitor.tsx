@@ -350,7 +350,11 @@ export default function TaskMonitor() {
 
         const isTerminal = status === 'completed' || status === 'error'
         const isHitl = status === 'hitl_trending' || status === 'hitl_script_review' || status === 'hitl_blueprint_review'
-        if (!isTerminal && !isHitl && taskId) connectWebSocket(taskId, repoUrl)
+        // Only connect WS for tasks that have no progress at all (fresh pending).
+        // Active, HITL, terminal tasks should NOT reconnect — their state comes from DB.
+        if (status === 'pending' && !dag.nodes.some(n => n.state === 'completed') && taskId) {
+          connectWebSocket(taskId, repoUrl)
+        }
       } catch {
         setLogs(['Failed to restore task state.'])
       }
