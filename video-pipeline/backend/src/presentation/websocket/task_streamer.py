@@ -564,6 +564,8 @@ def _extract_detail(node_name: str, output: dict) -> str:
 
 def _compile_graph_with_services(session, checkpointer):
     """Compile the workflow graph with all injected services."""
+    from ...infrastructure.config.app_config import settings
+
     repository, status_service = _build_services(session)
     analyzer = LLMRepoAnalyzer()
     composer = LLMScriptComposer()
