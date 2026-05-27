@@ -30,7 +30,7 @@ from ...domain.visual_blueprint.entities import (
     GlobalAudioConfig, AudioDucking,
 )
 from ...domain.visual_blueprint.interfaces import BlueprintComposer
-from ..llm.client import get_llm, LLMRole
+from ..llm.client import get_llm, LLMRole, structured_chain
 from ..llm.prompt_loader import load_prompt
 
 
@@ -474,7 +474,7 @@ class LLMBlueprintComposer(BlueprintComposer):
         }
 
         try:
-            chain = prompt | self.llm.with_structured_output(_FixupBlueprint, method="function_calling", strict=True)
+            chain = structured_chain(prompt, self.llm, _FixupBlueprint)
             fixup_result: _FixupBlueprint = await chain.ainvoke(invoke_params)
             blueprint = fixup_result.to_blueprint()
         except Exception as fc_err:
@@ -547,7 +547,7 @@ class LLMBlueprintComposer(BlueprintComposer):
         ])
 
         try:
-            chain = prompt | self.llm.with_structured_output(_FixupScene, method="function_calling", strict=True)
+            chain = structured_chain(prompt, self.llm, _FixupScene)
             fixup_scene: _FixupScene = await chain.ainvoke({"scene_context": user_prompt})
             # Preserve skeleton metadata
             fixup_scene.id = scene.id

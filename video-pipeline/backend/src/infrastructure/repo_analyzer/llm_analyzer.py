@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, GitHubSourceMeta, ProjectEncyclopedia, Script, SourceCodeInsight, MaterialManifest, ProjectCategory, TechDomain, RepoMetadata
 from ...domain.repo_analyzer.project_encyclopedia import ChartDataPoint
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
-from ..llm.client import get_llm, LLMRole
+from ..llm.client import get_llm, LLMRole, structured_chain
 from ..llm.prompt_loader import load_prompt
 
 # Bulletproof DTO for LLM response to ensure JSON parsing never fails
@@ -80,7 +80,7 @@ class LLMRepoAnalyzer(RepoAnalyzer):
             def resolved_domain(self) -> TechDomain:
                 return self.domain or self.tech_domain or TechDomain.GENERAL
 
-        chain = prompt | self.llm.with_structured_output(DomainWrapper, method="function_calling", strict=True)
+        chain = structured_chain(prompt, self.llm, DomainWrapper)
         result = await self._invoke_with_retry(chain, {"input": enriched_input})
         return result.resolved_domain
 
@@ -102,7 +102,7 @@ class LLMRepoAnalyzer(RepoAnalyzer):
             ("user", "Analyze this repository:\n\nURL: {url}\n\nCandidate Materials (JSON):\n{candidate_materials}\n\nEnriched Input:\n{enriched_input}\n\nRespond in strictly valid JSON format. IMPORTANT: Ensure all double quotes within strings are correctly escaped (e.g., \\\"word\\\")."),
         ])
 
-        chain = prompt | self.llm.with_structured_output(LLMContentResponse, method="function_calling", strict=True)
+        chain = structured_chain(prompt, self.llm, LLMContentResponse)
         flat_res: LLMContentResponse = await self._invoke_with_retry(chain, {
             "url": repo_url,
             "candidate_materials": candidate_materials,
@@ -181,7 +181,7 @@ class LLMRepoAnalyzer(RepoAnalyzer):
             ("user", load_prompt("repo_analyzer", "analyze_domain_user.md") + "\n\nRespond in strictly valid JSON format conforming to the expected schema. Ensure all double quotes inside strings are properly escaped."),
         ])
 
-        chain = prompt | self.llm.with_structured_output(DomainAnalysis, method="function_calling", strict=True)
+        chain = structured_chain(prompt, self.llm, DomainAnalysis)
 
         insight = content_model.source_code_insight
         source = content_model.source

@@ -4,7 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis
 from ...domain.script_composer.entities import Script
 from ...domain.script_composer.interfaces import ScriptComposer
-from ..llm.client import get_llm, LLMRole
+from ..llm.client import get_llm, LLMRole, structured_chain
 from ..llm.prompt_loader import load_prompt
 
 class LLMScriptComposer(ScriptComposer):
@@ -97,7 +97,7 @@ class LLMScriptComposer(ScriptComposer):
                 f"You MUST address this feedback in your new version."
             )
 
-        chain = prompt | self.llm.with_structured_output(Script, method="function_calling", strict=True)
+        chain = structured_chain(prompt, self.llm, Script)
         script: Script = await chain.ainvoke({
             "target_duration": "180-600 (3-10 minutes), decide based on project complexity and depth of content",
             "hook_pct": "~5-8%",

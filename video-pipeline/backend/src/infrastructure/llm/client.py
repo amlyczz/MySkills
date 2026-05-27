@@ -5,28 +5,35 @@ node can declare *what* it needs (extraction, reasoning, scoring, QA) without
 coupling to a concrete model name.
 
 Quick reference:
-    - ``extraction``  — Tool Calls strict mode, pro model, server-side schema enforcement
+    - ``extraction``  — Strict tool_calls (beta endpoint), pro model, thinking enabled
     - ``reasoning``   — Thinking mode (high reasoning_effort), pro model
-    - ``scoring``     — Fast model for lightweight classification / scoring
+    - ``scoring``     — Fast model (flash), thinking enabled
     - ``qa``          — Pro model with higher temperature for critical review
     - ``generation``  — Pro model, plain chat (no structured output constraints)
+
+Note: DeepSeek V4 enables thinking mode by default. Thinking supports tool_calls
+with ``tool_choice: "auto"``, but NOT with specific function name. Use
+:func:`structured_chain` for strict structured output compatible with thinking.
 """
 
 import enum
+import re
 import os
 import logging
 from langchain_deepseek import ChatDeepSeek
+from langchain_core.runnables import RunnableLambda
+from langchain_core.utils.function_calling import convert_to_openai_tool
 from ..config.app_config import settings
 
 logger = logging.getLogger(__name__)
 
-# ── Beta endpoint for DeepSeek Tool Calls strict mode ────────────────
+# ── Beta endpoint for DeepSeek strict mode ────────────────────────────
 _DEEPSEEK_BETA_BASE = "https://api.deepseek.com/beta"
 
 
 class LLMRole(str, enum.Enum):
     """Semantic roles that map to concrete LLM configurations."""
-    EXTRACTION = "extraction"      # Structured extraction via Tool Calls strict mode
+    EXTRACTION = "extraction"      # Strict tool_calls, pro model, thinking enabled
     REASONING = "reasoning"        # Deep thinking / analysis
     SCORING = "scoring"            # Lightweight classification / scoring (fast model)
     QA = "qa"                      # Critical review with higher temperature
@@ -56,11 +63,9 @@ def _build(model: str, temperature: float, **kwargs) -> ChatDeepSeek:
 # ── Role → config mapping ────────────────────────────────────────────
 
 def _build_extraction(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
-    """Tool Calls strict mode — uses beta endpoint for server-side schema enforcement.
+    """Strict tool_calls — beta endpoint for server-side schema enforcement.
 
-    Thinking mode is disabled because DeepSeek V4 thinking does not support
-    the specific ``tool_choice`` dict that LangChain's ``with_structured_output``
-    sends (only ``auto`` works with thinking).
+    Uses ``structured_chain()`` for structured output (thinking-compatible).
     """
     model_name = model or settings.llm_model_pro
     api_key = settings.openai_api_key or os.getenv("DEEPSEEK_API_KEY", "mock-key")
@@ -71,22 +76,19 @@ def _build_extraction(model: str | None = None, temperature: float = 0.2) -> Cha
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
         max_tokens=16384,
-        model_kwargs={"extra_body": {"thinking": {"type": "disabled"}}},
+        reasoning_effort=_thinking_effort(model_name),
     )
 
 
 def _build_reasoning(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
     """Thinking mode — reasoning_effort with no JSON constraints."""
     model_name = model or settings.llm_model_pro
-    return _build(
-        model_name, temperature,
-        reasoning_effort=_thinking_effort(model_name),
-    )
+    return _build(model_name, temperature, reasoning_effort=_thinking_effort(model_name))
 
 
 def _build_scoring(temperature: float = 0.2) -> ChatDeepSeek:
-    """Fast model for lightweight tasks — thinking disabled (incompatible with tool_choice, ignores temperature)."""
-    return _build(settings.llm_model_fast, temperature, model_kwargs={"extra_body": {"thinking": {"type": "disabled"}}})
+    """Fast model for lightweight tasks."""
+    return _build(settings.llm_model_fast, temperature, reasoning_effort=_thinking_effort(settings.llm_model_fast))
 
 
 def _build_qa(temperature: float = 0.7) -> ChatDeepSeek:
@@ -113,8 +115,6 @@ _ROLE_BUILDERS = {
 def get_llm(role: LLMRole, **kwargs) -> ChatDeepSeek:
     """Get an LLM client by semantic role.
 
-    This is the primary entry point for all callers.
-
     Args:
         role: Semantic role that determines model, temperature, and mode.
         **kwargs: Forwarded to the role-specific builder (e.g. temperature, model).
@@ -126,6 +126,56 @@ def get_llm(role: LLMRole, **kwargs) -> ChatDeepSeek:
     if builder is None:
         raise ValueError(f"Unknown LLM role: {role}")
     return builder(**kwargs)
+
+
+def structured_chain(prompt, llm, schema_cls, include_raw=False):
+    """Build a chain using DeepSeek strict tool_calls (thinking-compatible).
+
+    Unlike ``with_structured_output(method="function_calling")``, this does NOT
+    set ``tool_choice`` to a specific function name, so it works with DeepSeek's
+    thinking mode. Strict schema enforcement is achieved via the beta endpoint.
+
+    Args:
+        prompt: ChatPromptTemplate.
+        llm: ChatDeepSeek instance.
+        schema_cls: Pydantic model class for structured output.
+        include_raw: If True, return ``{"parsed": ..., "raw": ...}``.
+
+    Returns:
+        Runnable chain: prompt → llm_with_strict_tool → parser.
+    """
+    # Ensure beta endpoint for strict mode
+    if _DEEPSEEK_BETA_BASE not in (llm.api_base or ""):
+        llm = llm.model_copy(update={"api_base": _DEEPSEEK_BETA_BASE})
+
+    # Convert schema to OpenAI tool format with strict: true
+    tool_def = convert_to_openai_tool(schema_cls)
+    tool_def["function"]["strict"] = True
+
+    # Bind tools WITHOUT specific tool_choice (thinking-compatible)
+    llm_with_tools = llm.bind_tools([tool_def], parallel_tool_calls=False)
+
+    def _parse(msg):
+        # Primary: parse from tool_call arguments
+        if hasattr(msg, 'tool_calls') and msg.tool_calls:
+            args = msg.tool_calls[0]['args']
+            if isinstance(args, str):
+                return schema_cls.model_validate_json(args)
+            return schema_cls.model_validate(args)
+        # Fallback: parse from content
+        content = msg.content or ""
+        content = re.sub(r'^```(?:json)?\s*', '', content.strip())
+        content = re.sub(r'\s*```\s*$', '', content)
+        return schema_cls.model_validate_json(content)
+
+    parser = RunnableLambda(_parse)
+
+    if include_raw:
+        def _parse_with_raw(msg):
+            return {"parsed": _parse(msg), "raw": msg}
+        parser = RunnableLambda(_parse_with_raw)
+
+    return prompt | llm_with_tools | parser
 
 
 # ── Legacy aliases (backward compat, will be removed) ────────────────
@@ -141,7 +191,6 @@ def get_json_client(temperature: float = 0.2, model: str | None = None) -> ChatD
     return _build(
         model or settings.llm_model_pro, temperature,
         model_kwargs={"response_format": {"type": "json_object"}},
-        reasoning_effort=_thinking_effort(model or settings.llm_model_pro),
     )
 
 
