@@ -48,8 +48,15 @@ class GenerateBlueprintUseCase:
         # For Twitter tasks: build a minimal ContentModel from twitter_content
         if content_model is None and twitter_content is not None:
             from ...domain.repo_analyzer.entities import ContentModel, ProjectEncyclopedia
+            from ...domain.repo_analyzer.source_metadata import GitHubSourceMeta
             tc = twitter_content
             content_model = ContentModel(
+                source=GitHubSourceMeta(
+                    source_type="github",
+                    url=state.get("repo_url", ""),
+                    name=tc.get("handle", ""),
+                    full_name=tc.get("author", ""),
+                ),
                 content=ProjectEncyclopedia(
                     title=tc.get("title", ""),
                     tagline=tc.get("summary", ""),
