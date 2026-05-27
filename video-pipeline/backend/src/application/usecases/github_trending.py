@@ -98,7 +98,7 @@ class GithubTrendingUseCase:
                 ("user", "项目数据：\n{repos_data}"),
             ])
 
-            chain = prompt | self.llm.with_structured_output(TrendingResponse, include_raw=True)
+            chain = prompt | self.llm.with_structured_output(TrendingResponse, method="json_mode", include_raw=True)
             logger.info("[Graph] GithubTrendingUseCase: Sending to LLM for subjective scoring...")
 
             simplified_data = [

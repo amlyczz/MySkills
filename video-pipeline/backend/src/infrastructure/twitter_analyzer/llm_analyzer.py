@@ -72,7 +72,7 @@ class LLMTwitterAnalyzer(TwitterAnalyzer):
             ("user", self._build_user_prompt(raw, url)),
         ])
 
-        chain = prompt | self.llm.with_structured_output(LLMTwitterResponse, method="function_calling", strict=True)
+        chain = prompt | self.llm.with_structured_output(LLMTwitterResponse, method="json_mode")
 
         try:
             result: LLMTwitterResponse = await self._invoke_with_retry(chain, {})
