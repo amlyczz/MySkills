@@ -63,10 +63,9 @@ def _build_extraction(model: str | None = None, temperature: float = 0.2) -> Cha
         model=model_name,
         temperature=temperature,
         api_key=api_key,
-        openai_api_base=_DEEPSEEK_BETA_BASE,
+        api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
         max_tokens=16384,
-        reasoning_effort=_thinking_effort(model_name),
     )
 
 
