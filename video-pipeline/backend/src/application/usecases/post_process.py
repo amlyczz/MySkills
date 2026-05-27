@@ -95,14 +95,7 @@ class PostProcessUseCase:
             task.final_mp4_path = final_mp4_path
             await self.repository.update(task)
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=state["repo_url"],
-            final_mp4_path=final_mp4_path,
-            voiceover_path=voiceover_path,
-            bgm_path=bgm_path,
-            status=PipelineStatus.COMPLETED,
-        )
+        return {**state, "final_mp4_path": final_mp4_path, "voiceover_path": voiceover_path, "bgm_path": bgm_path, "status": PipelineStatus.COMPLETED}
 
 
 def _format_srt_time(seconds: float) -> str:

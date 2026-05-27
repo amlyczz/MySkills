@@ -23,9 +23,37 @@ from ...domain.repo_analyzer.entities import (
 )
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
 from ..llm.prompt_loader import load_prompt
-from .claude_code import ClaudeCodeChatModel
+from .claude_code import ClaudeCodeChatModel, parse_claude_json
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+
+class _ContentOutput(BaseModel):
+    title: str = ""
+    tagline: str = ""
+    quick_start: str = ""
+    use_cases: str = ""
+    usage_intro: str = ""
+    architecture_breakdown: str = ""
+    domain_specific_insights: str = ""
+
+
+class _SourceCodeInsightOutput(BaseModel):
+    architecture: str = ""
+    patterns: list[str] = []
+    highlights: list[str] = []
+    api_style: str = ""
+
+
+class AnalysisOutput(BaseModel):
+    """Pydantic schema for --json-schema constrained output."""
+    tech_domain: str = "GENERAL"
+    category: str = "promo"
+    content: _ContentOutput = _ContentOutput()
+    source_code_insight: _SourceCodeInsightOutput = _SourceCodeInsightOutput()
+    curated_materials: list[str] = []
+    domain_analysis: DomainAnalysis
 
 
 class CodeAgentAnalysisResult:
@@ -66,7 +94,7 @@ class CodeAgentRepoAnalyzer(RepoAnalyzer):
     """
 
     def __init__(self, timeout: int = 720, on_progress: Optional[Callable[[str], None]] = None) -> None:
-        self.llm = ClaudeCodeChatModel(timeout=timeout, on_progress=on_progress)
+        self.llm = ClaudeCodeChatModel.from_pydantic(AnalysisOutput, timeout=timeout, on_progress=on_progress)
         self._cached: Optional[CodeAgentAnalysisResult] = None
 
     # ── RepoAnalyzer interface ─────────────────────────────────────────
@@ -165,23 +193,6 @@ class CodeAgentRepoAnalyzer(RepoAnalyzer):
     def _parse_result(msg) -> CodeAgentAnalysisResult:
         """Parse the AIMessage content into CodeAgentAnalysisResult."""
         content = msg.content if hasattr(msg, "content") else str(msg)
-
-        # Try to extract JSON from the response
-        content = content.strip()
-        if content.startswith("```"):
-            # Strip markdown code fences
-            lines = content.split("\n")
-            content = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-
-        try:
-            data = json.loads(content)
-        except json.JSONDecodeError:
-            # Try to find JSON object in the text
-            start = content.find("{")
-            end = content.rfind("}") + 1
-            if start >= 0 and end > start:
-                data = json.loads(content[start:end])
-            else:
-                raise ValueError(f"Could not parse JSON from Claude Code output: {content[:500]}")
+        data = parse_claude_json(content)
 
         return CodeAgentAnalysisResult(data)

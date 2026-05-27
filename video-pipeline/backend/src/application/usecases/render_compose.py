@@ -140,11 +140,9 @@ class RenderComposeUseCase:
             },
         )
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=state["repo_url"],
-            video_mp4_path=video_path,
-            final_mp4_path=final_mp4_path,
-            blueprint=blueprint,
-            status=PipelineStatus.COMPLETED,
-        )
+        return {
+            **state,
+            "video_mp4_path": video_path,
+            "final_mp4_path": final_mp4_path,
+            "status": PipelineStatus.COMPLETED,
+        }

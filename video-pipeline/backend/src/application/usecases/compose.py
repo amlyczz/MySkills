@@ -43,15 +43,23 @@ class ComposeScriptUseCase:
         # Guard: if twitter_content came from a failed scrape, warn but proceed
         if twitter_content and content_model is None:
             main_text = twitter_content.main_tweet_text
+            has_media = bool(twitter_content.screenshot_paths or twitter_content.media_urls)
             if not main_text or len(main_text.strip()) < 20:
-                scrape_err = twitter_content.scrape_error or "unknown"
-                raise ValueError(
-                    f"Twitter scrape failed: {scrape_err}. "
-                    f"No usable tweet content to compose script from."
+                if not has_media:
+                    # No text AND no media — nothing to compose from
+                    scrape_err = twitter_content.scrape_error or "unknown"
+                    raise ValueError(
+                        f"Twitter scrape failed: {scrape_err}. "
+                        f"No usable tweet content to compose script from."
+                    )
+                # Has screenshots/media — proceed with what we captured
+                logger.warning(
+                    "[ComposeScript] Twitter text extraction failed (got %d chars) but "
+                    "proceeding with %d screenshot(s) and %d media URL(s)",
+                    len(main_text),
+                    len(twitter_content.screenshot_paths),
+                    len(twitter_content.media_urls),
                 )
-            if twitter_content.scrape_error:
-                logger.warning("[ComposeScript] Twitter scrape had errors but proceeding with %d chars of raw text",
-                    len(main_text))
 
         # Generate script from ContentModel or TwitterContent via ScriptComposer interface
         # Pass QA feedback from previous failed attempt if available
@@ -69,9 +77,4 @@ class ComposeScriptUseCase:
             updates={"status": PipelineStatus.COMPOSING, "script": script},
         )
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=state["repo_url"],
-            script=script,
-            status=PipelineStatus.COMPOSING,
-        )
+        return {**state, "script": script, "status": PipelineStatus.COMPOSING}

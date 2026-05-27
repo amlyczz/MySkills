@@ -382,7 +382,10 @@ class GitHubMaterialCollector:
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True, args=_playwright_launch_args())
                 page = await browser.new_page(viewport={"width": 1920, "height": 1080})
-                await page.goto(repo_url, wait_until="networkidle", timeout=30000)
+                await page.goto(repo_url, wait_until="domcontentloaded", timeout=30000)
+                # Don't use "networkidle" — GitHub has persistent WebSocket connections
+                # (notifications, real-time updates) that prevent it from ever firing.
+                await asyncio.sleep(2)  # give JS time to render
                 await page.screenshot(path=screenshot_path, full_page=True)
                 await browser.close()
 
@@ -406,7 +409,8 @@ class GitHubMaterialCollector:
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True, args=_playwright_launch_args())
                 page = await browser.new_page()
-                await page.goto(repo_url)
+                await page.goto(repo_url, wait_until="domcontentloaded", timeout=30000)
+                await asyncio.sleep(2)
                 readme_el = await page.query_selector("article")
                 if readme_el:
                     readme_text = await readme_el.inner_text()

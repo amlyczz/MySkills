@@ -46,9 +46,4 @@ class RenderVideoUseCase:
                 task.video_mp4_path = video_path
                 await self.repository.update(task)
 
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-                video_mp4_path=video_path,
-                status=PipelineStatus.RENDERING,
-            )
+            return {**state, "video_mp4_path": video_path, "status": PipelineStatus.RENDERING}

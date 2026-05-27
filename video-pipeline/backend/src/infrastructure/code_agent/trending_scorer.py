@@ -1,17 +1,16 @@
 """CodeAgent-backed trending scorer — Claude Code analyzes repos with actual code access.
 
-Instead of scoring based on truncated descriptions, Claude Code can use gh CLI
+Instead of scoring based on truncated descriptions, Claude Code uses gh CLI
 to fetch README, browse code structure, and make deeper assessments.
 """
 
-import json
 import logging
 from typing import Callable, Optional
 
 from langchain_core.prompts import ChatPromptTemplate
 
 from ...domain.github_trending.entities import TrendingResponse
-from .claude_code import ClaudeCodeChatModel
+from .claude_code import ClaudeCodeChatModel, parse_claude_json
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +40,8 @@ _SCORING_SYSTEM_PROMPT = """你是一个专业的 GitHub 项目评估专家，�
    - 1：无文档、复杂配置
 
 ## 工作方法
-- 用 `gh api repos/{{owner}}/{{repo}}` 获取仓库元数据
-- 用 `gh api repos/{{owner}}/{{repo}}/readme` 获取 README
-- 用 `gh api repos/{{owner}}/{{repo}}/git/trees/HEAD?recursive=1` 浏览目录结构
-- 用 `gh api repos/{{owner}}/{{repo}}/contents/{{path}}` 读取核心文件
+- 用 Read 工具读取仓库中的关键文件（README.md、核心源文件）
+- 用 Glob 工具浏览目录结构
 - 基于实际代码质量打分，不要只看描述
 
 ## 输出格式
@@ -69,8 +66,9 @@ class CodeAgentTrendingScorer:
     """
 
     def __init__(self, timeout: int = 600, on_progress: Optional[Callable[[str], None]] = None) -> None:
-        self.llm = ClaudeCodeChatModel(
-            allowed_tools=["Read", "Glob", "Grep", "Bash(gh:*)"],
+        self.llm = ClaudeCodeChatModel.from_pydantic(
+            TrendingResponse,
+            allowed_tools=["Read", "Glob", "Grep"],
             timeout=timeout,
             on_progress=on_progress,
         )
@@ -81,36 +79,20 @@ class CodeAgentTrendingScorer:
         Args:
             repos_data: List of dicts with at least 'owner' and 'name' keys.
         """
+        # Pass only repo identifiers — prompt stays small; Claude Code reads files directly
+        repo_list = "\n".join(f"- {r['owner']}/{r['name']}" for r in repos_data)
         prompt = ChatPromptTemplate.from_messages([
             ("system", _SCORING_SYSTEM_PROMPT),
-            ("user", "待评估的仓库列表（包含 owner 和 name，你可以用 gh CLI 深入分析每个仓库）：\n{repos_data}"),
+            ("user", f"待评估的仓库列表（通过 Read/Glob/Grep 工具分析每个仓库的代码和文档）：\n{repo_list}"),
         ])
 
         chain = prompt | self.llm | self._parse_result
-        return await chain.ainvoke({
-            "repos_data": json.dumps(repos_data, ensure_ascii=False),
-        })
+        return await chain.ainvoke({})
 
     @staticmethod
     def _parse_result(msg) -> TrendingResponse:
         content = msg.content if hasattr(msg, "content") else str(msg)
-        content = content.strip()
-
-        if content.startswith("```"):
-            lines = content.split("\n")
-            content = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-
-        try:
-            data = json.loads(content)
-        except json.JSONDecodeError:
-            start = content.find("{")
-            end = content.rfind("}") + 1
-            if start >= 0 and end > start:
-                data = json.loads(content[start:end])
-            else:
-                raise ValueError(f"Could not parse JSON from Claude Code output: {content[:500]}")
-
+        data = parse_claude_json(content)
         if isinstance(data, list):
             data = {"repos": data}
-
         return TrendingResponse.model_validate(data)

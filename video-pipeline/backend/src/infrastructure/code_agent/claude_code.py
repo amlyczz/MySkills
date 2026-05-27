@@ -42,6 +42,7 @@ class ClaudeCodeChatModel(BaseChatModel):
     timeout: int = 600  # 10 minutes
     extra_args: List[str] = []
     on_progress: Optional[Callable[[str], Any]] = None
+    json_schema: Optional[dict] = None
 
     # ── LangChain plumbing ─────────────────────────────────────────────
 
@@ -56,7 +57,17 @@ class ClaudeCodeChatModel(BaseChatModel):
             "allowed_tools": self.allowed_tools,
             "effort": self.effort,
             "timeout": self.timeout,
+            "json_schema": bool(self.json_schema),
         }
+
+    @classmethod
+    def from_pydantic(
+        cls,
+        schema: type,
+        **kwargs: Any,
+    ) -> "ClaudeCodeChatModel":
+        """Create a model constrained to output a specific Pydantic schema."""
+        return cls(json_schema=schema.model_json_schema(), **kwargs)
 
     # ── Message → prompt conversion ────────────────────────────────────
 
@@ -98,6 +109,8 @@ class ClaudeCodeChatModel(BaseChatModel):
         ]
         if self.dangerously_skip_permissions:
             cmd.append("--dangerously-skip-permissions")
+        if self.json_schema:
+            cmd.extend(["--json-schema", json.dumps(self.json_schema, ensure_ascii=False)])
         if self.allowed_tools:
             cmd.extend(["--allowedTools"] + self.allowed_tools)
         cmd.extend(self.extra_args)
@@ -123,17 +136,28 @@ class ClaudeCodeChatModel(BaseChatModel):
             )
 
         try:
-            stdout, _ = proc.communicate(timeout=self.timeout)
+            stdout, stderr = proc.communicate(timeout=self.timeout)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
             raise TimeoutError(f"Claude Code CLI timed out after {self.timeout}s")
 
         if proc.returncode != 0:
-            raise RuntimeError(f"Claude Code CLI exited {proc.returncode}")
+            cmd_str = " ".join(cmd[:6]) + "..."
+            raise RuntimeError(
+                f"Claude Code CLI exited {proc.returncode}. cmd: {cmd_str}. "
+                f"stderr: {stderr[:500] if stderr else '(none)'}"
+            )
 
         output = self._parse_output(stdout)
-        content = output.get("result", "")
+        # --output-format json wraps in {"type":"result","result":"..."} envelope.
+        # When --json-schema is also passed, structured output appears in the
+        # "structured_output" top-level field (not inside "result").
+        structured = output.get("structured_output")
+        if structured is not None:
+            content = json.dumps(structured, ensure_ascii=False)
+        else:
+            content = output.get("result", "") if isinstance(output.get("result"), str) else json.dumps(output, ensure_ascii=False)
 
         if not content:
             logger.warning("[ClaudeCode] empty result. Full output: %s", json.dumps(output, ensure_ascii=False)[:1000])
@@ -180,4 +204,176 @@ class ClaudeCodeChatModel(BaseChatModel):
             return data
 
         return data
+
+
+# ── Shared JSON parsing utilities ──────────────────────────────────────────
+
+import ast
+import json as _json
+import re
+
+
+def _to_json_compatible(obj):
+    """Recursively convert Python objects to JSON-serializable dict/list."""
+    if isinstance(obj, dict):
+        return {str(k): _to_json_compatible(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_to_json_compatible(item) for item in obj]
+    elif isinstance(obj, (int, float, str, bool, type(None))):
+        return obj
+    return str(obj)
+
+
+def parse_claude_json(raw: str, cwd: str | None = None) -> dict | list:
+    """Parse Claude Code output as JSON, with fallbacks for common deviations.
+
+    Tries in order:
+    1. Strict JSON
+    2. Extract {...} substring as JSON
+    3. ast.literal_eval (Python dict syntax) → JSON
+    4. Read a JSON file referenced in the output (Claude Code may write to a file)
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    raw = raw.strip()
+    if raw.startswith("```"):
+        lines = raw.split("\n")
+        end_idx = len(lines)
+        for i in range(len(lines) - 1, 0, -1):
+            if lines[i].strip() == "```":
+                end_idx = i
+                break
+        raw = "\n".join(lines[1:end_idx])
+
+    # Strategy 1: strict JSON
+    try:
+        return _json.loads(raw)
+    except _json.JSONDecodeError:
+        pass
+
+    # Strategy 2: extract {...} substring
+    start = raw.find("{")
+    end = raw.rfind("}") + 1
+    if start < 0 or end <= start:
+        # No braces found, try array
+        start = raw.find("[")
+        end = raw.rfind("]") + 1
+
+    snippet = raw[start:end] if start >= 0 and end > start else raw
+
+    try:
+        return _json.loads(snippet)
+    except _json.JSONDecodeError:
+        pass
+
+    # Strategy 3: Python dict syntax (unquoted keys: {segments: [...]})
+    try:
+        python_obj = ast.literal_eval(snippet)
+        return _to_json_compatible(python_obj)
+    except Exception:
+        pass
+
+    # Strategy 4: Claude Code may have written JSON to a file and returned a summary.
+    # Look for .json file references in the output and try to read them.
+    import re
+    import os
+
+    # Strategy 5: Parse markdown table (Claude sometimes returns tables instead of JSON).
+    # Table format: | col1 | col2 | ... |  (with header row and separator row)
+    table_pattern = re.compile(r"^\s*\|\s*(.+?)\s*\|\s*$", re.MULTILINE)
+    rows = table_pattern.findall(raw)
+    if len(rows) >= 3:  # need header + separator + at least one data row
+        lines = raw.strip().splitlines()
+        header_line = None
+        data_lines = []
+        in_separator = False
+        for line in lines:
+            line_stripped = line.strip()
+            if not line_stripped.startswith("|"):
+                continue
+            cols = [c.strip() for c in line_stripped.strip("|").split("|")]
+            if not header_line:
+                # First table-like row — check if it looks like a header
+                if any(re.match(r"^[-:\s]+$", c) for c in cols):
+                    continue  # skip separator
+                header_line = cols
+                continue
+            # Check for separator row
+            if len(cols) == len(header_line) and all(re.match(r"^[-:\s]+$", c) for c in cols):
+                in_separator = True
+                continue
+            if in_separator or (len(cols) == len(header_line)):
+                data_lines.append(cols)
+
+        if header_line and data_lines:
+            try:
+                result_list: list[dict] = []
+                # Detect column mapping from header names
+                h = [c.lower() for c in header_line]
+                # Common Chinese header aliases
+                repo_col = next((i for i, c in enumerate(h) if "仓库" in c or "项目" in c or "repo" in c), 1)
+                score_col = next((i for i, c in enumerate(h) if "综合" in c or "得分" in c or "score" in c or "评分" in c), None)
+                highlight_col = next((i for i, c in enumerate(h) if "亮点" in c or "原因" in c or "描述" in c), None)
+
+                for cols in data_lines:
+                    if len(cols) <= repo_col:
+                        continue
+                    repo_raw = cols[repo_col].strip()
+                    # Strip emoji/prefix like 🥇, 1, 2 ...
+                    repo_raw = re.sub(r"^[🥇🥈🥉\d\.\s]+", "", repo_raw).strip()
+                    if "/" not in repo_raw:
+                        # Try to find a "/" in the cell
+                        parts = re.split(r"[/\\]", repo_raw)
+                        if len(parts) < 2:
+                            continue
+                        owner, name = parts[0].strip(), parts[-1].strip()
+                    else:
+                        owner, name = repo_raw.split("/", 1)
+                        owner, name = owner.strip(), name.strip()
+
+                    score = 0
+                    if score_col is not None and len(cols) > score_col:
+                        score_str = re.sub(r"[^\d]", "", cols[score_col])
+                        score = int(score_str) if score_str.isdigit() else 0
+
+                    highlight = cols[highlight_col].strip() if highlight_col is not None and len(cols) > highlight_col else ""
+
+                    # Distribute combined score (max 20 = 4*5) across 4 dimensions
+                    # Use a fixed heuristic since table doesn't have per-dimension scores
+                    dim_score = max(1, round(score / 4))
+                    entry = {
+                        "owner": owner,
+                        "name": name,
+                        "tech_depth": dim_score,
+                        "video_friendly": dim_score,
+                        "topic_heat": dim_score,
+                        "onboarding_exp": dim_score,
+                        "one_liner": highlight,
+                    }
+                    result_list.append(entry)
+                if result_list:
+                    logger.info("parse_claude_json: extracted %d repos from markdown table", len(result_list))
+                    return {"repos": result_list}
+            except Exception as table_err:
+                logger.warning("parse_claude_json: table parse failed: %s", table_err)
+    json_file_matches = re.findall(r'`([^`]+\.json)`', raw)
+    if not json_file_matches:
+        json_file_matches = re.findall(r'(\S+\.json)', raw)
+
+    search_dirs = [d for d in [cwd, os.getcwd()] if d]
+    for fname in json_file_matches:
+        for search_dir in search_dirs:
+            candidate = os.path.join(search_dir, fname) if not os.path.isabs(fname) else fname
+            if os.path.isfile(candidate):
+                try:
+                    with open(candidate, "r", encoding="utf-8") as f:
+                        data = _json.load(f)
+                    logger.info("parse_claude_json: loaded JSON from file %s", candidate)
+                    return data
+                except Exception:
+                    continue
+
+    logger.error("parse_claude_json: all strategies failed. Raw (first 400 chars): %s", raw[:400])
+    raise ValueError(f"Could not parse Claude Code JSON: {raw[:200]}")
 

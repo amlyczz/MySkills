@@ -54,6 +54,17 @@ interface HitlEvent {
   scene_count?: number
   total_duration_frames?: number
   total_duration_seconds?: number
+  analysis?: AnalysisSummary
+  error?: string
+}
+
+interface AnalysisSummary {
+  title: string
+  tagline: string
+  quick_start: string
+  use_cases: string
+  source_code_highlights: string[]
+  has_content: boolean
 }
 
 interface TrendingRepo {
@@ -347,6 +358,10 @@ export default function TaskMonitor() {
           setHitlEvent({ reason: 'script_review', message: 'Review the script.', script: s })
         } else if (status === 'hitl_blueprint_review' && data.blueprint) {
           setHitlEvent({ reason: 'blueprint_review', message: 'Review the blueprint.' })
+        } else if (status === 'analyzing' && (data.analysis || data.error)) {
+          setHitlEvent({ reason: 'analyze_review', message: 'Review the repository analysis.',
+            analysis: data.analysis as AnalysisSummary | undefined,
+            error: data.error as string | undefined })
         }
 
         // Only connect WS for tasks that have no progress at all (fresh pending).
@@ -431,6 +446,10 @@ export default function TaskMonitor() {
           scene_count: eventData.scene_count as number | undefined,
           total_duration_frames: eventData.total_duration_frames as number | undefined,
           total_duration_seconds: eventData.total_duration_seconds as number | undefined })
+      } else if (reason === 'analyze_review') {
+        setHitlEvent({ reason: 'analyze_review', message,
+          analysis: eventData.analysis as AnalysisSummary | undefined,
+          error: eventData.error as string | undefined })
       } else {
         setHitlEvent({ reason, message })
       }
@@ -778,6 +797,70 @@ export default function TaskMonitor() {
                     className="flex-1 py-2 text-xs font-semibold rounded-md bg-[#166534] text-white hover:bg-[#145326]">Approve</button>
                   <button onClick={() => confirmAndSendHitl('reject', feedbackText)}
                     className="flex-1 py-2 text-xs font-semibold rounded-md bg-[#8B6914] text-white hover:bg-[#7A5B11]">Reject</button>
+                  <button onClick={() => confirmAndSendHitl('abort')}
+                    className="flex-1 py-2 text-xs font-semibold rounded-md border border-[#991B1B] text-[#991B1B] hover:bg-[#FEF2F2]">Abort</button>
+                </div>
+              </div>
+            )}
+
+            {hitlEvent?.reason === 'analyze_review' && (
+              <div className="space-y-3">
+                {hitlEvent.error ? (
+                  <div className="p-3 bg-[#FEF2F2] border border-[#991B1B]/20 rounded-lg">
+                    <p className="text-xs text-[#991B1B] font-semibold mb-1">Analysis Failed</p>
+                    <p className="text-[11px] text-[#991B1B]/80 font-mono break-all">{hitlEvent.error}</p>
+                  </div>
+                ) : hitlEvent.analysis ? (
+                  <div className="space-y-2">
+                    {hitlEvent.analysis.title && (
+                      <div>
+                        <span className="text-[10px] text-[#A8A29E] uppercase tracking-wide">Title</span>
+                        <p className="text-sm font-semibold text-[#1C1917]">{hitlEvent.analysis.title}</p>
+                      </div>
+                    )}
+                    {hitlEvent.analysis.tagline && (
+                      <div>
+                        <span className="text-[10px] text-[#A8A29E] uppercase tracking-wide">Tagline</span>
+                        <p className="text-xs text-[#57534E]">{hitlEvent.analysis.tagline}</p>
+                      </div>
+                    )}
+                    {hitlEvent.analysis.quick_start && (
+                      <div>
+                        <span className="text-[10px] text-[#A8A29E] uppercase tracking-wide">Quick Start</span>
+                        <p className="text-xs text-[#57534E] font-mono bg-[#FAF9F6] px-2 py-1 rounded border border-[#E2DED6] truncate">{hitlEvent.analysis.quick_start}</p>
+                      </div>
+                    )}
+                    {hitlEvent.analysis.use_cases && (
+                      <div>
+                        <span className="text-[10px] text-[#A8A29E] uppercase tracking-wide">Use Cases</span>
+                        <p className="text-xs text-[#57534E]">{hitlEvent.analysis.use_cases}</p>
+                      </div>
+                    )}
+                    {hitlEvent.analysis.source_code_highlights?.length ? (
+                      <div>
+                        <span className="text-[10px] text-[#A8A29E] uppercase tracking-wide">Code Highlights</span>
+                        <ul className="mt-1 space-y-1">
+                          {hitlEvent.analysis.source_code_highlights.slice(0, 3).map((h, i) => (
+                            <li key={i} className="text-xs text-[#57534E] flex items-start gap-1">
+                              <span className="text-[#7C2D2D]">•</span>{h}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[#57534E]">No analysis data available.</p>
+                )}
+                <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)}
+                  placeholder="Optional feedback for retry..."
+                  className="w-full p-2.5 text-[12px] rounded-lg border border-[#E2DED6] bg-white text-[#1C1917] resize-none h-16
+                    focus:outline-none focus:border-[#7C2D2D] placeholder:text-[#A8A29E]" />
+                <div className="flex gap-2">
+                  <button onClick={() => confirmAndSendHitl('approve', '')}
+                    className="flex-1 py-2 text-xs font-semibold rounded-md bg-[#166534] text-white hover:bg-[#145326]">Approve</button>
+                  <button onClick={() => confirmAndSendHitl('retry', feedbackText)}
+                    className="flex-1 py-2 text-xs font-semibold rounded-md bg-[#8B6914] text-white hover:bg-[#7A5B11]">Retry</button>
                   <button onClick={() => confirmAndSendHitl('abort')}
                     className="flex-1 py-2 text-xs font-semibold rounded-md border border-[#991B1B] text-[#991B1B] hover:bg-[#FEF2F2]">Abort</button>
                 </div>

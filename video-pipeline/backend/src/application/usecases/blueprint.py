@@ -83,9 +83,4 @@ class GenerateBlueprintUseCase:
             updates={"status": PipelineStatus.BLUEPRINTING, "blueprint": blueprint},
         )
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=state["repo_url"],
-            blueprint=blueprint,
-            status=PipelineStatus.BLUEPRINTING,
-        )
+        return {**state, "blueprint": blueprint, "status": PipelineStatus.BLUEPRINTING}

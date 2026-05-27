@@ -33,12 +33,16 @@
 - information_hierarchy: 信息层次 (must_tell: 3 项, worth_telling: 2 项, can_skip: 列表)
 - technical_depth: 推荐技术深度: surface / medium / deep
 
-## 工作方法
-- 用 Glob 找到项目的核心源码文件
-- 用 Read 读取关键代码（入口文件、核心模块、配置文件）
-- 用 Grep 搜索关键模式（类定义、函数导出、依赖引用）
-- 不要只看 README，要深入代码
-- 用 Bash 执行 `gh` CLI 命令获取 GitHub 相关信息
+## 重要：关于分析目标
+
+你正在分析一个 **远程 GitHub 仓库**，不是本地文件系统。仓库的元数据、目录结构和 README 已在下方 user message 中提供。
+
+- **禁止**使用 Glob/Read/Grep 读取本地文件，你的本地工作目录不是目标仓库
+- 如果需要深入查看源码，使用 `gh api` 命令从远程获取，例如：
+  - `gh api repos/{{owner}}/{{repo}}/contents/{{path}}` — 获取文件内容
+  - `gh api repos/{{owner}}/{{repo}}/git/trees/{{branch}}?recursive=1` — 获取完整目录树
+- 优先基于 user message 中已提供的信息进行分析，只在确实需要深入了解代码时才调用 gh API
+- 分析的仓库 URL 和名称已在 user message 开头标明，请始终围绕该仓库分析
 
 ## 输出格式
 以单个 JSON 对象响应，结构如下：

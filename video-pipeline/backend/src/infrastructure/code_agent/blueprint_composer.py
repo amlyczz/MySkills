@@ -11,7 +11,7 @@ from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis, Scrip
 from ...domain.visual_blueprint.entities import Blueprint
 from ...domain.visual_blueprint.interfaces import BlueprintComposer
 from ..llm.prompt_loader import load_prompt
-from .claude_code import ClaudeCodeChatModel
+from .claude_code import ClaudeCodeChatModel, parse_claude_json
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ class CodeAgentBlueprintComposer(BlueprintComposer):
     """BlueprintComposer backed by Claude Code CLI."""
 
     def __init__(self, timeout: int = 900, on_progress: Optional[Callable[[str], None]] = None) -> None:
-        self.llm = ClaudeCodeChatModel(timeout=timeout, on_progress=on_progress)
+        self.llm = ClaudeCodeChatModel.from_pydantic(Blueprint, timeout=timeout, on_progress=on_progress)
 
     async def compose_blueprint(
         self,
@@ -53,24 +53,5 @@ class CodeAgentBlueprintComposer(BlueprintComposer):
 
     @staticmethod
     def _parse_blueprint(raw: str) -> Blueprint:
-        raw = raw.strip()
-        if raw.startswith("```"):
-            lines = raw.split("\n")
-            end_idx = len(lines)
-            for i in range(len(lines) - 1, 0, -1):
-                if lines[i].strip() == "```":
-                    end_idx = i
-                    break
-            raw = "\n".join(lines[1:end_idx])
-
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            start = raw.find("{")
-            end = raw.rfind("}") + 1
-            if start >= 0 and end > start:
-                data = json.loads(raw[start:end])
-            else:
-                raise ValueError(f"Could not parse blueprint JSON: {raw[:500]}")
-
+        data = parse_claude_json(raw)
         return Blueprint.model_validate(data)

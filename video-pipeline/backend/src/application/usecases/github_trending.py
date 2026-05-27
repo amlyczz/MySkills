@@ -65,12 +65,7 @@ class GithubTrendingUseCase:
                     task_id, PipelineStatus.ERROR, node="github_trending",
                     error="No trending repositories found.",
                 )
-                return PipelineState(
-                    task_id=state["task_id"],
-                    repo_url=state.get("repo_url", ""),
-                    status=PipelineStatus.ERROR,
-                    error="No trending repositories found.",
-                )
+                return {**state, "status": PipelineStatus.ERROR, "error": "No trending repositories found."}
 
             # Objective scoring
             for r in raw_repos:
@@ -190,21 +185,11 @@ class GithubTrendingUseCase:
                 updates={"trending_repos": final_repos, "status": PipelineStatus.HITL_TRENDING},
             )
 
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state.get("repo_url", ""),
-                trending_repos=final_repos,
-                status=PipelineStatus.HITL_TRENDING,
-            )
+            return {**state, "trending_repos": final_repos, "status": PipelineStatus.HITL_TRENDING}
 
         except Exception as e:
             logger.exception(f"[Graph] GithubTrendingUseCase ERROR: {e}")
             await self.status_service.transition(
                 task_id, PipelineStatus.ERROR, node="github_trending", error=str(e),
             )
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state.get("repo_url", ""),
-                status=PipelineStatus.ERROR,
-                error=str(e),
-            )
+            return {**state, "status": PipelineStatus.ERROR, "error": str(e)}

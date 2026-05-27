@@ -41,6 +41,11 @@ class RawScrapeResult(BaseModel):
     screenshot_paths: list[str] = Field(default_factory=list)
     author_handle: str = ""
     author_name: str = ""
+    # fxtwitter API stats (when available)
+    views: int = 0
+    likes: int = 0
+    reposts: int = 0
+    bookmarks: int = 0
     error: Optional[str] = None
 
 

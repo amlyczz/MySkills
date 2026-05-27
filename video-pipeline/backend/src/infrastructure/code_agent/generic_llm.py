@@ -14,7 +14,7 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
-from .claude_code import ClaudeCodeChatModel
+from .claude_code import ClaudeCodeChatModel, parse_claude_json
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,8 @@ class CodeAgentLLM:
     ):
         self.system_prompt = system_prompt
         self.output_schema = output_schema
-        self.llm = ClaudeCodeChatModel(
+        self.llm = ClaudeCodeChatModel.from_pydantic(
+            output_schema,
             allowed_tools=allowed_tools or ["Read", "Glob", "Grep", "Bash(gh:*)"],
             timeout=timeout,
             on_progress=on_progress,
@@ -73,32 +74,5 @@ class CodeAgentLLM:
 
     def _parse(self, content: str) -> Any:
         """Parse JSON output into the target Pydantic schema."""
-        content = content.strip()
-
-        # Strip markdown code fences
-        if content.startswith("```"):
-            lines = content.split("\n")
-            end_idx = len(lines)
-            for i in range(len(lines) - 1, 0, -1):
-                if lines[i].strip() == "```":
-                    end_idx = i
-                    break
-            content = "\n".join(lines[1:end_idx])
-
-        try:
-            data = json.loads(content)
-        except json.JSONDecodeError:
-            start = content.find("{")
-            end = content.rfind("}") + 1
-            if start >= 0 and end > start:
-                data = json.loads(content[start:end])
-            else:
-                # Try array
-                start = content.find("[")
-                end = content.rfind("]") + 1
-                if start >= 0 and end > start:
-                    data = json.loads(content[start:end])
-                else:
-                    raise ValueError(f"Could not parse JSON from Claude Code output: {content[:500]}")
-
+        data = parse_claude_json(content)
         return self.output_schema.model_validate(data)

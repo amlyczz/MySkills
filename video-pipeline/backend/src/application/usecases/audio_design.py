@@ -143,14 +143,13 @@ class AudioDesignUseCase:
             },
         )
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=state["repo_url"],
-            voiceover_path=voiceover_path,
-            bgm_path=bgm_path,
-            segment_actual_durations=segment_durations,
-            status=PipelineStatus.GENERATE_MEDIA,
-        )
+        return {
+            **state,
+            "voiceover_path": voiceover_path,
+            "bgm_path": bgm_path,
+            "segment_actual_durations": segment_durations,
+            "status": PipelineStatus.GENERATE_MEDIA,
+        }
 
     async def _concat_audio(self, segment_paths: list[str], output_path: str) -> None:
         if not segment_paths:

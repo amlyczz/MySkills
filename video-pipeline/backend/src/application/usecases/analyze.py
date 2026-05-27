@@ -117,14 +117,13 @@ class AnalyzeRepoUseCase:
             },
         )
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=state["repo_url"],
-            content_model=content_model,
-            material_manifest=material_manifest,
-            domain_analysis=domain_analysis,
-            status=PipelineStatus.ANALYZING,
-        )
+        return {
+            **state,
+            "content_model": content_model,
+            "material_manifest": material_manifest,
+            "domain_analysis": domain_analysis,
+            "status": PipelineStatus.ANALYZING,
+        }
 
     def _build_enriched_input(
         self,
@@ -133,6 +132,11 @@ class AnalyzeRepoUseCase:
     ) -> str:
         """Enrich README text with structured metadata for better LLM analysis."""
         parts = []
+
+        parts.append("# 分析目标仓库")
+        parts.append(f"**请分析以下 GitHub 仓库：** https://github.com/{repo_metadata.full_name}")
+        parts.append("不要分析任何本地文件。所有分析必须基于下方提供的信息，或通过 `gh api` 从远程获取。")
+        parts.append("")
 
         parts.append("## Repository Metadata")
         parts.append(f"Full Name: {repo_metadata.full_name or 'N/A'}")
@@ -167,7 +171,7 @@ class AnalyzeRepoUseCase:
                 parts.append("")
 
         parts.append("## README Content")
-        parts.append(readme_text)
+        parts.append("[请用 gh api 或 Read 工具自行获取 README 内容，不要依赖下方信息]")
 
         return "\n".join(parts)
 

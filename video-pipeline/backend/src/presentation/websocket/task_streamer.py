@@ -368,6 +368,7 @@ async def _stream_graph(
                     failed_node = node_name
                     pipeline_status_str = "error"
                     node_status = NODE_TO_STATUS.get(node_name, PipelineStatus.ERROR).value
+                    await _mark_task_error(task_id, error_msg or str(status_val), node=node_name)
                     await _send_node_event(
                         websocket, node_name, "error", "error",
                         completed_nodes, error=error_msg or str(status_val),
@@ -460,6 +461,7 @@ async def _stream_graph(
         current_node = None
         err_msg = str(e) or repr(e)
         logger.error("Unhandled error in node '%s': %s", failed_node, err_msg)
+        await _mark_task_error(task_id, err_msg, node=failed_node)
         try:
             await _send_node_event(
                 websocket, failed_node, "error", "error",

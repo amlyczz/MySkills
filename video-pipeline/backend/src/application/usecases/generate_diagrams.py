@@ -39,11 +39,7 @@ class GenerateDiagramsUseCase:
                 task_id, "generate_diagrams",
                 updates={"status": PipelineStatus.GENERATING_DIAGRAMS},
             )
-            return PipelineState(
-                task_id=state["task_id"],
-                repo_url=state["repo_url"],
-                status=PipelineStatus.GENERATING_DIAGRAMS,
-            )
+            return {**state, "status": PipelineStatus.GENERATING_DIAGRAMS}
 
         output_dir = resolve_output_dir(state)
 
@@ -59,9 +55,4 @@ class GenerateDiagramsUseCase:
             updates={"status": PipelineStatus.GENERATING_DIAGRAMS},
         )
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=state["repo_url"],
-            script=script,
-            status=PipelineStatus.GENERATING_DIAGRAMS,
-        )
+        return {**state, "status": PipelineStatus.GENERATING_DIAGRAMS}

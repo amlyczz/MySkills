@@ -88,11 +88,12 @@ class LLMTwitterAnalyzer(TwitterAnalyzer):
             toxicity_level=result.toxicity_level or "low",
         )
 
+        # Use fxtwitter-provided stats when available, fall back to LLM estimates
         stats = TweetStats(
-            views=result.estimated_views or 0,
-            likes=result.estimated_likes or 0,
-            reposts=result.estimated_reposts or 0,
-            bookmarks=result.estimated_bookmarks or 0,
+            views=raw.views if raw.views > 0 else (result.estimated_views or 0),
+            likes=raw.likes if raw.likes > 0 else (result.estimated_likes or 0),
+            reposts=raw.reposts if raw.reposts > 0 else (result.estimated_reposts or 0),
+            bookmarks=raw.bookmarks if raw.bookmarks > 0 else (result.estimated_bookmarks or 0),
         )
 
         external_links = []

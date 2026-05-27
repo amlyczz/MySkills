@@ -80,9 +80,9 @@ class AnalyzeTwitterUseCase:
             },
         )
 
-        return PipelineState(
-            task_id=state["task_id"],
-            repo_url=repo_url,
-            twitter_content=twitter_content,
-            status=PipelineStatus.ANALYZING,
-        )
+        return {
+            **state,
+            "repo_url": repo_url,
+            "twitter_content": twitter_content,
+            "status": PipelineStatus.ANALYZING,
+        }
