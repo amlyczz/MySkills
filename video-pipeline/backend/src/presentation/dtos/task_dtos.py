@@ -1,6 +1,11 @@
 from typing import Optional
 from pydantic import BaseModel
 
+from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, Script
+from ...domain.twitter_analyzer.entities import TwitterContentModel
+from ...domain.visual_blueprint.entities import Blueprint
+from ...domain.github_trending.entities import ScoredRepo
+
 
 class TaskSubmitRequest(BaseModel):
     repo_url: str | None = None
@@ -33,14 +38,14 @@ class TaskStatusResponse(BaseModel):
     node_error: Optional[str] = None
 
     # Domain data
-    content_model: Optional[dict] = None
-    twitter_content: Optional[dict] = None
-    material_manifest: Optional[dict] = None
-    script: Optional[dict] = None
-    blueprint: Optional[dict] = None
+    content_model: Optional[ContentModel] = None
+    twitter_content: Optional[TwitterContentModel] = None
+    material_manifest: Optional[MaterialManifest] = None
+    script: Optional[Script] = None
+    blueprint: Optional[Blueprint] = None
     video_mp4_path: Optional[str] = None
     final_mp4_path: Optional[str] = None
-    trending_repos: Optional[list[dict]] = None
+    trending_repos: Optional[list[ScoredRepo]] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 

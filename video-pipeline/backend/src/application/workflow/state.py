@@ -4,6 +4,7 @@ from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, Scr
 from ...domain.visual_blueprint.entities import Blueprint
 from ...domain.task.entities import PipelineStatus, QAScorecard
 from ...domain.github_trending.entities import ScoredRepo
+from ...domain.twitter_analyzer.entities import TwitterContentModel
 
 
 class PipelineState(TypedDict):
@@ -30,7 +31,7 @@ class PipelineState(TypedDict):
     script: Optional[Script]
 
     # Twitter-specific content
-    twitter_content: Optional[dict]
+    twitter_content: Optional[TwitterContentModel]
 
     # Visual blueprint
     blueprint: Optional[Blueprint]

@@ -28,7 +28,6 @@ import {
   submitTaskInProject,
   getTaskStatus,
   type DagSnapshot,
-  type DagNodeSnapshot,
 } from '../lib/api'
 
 // ── Types ──
@@ -72,8 +71,6 @@ interface TrendingRepo {
 
 // ── Constants ──
 
-const API_BASE = 'http://localhost:18274/api/v1'
-
 // ── React Flow: Custom Edge ──
 
 function GlowEdge({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, selected }: EdgeProps) {
@@ -100,22 +97,26 @@ function DagProcessNode({ data }: NodeProps) {
   }
 
   let containerCls = 'border-[#D6D0C4] bg-white'
-  let accentCls = 'bg-[#D6D0C4]'
+  let accentNode = <span className="w-1.5 h-1.5 rounded-full bg-[#D6D0C4]" />
 
   if (state === 'completed') {
     containerCls = 'border-[#166534] bg-[#F0FDF4]'
-    accentCls = 'bg-[#166534]'
+    accentNode = <span className="w-1.5 h-1.5 rounded-full bg-[#166534]" />
   } else if (state === 'active') {
-    containerCls = 'border-[#7C2D2D] bg-[#FBF1F1] shadow-[0_0_0_3px_rgba(124,45,45,0.12)]'
-    accentCls = 'bg-[#7C2D2D] animate-pulse'
+    containerCls = 'node-active'
+    accentNode = (
+      <div className="radar-pulse">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#E11D48]" />
+      </div>
+    )
   } else if (state === 'error') {
-    containerCls = 'border-[#991B1B] bg-[#FEF2F2]'
-    accentCls = 'bg-[#991B1B]'
+    containerCls = 'node-error'
+    accentNode = <span className="alarm-blink w-1.5 h-1.5 rounded-full" />
   }
 
   const statusCls = state === 'completed' ? 'text-[#166534]' :
-    state === 'active' ? 'text-[#7C2D2D]' :
-    state === 'error' ? 'text-[#991B1B]' : 'text-[#A8A29E]'
+    state === 'active' ? 'text-[#E11D48] font-bold' :
+    state === 'error' ? 'text-[#DC2626] font-extrabold' : 'text-[#A8A29E]'
 
   return (
     <div className={`relative rounded-lg border-2 ${containerCls} min-w-[130px] transition-all duration-500`}>
@@ -126,7 +127,7 @@ function DagProcessNode({ data }: NodeProps) {
           <span className="text-[11px] font-semibold text-[#1C1917]">{label}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${accentCls}`} />
+          {accentNode}
           <span className={`text-[9px] font-bold tracking-wider ${statusCls}`}>{status_label}</span>
         </div>
       </div>
@@ -141,17 +142,17 @@ function DagHitlNode({ data }: NodeProps) {
   }
 
   let containerCls = 'border-[#D6D0C4] border-dashed bg-white'
-  let dotCls = 'bg-[#D6D0C4]'
+  let accentNode = <span className="w-1.5 h-1.5 rounded-full bg-[#D6D0C4]" />
 
   if (state === 'hitl') {
-    containerCls = 'border-[#8B6914] border-solid bg-[#FDF8EC] shadow-[0_0_0_2px_rgba(139,105,20,0.15)]'
-    dotCls = 'bg-[#8B6914] animate-pulse'
+    containerCls = 'node-hitl'
+    accentNode = <span className="alarm-blink w-1.5 h-1.5 rounded-full bg-[#D97706]" />
   } else if (state === 'completed') {
     containerCls = 'border-[#166534] border-solid bg-[#F0FDF4]'
-    dotCls = 'bg-[#166534]'
+    accentNode = <span className="w-1.5 h-1.5 rounded-full bg-[#166534]" />
   }
 
-  const statusCls = state === 'hitl' ? 'text-[#8B6914]' :
+  const statusCls = state === 'hitl' ? 'text-[#D97706] font-bold' :
     state === 'completed' ? 'text-[#166534]' : 'text-[#A8A29E]'
 
   return (
@@ -161,7 +162,7 @@ function DagHitlNode({ data }: NodeProps) {
         <div className="flex items-center gap-1.5">
           <Pause className="w-3 h-3" />
           <span className="text-[10px] font-semibold text-[#1C1917]">{label}</span>
-          <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} />
+          {accentNode}
           <span className={`text-[8px] font-bold tracking-wider ${statusCls}`}>{status_label}</span>
         </div>
       </div>
@@ -180,11 +181,11 @@ function DagSourceNode({ data }: NodeProps) {
   if (state === 'completed') {
     containerCls = 'opacity-100 border-[#166534] bg-[#F0FDF4]'
   } else if (state === 'active') {
-    containerCls = 'opacity-100 border-[#7C2D2D] bg-[#FBF1F1] shadow-[0_0_0_2px_rgba(124,45,45,0.12)]'
+    containerCls = 'opacity-100 node-active'
   }
 
   const statusCls = state === 'completed' ? 'text-[#166534]' :
-    state === 'active' ? 'text-[#7C2D2D]' : 'text-[#A8A29E]'
+    state === 'active' ? 'text-[#E11D48] font-bold' : 'text-[#A8A29E]'
 
   return (
     <div className={`relative rounded-lg border ${containerCls} min-w-[110px] transition-all duration-500`}>
@@ -253,8 +254,8 @@ export default function TaskMonitor() {
   const logContainerRef = useRef<HTMLDivElement>(null)
   const justStartedRef = useRef(false)
 
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState([])
-  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState([])
+  const [rfNodes, setRfNodes, onNodesChange] = useNodesState<Node>([])
+  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [showDag, setShowDag] = useState(true)
   const [showTerminal, setShowTerminal] = useState(true)
   const [showHitl, setShowHitl] = useState(false)
@@ -309,9 +310,9 @@ export default function TaskMonitor() {
 
         // Fetch full task details for HITL/data restoration
         const data = await getTaskStatus(taskId)
-        const status: string = data.status || 'pending'
+        const status: string = (data.status as string) || 'pending'
 
-        const repoUrl: string = data.repo_url || ''
+        const repoUrl: string = (data.repo_url as string) || ''
         const detectedType = repoUrl === 'trending' ? 'github_trending'
           : (repoUrl.includes('twitter.com') || repoUrl.includes('x.com')) ? 'twitter'
           : 'github_url'
@@ -348,8 +349,6 @@ export default function TaskMonitor() {
           setHitlEvent({ reason: 'blueprint_review', message: 'Review the blueprint.' })
         }
 
-        const isTerminal = status === 'completed' || status === 'error'
-        const isHitl = status === 'hitl_trending' || status === 'hitl_script_review' || status === 'hitl_blueprint_review'
         // Only connect WS for tasks that have no progress at all (fresh pending).
         // Active, HITL, terminal tasks should NOT reconnect — their state comes from DB.
         if (status === 'pending' && !dag.nodes.some(n => n.state === 'completed') && taskId) {
@@ -791,7 +790,7 @@ export default function TaskMonitor() {
                 {rfNodes.filter(n => n.data.state === 'error').map(n => (
                   <div key={n.id} className="p-2 bg-[#FEF2F2] rounded-lg border border-[#991B1B]/20 flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-[#991B1B] font-semibold">{n.data.label}</p>
+                      <p className="text-xs text-[#991B1B] font-semibold">{n.data.label as string}</p>
                       <p className="text-[10px] text-[#991B1B]/70">FAILED</p>
                     </div>
                     <button onClick={() => handleRetry(n.id)}

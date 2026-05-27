@@ -369,12 +369,17 @@ async def fetch_trending_repos(limit: int = 20, exclude_urls: set[str] | None = 
 
     enriched = await asyncio.gather(*(fetch_with_sem(r) for r in repos_to_score))
 
-    # ── Sort by recent star growth ──
-    enriched.sort(key=lambda x: x.recent_stars_7d, reverse=True)
+    # ── Sort by recent star growth (fallback to total stars for search API results) ──
+    enriched.sort(key=lambda x: (x.recent_stars_7d, x.stars), reverse=True)
 
     trending = [r for r in enriched if r.recent_stars_7d > 0]
-    if len(trending) < 5:
-        trending = list(enriched)
+    
+    # If we still have room for more candidates up to the requested limit,
+    # fill them with the fallback Search API results (which have recent_stars_7d == 0)
+    if len(trending) < limit:
+        for r in enriched:
+            if r.recent_stars_7d == 0 and len(trending) < limit:
+                trending.append(r)
 
     if trending:
         top = trending[0]

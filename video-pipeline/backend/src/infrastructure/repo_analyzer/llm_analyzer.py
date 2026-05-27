@@ -10,16 +10,16 @@ from ..llm.prompt_loader import load_prompt
 
 # Bulletproof DTO for LLM response to ensure JSON parsing never fails
 class LLMContentResponse(BaseModel):
-    title: Optional[Any] = None
-    tagline: Optional[Any] = None
-    quick_start: Optional[Any] = None
-    use_cases: Optional[Any] = None
-    usage_intro: Optional[Any] = None
-    architecture_breakdown: Optional[Any] = None
-    domain_specific_insights: Optional[Any] = None
-    stats_text: Optional[Any] = None
-    chart_data: Optional[Any] = None
-    source_code_insight: Optional[Any] = None
+    title: Optional[str] = None
+    tagline: Optional[str] = None
+    quick_start: Optional[str] = None
+    use_cases: Optional[str] = None
+    usage_intro: Optional[str] = None
+    architecture_breakdown: Optional[str] = None
+    domain_specific_insights: Optional[str] = None
+    stats_text: Optional[str] = None
+    chart_data: Optional[list[ChartDataPoint]] = None
+    source_code_insight: Optional[SourceCodeInsight] = None
     curated_assets: Optional[list[str]] = None
     curated_materials: Optional[list[str]] = None
 
@@ -46,17 +46,8 @@ class LLMRepoAnalyzer(RepoAnalyzer):
         self.llm = get_llm(LLMRole.EXTRACTION)
 
     async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
-        import logging
-        logger = logging.getLogger(__name__)
-        last_error = None
-        for attempt in range(max_retries):
-            try:
-                return await chain.ainvoke(kwargs)
-            except Exception as e:
-                last_error = e
-                logger.warning(f"Structured output failed (attempt {attempt + 1}/{max_retries}): {e}")
-        if last_error:
-            raise last_error
+        # No automatic retries as requested by user. Let exceptions propagate so manual retry can handle it.
+        return await chain.ainvoke(kwargs)
 
     async def classify_tech_domain(self, enriched_input: str) -> TechDomain:
         prompt = ChatPromptTemplate.from_messages([

@@ -42,14 +42,14 @@ class ComposeScriptUseCase:
 
         # Guard: if twitter_content came from a failed scrape, warn but proceed
         if twitter_content and content_model is None:
-            main_text = twitter_content.get("main_tweet_text", "")
+            main_text = twitter_content.main_tweet_text
             if not main_text or len(main_text.strip()) < 20:
-                scrape_err = twitter_content.get("scrape_error", "unknown")
+                scrape_err = twitter_content.scrape_error or "unknown"
                 raise ValueError(
                     f"Twitter scrape failed: {scrape_err}. "
                     f"No usable tweet content to compose script from."
                 )
-            if twitter_content.get("scrape_error"):
+            if twitter_content.scrape_error:
                 logger.warning("[ComposeScript] Twitter scrape had errors but proceeding with %d chars of raw text",
                     len(main_text))
 

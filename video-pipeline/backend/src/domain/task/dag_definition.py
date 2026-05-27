@@ -218,7 +218,7 @@ def compute_dag_snapshot(task: Optional[Any] = None) -> dict:
 
         if nid in completed:
             state = "completed"
-            status_label = "READY" if ntype == "source" else "DONE"
+            status_label = "DONE"
         elif nid == failed:
             state = "error"
             status_label = "FAILED"

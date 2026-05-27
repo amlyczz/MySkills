@@ -22,7 +22,7 @@ from ...domain.twitter_analyzer.entities import (
     ExternalLink,
 )
 from ...domain.twitter_analyzer.interfaces import TwitterAnalyzer
-from ..llm.client import get_llm, LLMRole
+from ..llm.client import get_llm, LLMRole, structured_chain
 from ..llm.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -53,15 +53,8 @@ class LLMTwitterAnalyzer(TwitterAnalyzer):
         self.llm = get_llm(LLMRole.SCORING, temperature=0.3)
 
     async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
-        last_error = None
-        for attempt in range(max_retries):
-            try:
-                return await chain.ainvoke(kwargs)
-            except Exception as e:
-                last_error = e
-                logger.warning("[TwitterAnalyzer] LLM attempt %d/%d failed: %s", attempt + 1, max_retries, e)
-        if last_error:
-            raise last_error
+        # No automatic retries as requested by user. Let exceptions propagate so manual retry can handle it.
+        return await chain.ainvoke(kwargs)
 
     async def analyze(self, raw: RawScrapeResult, url: str) -> TwitterContentModel:
         """Transform RawScrapeResult into a structured TwitterContentModel."""
@@ -72,7 +65,7 @@ class LLMTwitterAnalyzer(TwitterAnalyzer):
             ("user", self._build_user_prompt(raw, url)),
         ])
 
-        chain = prompt | self.llm.with_structured_output(LLMTwitterResponse, method="json_mode")
+        chain = structured_chain(prompt, self.llm, LLMTwitterResponse)
 
         try:
             result: LLMTwitterResponse = await self._invoke_with_retry(chain, {})

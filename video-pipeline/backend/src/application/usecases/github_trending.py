@@ -9,7 +9,7 @@ from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.github_trending.entities import ScoredRepo, TrendingResponse, RawTrendingRepo
 from ..workflow.state import PipelineState
-from ...infrastructure.llm.client import get_llm, LLMRole
+from ...infrastructure.llm.client import get_llm, LLMRole, structured_chain
 from ...infrastructure.llm.prompt_loader import load_prompt
 
 
@@ -98,7 +98,7 @@ class GithubTrendingUseCase:
                 ("user", "项目数据：\n{repos_data}"),
             ])
 
-            chain = prompt | self.llm.with_structured_output(TrendingResponse, method="json_mode", include_raw=True)
+            chain = structured_chain(prompt, self.llm, TrendingResponse, include_raw=True)
             logger.info("[Graph] GithubTrendingUseCase: Sending to LLM for subjective scoring...")
 
             simplified_data = [
@@ -122,11 +122,17 @@ class GithubTrendingUseCase:
                         content = raw_msg.content
                         content = re.sub(r'^```(?:json)?\s*\n?', '', content.strip())
                         content = re.sub(r'\n?```\s*$', '', content.strip())
-                        llm_res = TrendingResponse.model_validate_json(content)
+                        
+                        parsed_data = json.loads(content)
+                        # If the LLM returned a raw array, wrap it in the expected object structure
+                        if isinstance(parsed_data, list):
+                            parsed_data = {"repos": parsed_data}
+                            
+                        llm_res = TrendingResponse.model_validate(parsed_data)
                         logger.info("[Graph] GithubTrendingUseCase: Recovered via raw content fallback")
                     except Exception as fb_err:
                         logger.warning(f"[Graph] GithubTrendingUseCase: Raw fallback also failed: {fb_err}")
-                        raise ValueError(f"LLM structured output failed: {raw_result.get('parsing_error')}")
+                        raise ValueError(f"LLM structured output failed: {fb_err}")
                 else:
                     raise ValueError("LLM returned no structured output and no raw content")
 

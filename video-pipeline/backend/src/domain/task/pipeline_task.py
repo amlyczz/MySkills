@@ -8,6 +8,7 @@ from ..repo_analyzer.entities import ContentModel, MaterialManifest, Script
 from ..repo_analyzer.domain_analysis import DomainAnalysis
 from ..visual_blueprint.entities import Blueprint
 from ..github_trending.entities import ScoredRepo
+from ..twitter_analyzer.entities import TwitterContentModel
 from .pipeline_status import PipelineStatus
 from .qa_scorecard import QAScorecard
 
@@ -19,7 +20,7 @@ class PipelineTask(BaseModel):
 
     # Domain entities (local to video-pipeline)
     content_model: Optional[ContentModel] = None
-    twitter_content: Optional[dict] = None
+    twitter_content: Optional[TwitterContentModel] = None
     material_manifest: Optional[MaterialManifest] = None
     script: Optional[Script] = None
     blueprint: Optional[Blueprint] = None

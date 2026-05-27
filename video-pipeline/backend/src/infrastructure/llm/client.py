@@ -48,16 +48,21 @@ def _thinking_effort(model: str) -> str | None:
     return None
 
 
-def _build(model: str, temperature: float, **kwargs) -> ChatDeepSeek:
+def _build(model_name: str, temperature: float, **kwargs) -> ChatDeepSeek:
+    """Base builder for ChatDeepSeek clients."""
     api_key = settings.openai_api_key or os.getenv("DEEPSEEK_API_KEY", "mock-key")
-    return ChatDeepSeek(
-        model=model,
-        temperature=temperature,
-        api_key=api_key,
-        max_retries=2,
-        max_tokens=16384,
-        **kwargs,
-    )
+    base_url = settings.openai_base_url or os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
+    
+    config = {
+        "model": model_name,
+        "temperature": temperature,
+        "api_key": api_key,
+        "api_base": base_url,
+        "max_retries": 2,
+        "max_tokens": 50000,
+    }
+    config.update(kwargs)
+    return ChatDeepSeek(**config)
 
 
 # ── Role → config mapping ────────────────────────────────────────────
@@ -75,7 +80,7 @@ def _build_extraction(model: str | None = None, temperature: float = 0.2) -> Cha
         api_key=api_key,
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
-        max_tokens=16384,
+        max_tokens=50000,
         reasoning_effort=_thinking_effort(model_name),
     )
 
@@ -152,21 +157,60 @@ def structured_chain(prompt, llm, schema_cls, include_raw=False):
     tool_def = convert_to_openai_tool(schema_cls)
     tool_def["function"]["strict"] = True
 
+    def _make_strict(schema: dict):
+        if schema.get("type") == "object":
+            props = schema.get("properties", {})
+            schema["required"] = list(props.keys())
+            schema["additionalProperties"] = False
+            for prop_schema in props.values():
+                if isinstance(prop_schema, dict):
+                    _make_strict(prop_schema)
+        elif schema.get("type") == "array":
+            if "items" in schema and isinstance(schema["items"], dict):
+                _make_strict(schema["items"])
+        elif "anyOf" in schema and isinstance(schema["anyOf"], list):
+            for s in schema["anyOf"]:
+                if isinstance(s, dict):
+                    _make_strict(s)
+        elif "allOf" in schema and isinstance(schema["allOf"], list):
+            for s in schema["allOf"]:
+                if isinstance(s, dict):
+                    _make_strict(s)
+
+    _make_strict(tool_def["function"]["parameters"])
+
     # Bind tools WITHOUT specific tool_choice (thinking-compatible)
     llm_with_tools = llm.bind_tools([tool_def], parallel_tool_calls=False)
 
     def _parse(msg):
-        # Primary: parse from tool_call arguments
-        if hasattr(msg, 'tool_calls') and msg.tool_calls:
-            args = msg.tool_calls[0]['args']
-            if isinstance(args, str):
-                return schema_cls.model_validate_json(args)
-            return schema_cls.model_validate(args)
-        # Fallback: parse from content
-        content = msg.content or ""
-        content = re.sub(r'^```(?:json)?\s*', '', content.strip())
-        content = re.sub(r'\s*```\s*$', '', content)
-        return schema_cls.model_validate_json(content)
+        try:
+            # Primary: parse from tool_call arguments
+            if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                args = msg.tool_calls[0]['args']
+                if isinstance(args, str):
+                    if not args.strip():
+                        raise ValueError("LLM returned empty tool_call arguments (likely hit token limit).")
+                    return schema_cls.model_validate_json(args)
+                if not args:
+                    raise ValueError("LLM returned empty tool_call arguments dict (likely hit token limit).")
+                return schema_cls.model_validate(args)
+                
+            # Fallback: parse from content
+            content = msg.content or ""
+            content = re.sub(r'^```(?:json)?\s*', '', content.strip())
+            content = re.sub(r'\s*```\s*$', '', content)
+            
+            if not content.strip():
+                # Check if there's raw reasoning but no output
+                has_reasoning = getattr(msg, "reasoning_content", None) or msg.additional_kwargs.get("reasoning_content")
+                if has_reasoning:
+                    raise ValueError("LLM generated reasoning but output empty JSON (likely hit token limit).")
+                raise ValueError("LLM returned completely empty content.")
+                
+            return schema_cls.model_validate_json(content)
+        except Exception as e:
+            # Re-raise as ValueError so caller can catch it and retry
+            raise ValueError(f"LLM structured output parsing failed: {e}")
 
     parser = RunnableLambda(_parse)
 

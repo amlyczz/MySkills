@@ -4,6 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from ...domain.repo_analyzer.entities import ContentModel, DomainAnalysis
 from ...domain.script_composer.entities import Script
 from ...domain.script_composer.interfaces import ScriptComposer
+from ...domain.twitter_analyzer.entities import TwitterContentModel
 from ..llm.client import get_llm, LLMRole, structured_chain
 from ..llm.prompt_loader import load_prompt
 
@@ -18,7 +19,7 @@ class LLMScriptComposer(ScriptComposer):
         target_duration: int = 0,
         domain_analysis: Optional[DomainAnalysis] = None,
         qa_feedback: Optional[str] = None,
-        twitter_content: Optional[dict] = None,
+        twitter_content: Optional[TwitterContentModel] = None,
     ) -> Script:
         prompt = ChatPromptTemplate.from_messages([
             ("system", load_prompt("script_composer", "compose_script_system.md")),
@@ -50,16 +51,16 @@ class LLMScriptComposer(ScriptComposer):
                 else "No explicit assets provided."
             )
         elif twitter_content is not None:
-            # Twitter flow — build context from twitter_content dict
+            # Twitter flow — build context from twitter_content object
             tc = twitter_content
-            name = tc.get("title", "Twitter Thread")
-            author = tc.get("author", "")
-            handle = tc.get("handle", "")
-            summary = tc.get("summary", "")
-            main_text = tc.get("main_tweet_text", "")
-            thread_flow = tc.get("thread_context", {})
-            sentiment = tc.get("community_sentiment", {})
-            domain = tc.get("tech_domain", "")
+            name = tc.title or "Twitter Thread"
+            author = tc.author
+            handle = tc.handle
+            summary = tc.summary
+            main_text = tc.main_tweet_text
+            thread_flow = tc.thread_context
+            sentiment = tc.community_sentiment
+            domain = tc.tech_domain or ""
 
             quick_start = ""
             use_cases = ""
@@ -68,8 +69,8 @@ class LLMScriptComposer(ScriptComposer):
             domain_specific_insights = (
                 f"Author: @{handle} ({author})\n"
                 f"Tech domain: {domain}\n"
-                f"Community tone: {sentiment.get('overall_tone', 'neutral')}\n"
-                f"Thread narrative: {thread_flow.get('narrative_flow', '')[:500]}"
+                f"Community tone: {sentiment.overall_tone}\n"
+                f"Thread narrative: {thread_flow.narrative_flow[:500]}"
             )
             curated_materials_text = f"Main tweet content:\n{main_text[:2000]}"
         else:
@@ -97,7 +98,11 @@ class LLMScriptComposer(ScriptComposer):
                 f"You MUST address this feedback in your new version."
             )
 
+        import logging
+        logger = logging.getLogger(__name__)
+
         chain = structured_chain(prompt, self.llm, Script)
+        
         script: Script = await chain.ainvoke({
             "target_duration": "180-600 (3-10 minutes), decide based on project complexity and depth of content",
             "hook_pct": "~5-8%",

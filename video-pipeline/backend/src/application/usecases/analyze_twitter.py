@@ -76,13 +76,13 @@ class AnalyzeTwitterUseCase:
             task_id, "analyze_twitter",
             updates={
                 "status": PipelineStatus.ANALYZING,
-                "twitter_content": json.loads(twitter_content.model_dump_json(exclude_none=True)),
+                "twitter_content": twitter_content,
             },
         )
 
         return PipelineState(
             task_id=state["task_id"],
             repo_url=repo_url,
-            twitter_content=json.loads(twitter_content.model_dump_json(exclude_none=True)),
+            twitter_content=twitter_content,
             status=PipelineStatus.ANALYZING,
         )

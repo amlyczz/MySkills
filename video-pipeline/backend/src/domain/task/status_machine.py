@@ -6,7 +6,7 @@ All status changes MUST go through this service to ensure consistency.
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Optional, Any, Callable, Awaitable
 
 from .pipeline_status import PipelineStatus
 from .interfaces import PipelineTaskRepository
@@ -52,8 +52,9 @@ class StatusTransitionService:
     Enforces FSM transitions, updates DB atomically, and tracks node progress.
     """
 
-    def __init__(self, repository: PipelineTaskRepository) -> None:
+    def __init__(self, repository: PipelineTaskRepository, ws_callback: Optional[Callable[[Any], Awaitable[None]]] = None) -> None:
         self.repository = repository
+        self.ws_callback = ws_callback
 
     async def transition(
         self,
@@ -118,6 +119,12 @@ class StatusTransitionService:
             str(task_id)[:8], from_status.value, to_status.value, node or "-",
         )
 
+        if self.ws_callback:
+            try:
+                await self.ws_callback(task)
+            except Exception as e:
+                logger.warning("ws_callback failed in transition: %s", e)
+
     async def mark_node_completed(
         self,
         task_id: uuid.UUID,
@@ -142,6 +149,12 @@ class StatusTransitionService:
 
         await self.repository.update(task)
         logger.info("Task %s: node '%s' completed. Progress: %s", str(task_id)[:8], node, task.completed_nodes)
+
+        if self.ws_callback:
+            try:
+                await self.ws_callback(task)
+            except Exception as e:
+                logger.warning("ws_callback failed in mark_node_completed: %s", e)
 
     async def reset_for_retry(self, task_id: uuid.UUID) -> None:
         """Reset task from ERROR to PENDING for retry."""

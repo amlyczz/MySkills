@@ -54,19 +54,19 @@ class GenerateBlueprintUseCase:
                 source=GitHubSourceMeta(
                     source_type="github",
                     url=state.get("repo_url", ""),
-                    name=tc.get("handle", ""),
-                    full_name=tc.get("author", ""),
+                    name=tc.handle,
+                    full_name=tc.author,
                 ),
                 content=ProjectEncyclopedia(
-                    title=tc.get("title", ""),
-                    tagline=tc.get("summary", ""),
+                    title=tc.title,
+                    tagline=tc.summary,
                     quick_start="",
                     usage_intro="",
-                    use_cases=tc.get("main_tweet_text", "")[:500],
-                    architecture_breakdown=tc.get("thread_context", {}).get("narrative_flow", ""),
-                    domain_specific_insights=tc.get("community_sentiment", {}).get("overall_tone", ""),
+                    use_cases=tc.main_tweet_text[:500],
+                    architecture_breakdown=tc.thread_context.narrative_flow,
+                    domain_specific_insights=tc.community_sentiment.overall_tone,
                 ),
-                curated_materials=tc.get("media_urls", []),
+                curated_materials=tc.media_urls,
             )
 
         # AI Agent visual orchestration → full Remotion Blueprint

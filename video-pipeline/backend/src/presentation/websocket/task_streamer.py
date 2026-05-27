@@ -36,10 +36,10 @@ global_render_semaphore = asyncio.Semaphore(1)
 _active_graphs: dict[str, Any] = {}
 
 
-def _build_services(session):
+def _build_services(session, ws_callback: Any = None):
     """Create all DDD services with shared session and StatusTransitionService."""
     repository = PostgresPipelineTaskRepository(session)
-    status_service = StatusTransitionService(repository)
+    status_service = StatusTransitionService(repository, ws_callback=ws_callback)
     return repository, status_service
 
 
@@ -236,6 +236,8 @@ async def _stream_graph(
     pipeline_status_str: str = "pending"
 
     # Load initial progress from DB
+    _hitl_nodes = {"hitl_trending_review", "hitl_script_review", "hitl_blueprint_review"}
+    _hitl_statuses = {"hitl_trending", "hitl_script_review", "hitl_blueprint_review"}
     try:
         async with session_maker() as session:
             repo_db = PostgresPipelineTaskRepository(session)
@@ -246,8 +248,18 @@ async def _stream_graph(
                 current_node = task.current_node
                 failed_node = task.failed_node
                 pipeline_status_str = task.status.value
+                # If we are resuming from a HITL pause, the HITL node itself was never
+                # added to completed_nodes. Pre-add it now so the DAG renders it as
+                # "completed" (not "idle") after the human decision is submitted.
+                if (
+                    task.status.value in _hitl_statuses
+                    and task.current_node in _hitl_nodes
+                    and task.current_node not in completed_nodes
+                ):
+                    completed_nodes.append(task.current_node)
     except Exception:
         pass
+
 
     def _snapshot(node: str | None = None, status: str | None = None) -> dict:
         return _build_dag_snapshot_from_state(
@@ -562,11 +574,11 @@ def _extract_detail(node_name: str, output: dict) -> str:
     return ""
 
 
-def _compile_graph_with_services(session, checkpointer):
+def _compile_graph_with_services(session, checkpointer, ws_callback: Any = None):
     """Compile the workflow graph with all injected services."""
     from ...infrastructure.config.app_config import settings
 
-    repository, status_service = _build_services(session)
+    repository, status_service = _build_services(session, ws_callback=ws_callback)
     analyzer = LLMRepoAnalyzer()
     composer = LLMScriptComposer()
     twitter_scraper = OpenCLITwitterScraper()
@@ -679,7 +691,18 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str) -> None
                     logger.error("Checkpointer setup failed: %s", e)
                     checkpointer = None
 
-            graph, repository, status_service = _compile_graph_with_services(session, checkpointer)
+            async def ws_callback(updated_task) -> None:
+                snap = compute_dag_snapshot(updated_task)
+                snap["source_type"] = source_type
+                try:
+                    await websocket.send_json({
+                        "type": "sync",
+                        "dag_snapshot": snap
+                    })
+                except Exception:
+                    pass
+
+            graph, repository, status_service = _compile_graph_with_services(session, checkpointer, ws_callback=ws_callback)
             _active_graphs[task_id] = graph
 
             config = {"configurable": {"thread_id": task_id}}
@@ -749,7 +772,18 @@ async def resume_task(websocket: WebSocket, task_id: str) -> None:
                         logger.error("Checkpointer setup failed: %s", e)
                         checkpointer = None
 
-                graph, repository, status_service = _compile_graph_with_services(session, checkpointer)
+                async def ws_callback(updated_task) -> None:
+                    snap = compute_dag_snapshot(updated_task)
+                    try:
+                        snap["source_type"] = _detect_source_type(updated_task.repo_url)
+                        await websocket.send_json({
+                            "type": "sync",
+                            "dag_snapshot": snap
+                        })
+                    except Exception:
+                        pass
+
+                graph, repository, status_service = _compile_graph_with_services(session, checkpointer, ws_callback=ws_callback)
 
                 db_task = await repository.get_by_id(uuid.UUID(task_id))
                 if db_task is None:
@@ -898,7 +932,18 @@ async def retry_task(websocket: WebSocket, task_id: str, node: str = "") -> None
                         logger.error("Checkpointer setup failed: %s", e)
                         checkpointer = None
 
-                graph, _, _ = _compile_graph_with_services(session, checkpointer)
+                async def ws_callback(updated_task) -> None:
+                    snap = compute_dag_snapshot(updated_task)
+                    try:
+                        snap["source_type"] = _detect_source_type(updated_task.repo_url)
+                        await websocket.send_json({
+                            "type": "sync",
+                            "dag_snapshot": snap
+                        })
+                    except Exception:
+                        pass
+
+                graph, _, _ = _compile_graph_with_services(session, checkpointer, ws_callback=ws_callback)
 
                 # Use original thread_id to resume from last checkpoint (per-node retry)
                 # or fresh thread for full retry

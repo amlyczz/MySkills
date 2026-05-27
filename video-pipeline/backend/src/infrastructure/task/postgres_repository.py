@@ -10,6 +10,7 @@ from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, Scr
 from ...domain.repo_analyzer.domain_analysis import DomainAnalysis
 from ...domain.visual_blueprint.entities import Blueprint
 from ...domain.github_trending.entities import ScoredRepo
+from ...domain.twitter_analyzer.entities import TwitterContentModel
 from .postgres_models import PipelineTaskDB
 
 class PostgresPipelineTaskRepository(PipelineTaskRepository):
@@ -23,7 +24,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             repo_url=task.repo_url,
             status=task.status,
             content_model=task.content_model.model_dump() if task.content_model else None,
-            twitter_content=task.twitter_content,
+            twitter_content=task.twitter_content.model_dump() if task.twitter_content else None,
             material_manifest=task.material_manifest.model_dump() if task.material_manifest else None,
             script=task.script.model_dump() if task.script else None,
             blueprint=task.blueprint.model_dump() if task.blueprint else None,
@@ -55,6 +56,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             return None
 
         content_model = ContentModel.model_validate(db_task.content_model) if db_task.content_model else None
+        twitter_content = TwitterContentModel.model_validate(db_task.twitter_content) if db_task.twitter_content else None
         material_manifest = MaterialManifest.model_validate(db_task.material_manifest) if db_task.material_manifest else None
         script = Script.model_validate(db_task.script) if db_task.script else None
         blueprint = Blueprint.model_validate(db_task.blueprint) if db_task.blueprint else None
@@ -68,7 +70,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             repo_url=db_task.repo_url,
             status=db_task.status,
             content_model=content_model,
-            twitter_content=db_task.twitter_content,
+            twitter_content=twitter_content,
             material_manifest=material_manifest,
             script=script,
             blueprint=blueprint,
@@ -106,7 +108,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
         if db_task:
             db_task.status = task.status
             db_task.content_model = task.content_model.model_dump() if task.content_model else None
-            db_task.twitter_content = task.twitter_content
+            db_task.twitter_content = task.twitter_content.model_dump() if task.twitter_content else None
             db_task.material_manifest = task.material_manifest.model_dump() if task.material_manifest else None
             db_task.script = task.script.model_dump() if task.script else None
             db_task.blueprint = task.blueprint.model_dump() if task.blueprint else None

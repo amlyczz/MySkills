@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from .entities import ContentModel, Script, VisualPlan
 from ..repo_analyzer.entities import DomainAnalysis
+from ..twitter_analyzer.entities import TwitterContentModel
 from ..task.entities import QAScorecard
 from typing import Optional
 
@@ -15,7 +16,7 @@ class ScriptComposer(ABC):
         target_duration: int = 0,
         domain_analysis: Optional[DomainAnalysis] = None,
         qa_feedback: Optional[str] = None,
-        twitter_content: Optional[dict] = None,
+        twitter_content: Optional[TwitterContentModel] = None,
     ) -> Script:
         """Compose a narration script from ContentModel and/or Twitter content.
 
