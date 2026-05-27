@@ -81,13 +81,16 @@ class _FixupElement(pydantic.BaseModel):
 
 
 class _FixupScene(pydantic.BaseModel):
-    """Scene that accepts both string and object backgrounds."""
+    """Scene that accepts both string and object backgrounds, and coerces null/list voiceover/subtitles."""
     id: str
     type: str
     startFrame: int = 0
     durationInFrames: int
     background: Any = pydantic.Field(default_factory=lambda: {"type": "solid-color", "color": "#0a0a0a"})
     elements: list[_FixupElement] = []
+    voiceover: Any = None
+    subtitles: Any = None
+    sfx: Any = None
     model_config = pydantic.ConfigDict(extra="allow")
 
     @pydantic.field_validator("background", mode="before")
@@ -97,11 +100,52 @@ class _FixupScene(pydantic.BaseModel):
             return {"type": "solid-color", "color": "#0a0a0a"}
         return v
 
+    @pydantic.field_validator("voiceover", "subtitles", mode="before")
+    @classmethod
+    def _coerce_voiceover_subtitles(cls, v: Any) -> Any:
+        """LLM outputs [] or null for these fields — set to None so Step 3 can fill them."""
+        if v is None or (isinstance(v, list) and len(v) == 0):
+            return None
+        if isinstance(v, list):
+            return None  # Invalid format, let Step 3 fill programmatically
+        if isinstance(v, dict):
+            return v  # Proper dict format, pass through
+        return None
+
 
 class _FixupGlobalSettings(pydantic.BaseModel):
     """GlobalSettings that accepts both list and dict motionTokens, and fixes flattened easing."""
     motionTokens: Any = pydantic.Field(default_factory=dict)
+    theme: Any = pydantic.Field(default_factory=ThemeConfig)
+    audio: Any = None
     model_config = pydantic.ConfigDict(extra="allow")
+
+    @pydantic.field_validator("theme", mode="before")
+    @classmethod
+    def _coerce_theme(cls, v: Any) -> Any:
+        if v is None or isinstance(v, str):
+            # LLM outputs theme as a string like "dark-neon" → use default ThemeConfig
+            return ThemeConfig().model_dump()
+        if isinstance(v, dict):
+            # If LLM nested colors/typography inside a "colors"/"typography" key correctly, pass through
+            return v
+        return ThemeConfig().model_dump()
+
+    @pydantic.field_validator("audio", mode="before")
+    @classmethod
+    def _coerce_audio(cls, v: Any) -> Any:
+        if v is None:
+            return None
+        if isinstance(v, dict):
+            # Fix ducking: LLM sometimes outputs bool instead of AudioDucking object
+            ducking = v.get("ducking")
+            if isinstance(ducking, bool):
+                v["ducking"] = {"enabled": ducking, "duckToVolume": 0.2 if ducking else None}
+            elif isinstance(ducking, dict) and "enable" in ducking and "enabled" not in ducking:
+                # LLM uses "enable" instead of "enabled"
+                ducking["enabled"] = ducking.pop("enable")
+            return v
+        return None
 
     @pydantic.field_validator("motionTokens", mode="before")
     @classmethod
@@ -151,6 +195,7 @@ class _FixupGlobalSettings(pydantic.BaseModel):
 class _FixupBlueprint(pydantic.BaseModel):
     """Lenient wrapper that fixes LLM output then produces strict Blueprint."""
     globalSettings: _FixupGlobalSettings = pydantic.Field(default_factory=_FixupGlobalSettings)
+    globalBackground: Any = None
     scenes: list[_FixupScene] = []
     meta: dict[str, Any] = pydantic.Field(
         default_factory=lambda: {
@@ -170,6 +215,13 @@ class _FixupBlueprint(pydantic.BaseModel):
             v = {}
         v.setdefault("id", str(uuid.uuid4()))
         v.setdefault("name", "Auto-generated Blueprint")
+        return v
+
+    @pydantic.field_validator("globalBackground", mode="before")
+    @classmethod
+    def _coerce_global_background(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return None  # LLM outputs theme name as string, just ignore
         return v
 
     def to_blueprint(self) -> "Blueprint":
@@ -404,23 +456,27 @@ class LLMBlueprintComposer(BlueprintComposer):
         narrative_angle = domain_analysis.narrative.angle if domain_analysis else ""
         technical_depth = domain_analysis.technical_depth if domain_analysis else "moderate"
 
-        # Primary: json_mode + fallback: raw JSON + fixup
+        # Primary: json_mode with lenient _FixupBlueprint (accepts LLM quirks like string backgrounds, missing meta/ids)
+        # Then convert to strict Blueprint via to_blueprint()
+        invoke_params = {
+            "script_title": content_title,
+            "script_duration": script.total_duration_est,
+            "script_segments": segments_repr,
+            "content_title": content_title,
+            "content_tagline": content_tagline,
+            "content_points": content_points,
+            "architecture_pattern": architecture_pattern,
+            "audience_primary": audience_primary,
+            "audience_expertise": audience_expertise,
+            "narrative_angle": narrative_angle,
+            "technical_depth": technical_depth,
+            "feedback_section": feedback_section,
+        }
+
         try:
-            chain = prompt | self.llm.with_structured_output(Blueprint, method="json_mode")
-            blueprint: Blueprint = await chain.ainvoke({
-                "script_title": content_title,
-                "script_duration": script.total_duration_est,
-                "script_segments": segments_repr,
-                "content_title": content_title,
-                "content_tagline": content_tagline,
-                "content_points": content_points,
-                "architecture_pattern": architecture_pattern,
-                "audience_primary": audience_primary,
-                "audience_expertise": audience_expertise,
-                "narrative_angle": narrative_angle,
-                "technical_depth": technical_depth,
-                "feedback_section": feedback_section,
-            })
+            chain = prompt | self.llm.with_structured_output(_FixupBlueprint, method="json_mode")
+            fixup_result: _FixupBlueprint = await chain.ainvoke(invoke_params)
+            blueprint = fixup_result.to_blueprint()
         except Exception as fc_err:
             logger.warning("json_mode failed (%s), falling back to raw JSON + fixup", fc_err)
             raw_chain = prompt | self.llm
@@ -491,8 +547,13 @@ class LLMBlueprintComposer(BlueprintComposer):
         ])
 
         try:
-            chain = prompt | self.llm.with_structured_output(SceneConfig, method="json_mode")
-            filled: SceneConfig = await chain.ainvoke({"scene_context": user_prompt})
+            chain = prompt | self.llm.with_structured_output(_FixupScene, method="json_mode")
+            fixup_scene: _FixupScene = await chain.ainvoke({"scene_context": user_prompt})
+            # Preserve skeleton metadata
+            fixup_scene.id = scene.id
+            fixup_scene.startFrame = scene.startFrame
+            fixup_scene.durationInFrames = scene.durationInFrames
+            filled = SceneConfig.model_validate(fixup_scene.model_dump())
         except Exception as fc_err:
             logger.warning("Step2 json_mode failed for scene %s (%s), falling back to raw JSON",
                 scene.id, str(fc_err)[:100])
@@ -508,7 +569,9 @@ class LLMBlueprintComposer(BlueprintComposer):
             raw_data.setdefault("durationInFrames", scene.durationInFrames)
             if "background" not in raw_data:
                 raw_data["background"] = scene.background.model_dump() if scene.background else {"type": "solid-color", "color": "#000000"}
-            filled = SceneConfig.model_validate(raw_data)
+            filled = SceneConfig.model_validate(_FixupScene.model_validate(raw_data).model_dump())
+
+        return filled
 
     @staticmethod
     def _serialize_segments(script: Script) -> str:
