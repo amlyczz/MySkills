@@ -56,7 +56,12 @@ def _build(model: str, temperature: float, **kwargs) -> ChatDeepSeek:
 # ── Role → config mapping ────────────────────────────────────────────
 
 def _build_extraction(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
-    """Tool Calls strict mode — uses beta endpoint for server-side schema enforcement."""
+    """Tool Calls strict mode — uses beta endpoint for server-side schema enforcement.
+
+    Thinking mode is disabled because DeepSeek V4 thinking does not support
+    the specific ``tool_choice`` dict that LangChain's ``with_structured_output``
+    sends (only ``auto`` works with thinking).
+    """
     model_name = model or settings.llm_model_pro
     api_key = settings.openai_api_key or os.getenv("DEEPSEEK_API_KEY", "mock-key")
     return ChatDeepSeek(
@@ -66,6 +71,7 @@ def _build_extraction(model: str | None = None, temperature: float = 0.2) -> Cha
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
         max_tokens=16384,
+        model_kwargs={"extra_body": {"thinking": {"type": "disabled"}}},
     )
 
 
@@ -79,8 +85,8 @@ def _build_reasoning(model: str | None = None, temperature: float = 0.2) -> Chat
 
 
 def _build_scoring(temperature: float = 0.2) -> ChatDeepSeek:
-    """Fast model for lightweight tasks."""
-    return _build(settings.llm_model_fast, temperature)
+    """Fast model for lightweight tasks — thinking disabled (incompatible with tool_choice, ignores temperature)."""
+    return _build(settings.llm_model_fast, temperature, model_kwargs={"extra_body": {"thinking": {"type": "disabled"}}})
 
 
 def _build_qa(temperature: float = 0.7) -> ChatDeepSeek:
