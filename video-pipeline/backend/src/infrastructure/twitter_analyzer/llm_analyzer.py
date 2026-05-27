@@ -22,7 +22,7 @@ from ...domain.twitter_analyzer.entities import (
     ExternalLink,
 )
 from ...domain.twitter_analyzer.interfaces import TwitterAnalyzer
-from ..llm.client import get_json_client
+from ..llm.client import get_llm, LLMRole
 from ..llm.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class LLMTwitterAnalyzer(TwitterAnalyzer):
     """LLM-powered analyzer that transforms raw Twitter scrape data into structured content."""
 
     def __init__(self) -> None:
-        self.llm = get_json_client(temperature=0.3)
+        self.llm = get_llm(LLMRole.SCORING, temperature=0.3)
 
     async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
         last_error = None
@@ -72,7 +72,7 @@ class LLMTwitterAnalyzer(TwitterAnalyzer):
             ("user", self._build_user_prompt(raw, url)),
         ])
 
-        chain = prompt | self.llm.with_structured_output(LLMTwitterResponse, method="json_mode")
+        chain = prompt | self.llm.with_structured_output(LLMTwitterResponse, method="function_calling", strict=True)
 
         try:
             result: LLMTwitterResponse = await self._invoke_with_retry(chain, {})

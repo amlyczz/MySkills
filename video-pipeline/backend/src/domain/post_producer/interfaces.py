@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from .entities import MixAudioRequest
 
@@ -6,8 +7,21 @@ from .entities import MixAudioRequest
 class VoiceoverGenerator(ABC):
 
     @abstractmethod
-    async def generate_voiceover(self, text: str, output_path: str, voice_id: str) -> str:
-        """Generates voiceover from text."""
+    async def generate_voiceover(
+        self,
+        text: str,
+        output_path: str,
+        voice_id: str = "default",
+        style: Optional[str] = None,
+    ) -> str:
+        """Generates voiceover from text.
+
+        Args:
+            text: Text to synthesize.
+            output_path: Where to write the audio file (.mp3).
+            voice_id: Provider-specific voice identifier.
+            style: Optional natural language style instruction (e.g. "用沉稳专业的男声朗读").
+        """
         pass
 
 

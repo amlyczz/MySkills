@@ -21,6 +21,10 @@ from ...infrastructure.visual_blueprint.llm_composer import LLMBlueprintComposer
 from ...infrastructure.visual_blueprint.remotion_renderer import RemotionVideoRenderer
 from ...infrastructure.post_producer.media_generator import MediaGenerator
 from ...infrastructure.post_producer.ffmpeg_mixer import FFmpegAudioMixer
+from ...infrastructure.post_producer.tts.mimo_tts import MimoTTSVoiceoverGenerator
+from ...infrastructure.post_producer.tts.minimax_tts import MinimaxTTSVoiceoverGenerator
+from ...infrastructure.post_producer.tts.omnivoice_tts import OmnivoiceTTSVoiceoverGenerator
+from ...infrastructure.post_producer.tts.chain import TTSChain
 from ...application.workflow.graph import compile_workflow
 
 router = APIRouter(prefix="/api/v1/task", tags=["stream"])
@@ -567,7 +571,15 @@ def _compile_graph_with_services(session, checkpointer):
     twitter_analyzer = LLMTwitterAnalyzer()
     blueprint_composer = LLMBlueprintComposer()
     video_renderer = RemotionVideoRenderer()
-    media_gen = MediaGenerator()
+
+    # TTS chain: MiMo (首选) → MiniMax → Omnivoice
+    tts_chain = TTSChain(providers=[
+        MimoTTSVoiceoverGenerator(api_key=settings.mimo_api_key, voice=settings.mimo_tts_voice),
+        MinimaxTTSVoiceoverGenerator(),
+        OmnivoiceTTSVoiceoverGenerator(),
+    ])
+
+    media_gen = MediaGenerator()  # BGM only
     audio_mixer = FFmpegAudioMixer()
 
     graph = compile_workflow(
@@ -577,7 +589,7 @@ def _compile_graph_with_services(session, checkpointer):
         twitter_analyzer=twitter_analyzer,
         blueprint_composer=blueprint_composer,
         video_renderer=video_renderer,
-        voiceover_gen=media_gen,
+        voiceover_gen=tts_chain,
         bgm_gen=media_gen,
         audio_mixer=audio_mixer,
         repository=repository,

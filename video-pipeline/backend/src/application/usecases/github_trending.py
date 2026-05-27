@@ -1,16 +1,15 @@
 import json
 import logging
-import os
 import uuid
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_deepseek import ChatDeepSeek
 
 logger = logging.getLogger(__name__)
 from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.github_trending.entities import ScoredRepo, TrendingResponse, RawTrendingRepo
 from ..workflow.state import PipelineState
+from ...infrastructure.llm.client import get_llm, LLMRole
 from ...infrastructure.llm.prompt_loader import load_prompt
 
 
@@ -18,13 +17,7 @@ class GithubTrendingUseCase:
     """LangGraph Node: Fetches trending repos and uses LLM to score subjective dimensions."""
 
     def __init__(self, repository: PipelineTaskRepository, status_service: StatusTransitionService):
-        api_key = os.getenv("DEEPSEEK_V4_API_KEY")
-        self.llm = ChatDeepSeek(
-            model=os.getenv("LLM_MODEL_FAST", "deepseek-chat"),
-            api_key=api_key,
-            temperature=0.2,
-            max_retries=2,
-        )
+        self.llm = get_llm(LLMRole.SCORING)
         self.repository = repository
         self.status_service = status_service
 

@@ -30,7 +30,7 @@ from ...domain.visual_blueprint.entities import (
     GlobalAudioConfig, AudioDucking,
 )
 from ...domain.visual_blueprint.interfaces import BlueprintComposer
-from ..llm.client import get_json_client
+from ..llm.client import get_llm, LLMRole
 from ..llm.prompt_loader import load_prompt
 
 
@@ -394,7 +394,7 @@ def _is_dark_color(hex_color: str) -> bool:
 class LLMBlueprintComposer(BlueprintComposer):
 
     def __init__(self) -> None:
-        self.llm = get_json_client()
+        self.llm = get_llm(LLMRole.EXTRACTION)
 
     async def compose_blueprint(
         self,
@@ -456,7 +456,7 @@ class LLMBlueprintComposer(BlueprintComposer):
         narrative_angle = domain_analysis.narrative.angle if domain_analysis else ""
         technical_depth = domain_analysis.technical_depth if domain_analysis else "moderate"
 
-        # Primary: json_mode with lenient _FixupBlueprint (accepts LLM quirks like string backgrounds, missing meta/ids)
+        # Primary: function_calling strict mode with _FixupBlueprint (server-side schema enforcement)
         # Then convert to strict Blueprint via to_blueprint()
         invoke_params = {
             "script_title": content_title,
@@ -474,11 +474,11 @@ class LLMBlueprintComposer(BlueprintComposer):
         }
 
         try:
-            chain = prompt | self.llm.with_structured_output(_FixupBlueprint, method="json_mode")
+            chain = prompt | self.llm.with_structured_output(_FixupBlueprint, method="function_calling", strict=True)
             fixup_result: _FixupBlueprint = await chain.ainvoke(invoke_params)
             blueprint = fixup_result.to_blueprint()
         except Exception as fc_err:
-            logger.warning("json_mode failed (%s), falling back to raw JSON + fixup", fc_err)
+            logger.warning("function_calling strict mode failed (%s), falling back to raw JSON + fixup", fc_err)
             raw_chain = prompt | self.llm
             raw_response = await raw_chain.ainvoke({
                 "script_title": content_title,
@@ -547,7 +547,7 @@ class LLMBlueprintComposer(BlueprintComposer):
         ])
 
         try:
-            chain = prompt | self.llm.with_structured_output(_FixupScene, method="json_mode")
+            chain = prompt | self.llm.with_structured_output(_FixupScene, method="function_calling", strict=True)
             fixup_scene: _FixupScene = await chain.ainvoke({"scene_context": user_prompt})
             # Preserve skeleton metadata
             fixup_scene.id = scene.id
@@ -555,7 +555,7 @@ class LLMBlueprintComposer(BlueprintComposer):
             fixup_scene.durationInFrames = scene.durationInFrames
             filled = SceneConfig.model_validate(fixup_scene.model_dump())
         except Exception as fc_err:
-            logger.warning("Step2 json_mode failed for scene %s (%s), falling back to raw JSON",
+            logger.warning("Step2 function_calling strict mode failed for scene %s (%s), falling back to raw JSON",
                 scene.id, str(fc_err)[:100])
             raw_chain = prompt | self.llm
             raw_response = await raw_chain.ainvoke({"scene_context": user_prompt})

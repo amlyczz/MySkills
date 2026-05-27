@@ -62,5 +62,11 @@ class AppConfig(BaseModel):
     qa_model: str | None = Field(
         default_factory=lambda: os.getenv("QA_MODEL") or None
     )
+    mimo_api_key: str = Field(
+        default_factory=lambda: os.getenv("MIMO_API_KEY", "")
+    )
+    mimo_tts_voice: str = Field(
+        default_factory=lambda: os.getenv("MIMO_TTS_VOICE", "苏打")
+    )
 
 settings = AppConfig()
