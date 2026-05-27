@@ -37,17 +37,31 @@ class AnalyzeRepoUseCase:
 
         repo_url = state.get("repo_url", "")
 
-        # Guard: refuse to analyze placeholder URLs (happens on retry of old tasks)
+        # Fallback: if repo_url is a placeholder, try loading the real URL from DB
+        # (This can happen if the LangGraph checkpoint didn't properly merge the HITL decision)
+        if not repo_url or repo_url in ("pending", "trending", ""):
+            try:
+                db_task = await self.repository.get_by_id(task_id)
+                if db_task and db_task.repo_url and db_task.repo_url not in ("pending", "trending", ""):
+                    logger.warning(
+                        "[UseCase] AnalyzeRepo: repo_url was '%s' in state but '%s' in DB — using DB value",
+                        repo_url, db_task.repo_url[:60],
+                    )
+                    repo_url = db_task.repo_url
+            except Exception as e:
+                logger.warning("[UseCase] AnalyzeRepo: failed to load repo_url from DB: %s", e)
+
+        # ① Enter node: mark active immediately (before guard, so error is attributed correctly)
+        await self.status_service.transition(
+            task_id, PipelineStatus.ANALYZING, node="analyze_repo"
+        )
+
+        # Guard: refuse to analyze placeholder URLs
         if not repo_url or repo_url in ("pending", "trending", ""):
             raise ValueError(
                 f"Cannot analyze repo with URL '{repo_url}'. "
                 f"Delete this task and create a new one with a real GitHub URL."
             )
-
-        # ① Enter node: mark active immediately
-        await self.status_service.transition(
-            task_id, PipelineStatus.ANALYZING, node="analyze_repo"
-        )
 
         logger.info("[UseCase] Running AnalyzeRepo")
 

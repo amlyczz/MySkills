@@ -602,19 +602,50 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str) -> None
 
     session_maker = _get_session_maker()
     async with session_maker() as session:
-        checkpointer_ctx = _get_checkpointer_context()
-        async with checkpointer_ctx as checkpointer:
-            if checkpointer is not None:
-                try:
-                    await checkpointer.setup()
-                except Exception as e:
-                    logger.error("Checkpointer setup failed: %s", e)
-                    checkpointer = None
+        # --- Restore state from DB if task already has progress (page refresh) ---
+        existing_task = None
+        try:
+            repo_check = PostgresPipelineTaskRepository(session)
+            existing_task = await repo_check.get_by_id(uuid.UUID(task_id))
+        except Exception:
+            pass
 
-            graph, repository, status_service = _compile_graph_with_services(session, checkpointer)
-            _active_graphs[task_id] = graph
+        if existing_task and existing_task.completed_nodes:
+            logger.info(
+                "Task %s already has %d completed nodes (status=%s), restoring state for reconnect",
+                task_id[:8], len(existing_task.completed_nodes), existing_task.status.value,
+            )
+            source_type = _detect_source_type(existing_task.repo_url)
+            repo_url = existing_task.repo_url
 
-            config = {"configurable": {"thread_id": task_id}}
+        if existing_task and existing_task.completed_nodes:
+            state_input = {
+                "task_id": task_id,
+                "repo_url": existing_task.repo_url,
+                "source_type": source_type,
+                "status": existing_task.status,
+                "trending_repos": existing_task.trending_repos,
+                "hitl_trending_feedback": None,
+                "content_model": existing_task.content_model,
+                "material_manifest": existing_task.material_manifest,
+                "domain_analysis": existing_task.domain_analysis,
+                "script": existing_task.script,
+                "blueprint": existing_task.blueprint,
+                "twitter_content": existing_task.twitter_content,
+                "qa_script": existing_task.qa_script,
+                "qa_blueprint": existing_task.qa_blueprint,
+                "qa_script_retry_count": 0,
+                "qa_blueprint_retry_count": 0,
+                "qa_script_feedback": None,
+                "qa_blueprint_feedback": None,
+                "segment_actual_durations": existing_task.segment_actual_durations if hasattr(existing_task, 'segment_actual_durations') else [],
+                "voiceover_path": existing_task.voiceover_path,
+                "bgm_path": existing_task.bgm_path,
+                "video_mp4_path": existing_task.video_mp4_path,
+                "final_mp4_path": existing_task.final_mp4_path,
+                "error": None,
+            }
+        else:
             state_input = {
                 "task_id": task_id,
                 "repo_url": repo_url,
@@ -639,6 +670,20 @@ async def stream_task(websocket: WebSocket, task_id: str, repo_url: str) -> None
                 "final_mp4_path": None,
                 "error": None,
             }
+
+        checkpointer_ctx = _get_checkpointer_context()
+        async with checkpointer_ctx as checkpointer:
+            if checkpointer is not None:
+                try:
+                    await checkpointer.setup()
+                except Exception as e:
+                    logger.error("Checkpointer setup failed: %s", e)
+                    checkpointer = None
+
+            graph, repository, status_service = _compile_graph_with_services(session, checkpointer)
+            _active_graphs[task_id] = graph
+
+            config = {"configurable": {"thread_id": task_id}}
 
             try:
                 result = await _stream_graph(graph, state_input, config, websocket, task_id,

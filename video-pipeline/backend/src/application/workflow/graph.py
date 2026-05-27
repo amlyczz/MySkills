@@ -76,9 +76,11 @@ async def hitl_trending_review_node(state: PipelineState) -> PipelineState:
     action = decision.get("action", "abort")
 
     if action == "select":
+        selected_url = decision.get("repo_url", repo_url)
+        logger.info("[HITL] Trending review selected: %s (was %s)", selected_url[:60] if selected_url else "?", repo_url[:60] if repo_url else "?")
         return PipelineState(
             task_id=state["task_id"],
-            repo_url=decision.get("repo_url", repo_url),
+            repo_url=selected_url,
             hitl_trending_feedback=None,
             status=PipelineStatus.PENDING,
         )
