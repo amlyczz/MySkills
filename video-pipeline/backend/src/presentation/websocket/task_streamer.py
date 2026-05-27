@@ -333,36 +333,51 @@ async def _stream_graph(
                     completed_nodes.append(node_name)
 
                 pipeline_status_str = NODE_TO_STATUS.get(node_name, PipelineStatus.PENDING).value
-                current_node = None
                 detail = _extract_detail(node_name, output_dict)
 
                 logger.info("Node '%s' completed. Progress: %s", node_name, completed_nodes)
-                await _send_node_event(
-                    websocket, node_name, "completed", pipeline_status_str,
-                    completed_nodes, detail=detail,
-                    dag_snapshot=_snapshot(None, pipeline_status_str),
-                )
 
-                last_announced_node = node_name
-
-                # Announce next node as started (from DB state refreshed by FSM)
+                # Read next current_node from DB BEFORE sending completed event,
+                # so the dag_snapshot reflects the next active node correctly.
+                next_current_node: str | None = None
+                next_pipeline_status: str | None = None
                 try:
                     async with session_maker() as session:
                         repo_db2 = PostgresPipelineTaskRepository(session)
                         task2 = await repo_db2.get_by_id(uuid.UUID(task_id))
                         if task2 and task2.current_node:
-                            next_node = task2.current_node
-                            current_node = next_node
-                            next_status = NODE_TO_STATUS.get(next_node, PipelineStatus.PENDING).value
-                            pipeline_status_str = next_status
-                            await _send_node_event(
-                                websocket, next_node, "started", next_status,
-                                completed_nodes,
-                                dag_snapshot=_snapshot(next_node, next_status),
-                            )
-                            last_announced_node = next_node
+                            next_current_node = task2.current_node
+                            next_pipeline_status = NODE_TO_STATUS.get(
+                                next_current_node, PipelineStatus.PENDING
+                            ).value
                 except Exception:
-                    pass  # Non-critical — frontend will still work without start announcements
+                    pass
+
+                # Update local tracking variables
+                current_node = next_current_node
+                if next_pipeline_status:
+                    pipeline_status_str = next_pipeline_status
+                else:
+                    current_node = None
+
+                # Send completed event with snapshot that already shows the next active node
+                await _send_node_event(
+                    websocket, node_name, "completed", pipeline_status_str,
+                    completed_nodes, detail=detail,
+                    dag_snapshot=_snapshot(current_node, pipeline_status_str),
+                )
+
+                last_announced_node = node_name
+
+                # Send explicit started event for the next node
+                if next_current_node:
+                    await _send_node_event(
+                        websocket, next_current_node, "started",
+                        next_pipeline_status or "pending",
+                        completed_nodes,
+                        dag_snapshot=_snapshot(next_current_node, next_pipeline_status),
+                    )
+                    last_announced_node = next_current_node
 
         logger.info("Pipeline finished normally (no more nodes)")
         pipeline_status_str = "completed"
