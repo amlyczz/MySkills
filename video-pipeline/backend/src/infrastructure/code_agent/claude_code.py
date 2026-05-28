@@ -36,10 +36,10 @@ class ClaudeCodeChatModel(BaseChatModel):
     """
 
     model_name: str = "claude"
-    allowed_tools: List[str] = ["Read", "Glob", "Grep", "Bash(gh:*)"]
-    effort: str = "high"
+    allowed_tools: List[str] = ["Read", "Glob", "Grep"]
+    effort: str = "medium"
     dangerously_skip_permissions: bool = True
-    timeout: int = 600  # 10 minutes
+    timeout: int = 1800  # 30 minutes
     extra_args: List[str] = []
     on_progress: Optional[Callable[[str], Any]] = None
     json_schema: Optional[dict] = None
@@ -112,15 +112,28 @@ class ClaudeCodeChatModel(BaseChatModel):
         if self.json_schema:
             cmd.extend(["--json-schema", json.dumps(self.json_schema, ensure_ascii=False)])
         if self.allowed_tools:
-            cmd.extend(["--allowedTools"] + self.allowed_tools)
+            cmd.extend(["--allowedTools", ",".join(self.allowed_tools)])
         cmd.extend(self.extra_args)
 
         logger.info("[ClaudeCode] starting (timeout=%ds, effort=%s)", self.timeout, self.effort)
 
         # Unset Claude Code env vars to allow nested invocation
         env = os.environ.copy()
-        for key in ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"]:
+        claude_keys = [
+            k for k in env
+            if k.startswith("CLAUDECODE") or k.startswith("CLAUDE_CODE")
+        ]
+        for key in claude_keys:
             env.pop(key, None)
+
+        # Ensure proxy settings are passed down to Claude Code so it can reach GitHub
+        from ..config import settings
+        if settings.http_proxy:
+            env["HTTP_PROXY"] = settings.http_proxy
+            env["http_proxy"] = settings.http_proxy
+        if settings.https_proxy:
+            env["HTTPS_PROXY"] = settings.https_proxy
+            env["https_proxy"] = settings.https_proxy
 
         try:
             proc = subprocess.Popen(
@@ -142,10 +155,20 @@ class ClaudeCodeChatModel(BaseChatModel):
             proc.wait()
             raise TimeoutError(f"Claude Code CLI timed out after {self.timeout}s")
 
+        nested_session = (
+            proc.returncode == 1
+            and stderr
+            and ("nested" in stderr.lower() or "inside another" in stderr.lower())
+        )
+        if nested_session:
+            logger.warning("[ClaudeCode] nested session detected, falling back to DeepSeek API")
+            return self._fallback_generate(messages)
+
         if proc.returncode != 0:
             cmd_str = " ".join(cmd[:6]) + "..."
             raise RuntimeError(
                 f"Claude Code CLI exited {proc.returncode}. cmd: {cmd_str}. "
+                f"stdout: {stdout[:1000] if stdout else '(none)'}. "
                 f"stderr: {stderr[:500] if stderr else '(none)'}"
             )
 
@@ -163,6 +186,51 @@ class ClaudeCodeChatModel(BaseChatModel):
             logger.warning("[ClaudeCode] empty result. Full output: %s", json.dumps(output, ensure_ascii=False)[:1000])
 
         logger.info("[ClaudeCode] finished (%d chars)", len(content))
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=content))])
+
+    # ── Fallback: direct DeepSeek API when Claude Code nested session is detected ──
+
+    def _fallback_generate(self, messages: List[BaseMessage]) -> ChatResult:
+        """Use DeepSeek direct API when Claude Code CLI cannot run (nested session)."""
+        from langchain_core.prompts import ChatPromptTemplate
+        from ..llm.client import get_llm, LLMRole, structured_chain
+
+        system_parts = []
+        user_parts = []
+        for msg in messages:
+            if isinstance(msg, SystemMessage):
+                system_parts.append(("system", msg.content))
+            elif isinstance(msg, HumanMessage):
+                user_parts.append(("user", msg.content))
+            elif isinstance(msg, AIMessage):
+                user_parts.append(("user", f"[Previous response]: {msg.content}"))
+
+        prompt = ChatPromptTemplate.from_messages(system_parts + user_parts)
+        llm = get_llm(LLMRole.EXTRACTION)
+
+        schema_cls = None
+        if self.json_schema:
+            from pydantic import create_model
+            schema_cls = create_model(
+                "DynamicSchema",
+                **{
+                    k: (v.get("type") if isinstance(v, dict) else str, ...)
+                    for k, v in self.json_schema.get("properties", {}).items()
+                }
+            )
+
+        if schema_cls is not None:
+            chain = structured_chain(prompt, llm, schema_cls)
+            try:
+                result = chain.invoke({})
+                content = result.model_dump_json() if hasattr(result, "model_dump_json") else str(result)
+            except Exception:
+                content = "{}"
+        else:
+            response = llm.invoke(prompt.invoke({}))
+            content = response.content if hasattr(response, "content") else str(response)
+
+        logger.info("[ClaudeCode/fallback] finished via DeepSeek API (%d chars)", len(content))
         return ChatResult(generations=[ChatGeneration(message=AIMessage(content=content))])
 
     # ── Streaming (required by BaseChatModel, but we delegate to _generate) ──

@@ -38,3 +38,23 @@ class RepoAnalyzer(ABC):
     ) -> DomainAnalysis:
         """Analyze domain architecture, build audience profile, and select narrative angle."""
         pass
+
+
+class MaterialCollector(ABC):
+
+    @abstractmethod
+    async def collect(
+        self, repo_url: str, output_dir: str, screenshot_path: str
+    ) -> tuple[str, MaterialManifest, RepoMetadata]:
+        """Collect all available materials from a repository."""
+        pass
+
+
+class MaterialDownloader(ABC):
+
+    @abstractmethod
+    async def download(
+        self, urls: list[str], output_dir: str, manifest: MaterialManifest
+    ) -> None:
+        """Download a list of materials into the output directory and update manifest."""
+        pass

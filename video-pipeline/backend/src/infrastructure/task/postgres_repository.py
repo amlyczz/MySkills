@@ -23,6 +23,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             id=task.id,
             repo_url=task.repo_url,
             status=task.status,
+            project_id=task.project_id,
             content_model=task.content_model.model_dump() if task.content_model else None,
             twitter_content=task.twitter_content.model_dump() if task.twitter_content else None,
             material_manifest=task.material_manifest.model_dump() if task.material_manifest else None,
@@ -126,3 +127,31 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             db_task.node_error = task.node_error
             db_task.updated_at = datetime.utcnow()
             await self.session.commit()
+
+    async def delete(self, task_id: uuid.UUID) -> bool:
+        from sqlalchemy import delete as sa_delete
+        stmt = sa_delete(PipelineTaskDB).where(PipelineTaskDB.id == task_id)
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+        return result.rowcount > 0
+
+    async def list_by_project(self, project_id: uuid.UUID) -> list[PipelineTask]:
+        stmt = (
+            select(PipelineTaskDB)
+            .where(PipelineTaskDB.project_id == project_id)
+            .order_by(PipelineTaskDB.created_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        db_tasks = result.scalars().all()
+        
+        tasks = []
+        for db_task in db_tasks:
+            tasks.append(PipelineTask(
+                id=db_task.id,
+                repo_url=db_task.repo_url or "",
+                status=db_task.status,
+                project_id=db_task.project_id,
+                created_at=db_task.created_at,
+                updated_at=db_task.updated_at,
+            ))
+        return tasks

@@ -17,6 +17,7 @@ class PipelineTask(BaseModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4)
     repo_url: str
     status: PipelineStatus = PipelineStatus.PENDING
+    project_id: Optional[uuid.UUID] = None
 
     # Domain entities (local to video-pipeline)
     content_model: Optional[ContentModel] = None

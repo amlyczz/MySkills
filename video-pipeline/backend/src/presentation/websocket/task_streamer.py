@@ -634,14 +634,17 @@ def _compile_graph_with_services(
             CodeAgent implementations push stderr lines to this queue,
             and the caller drains it to send WebSocket events.
     """
-    from ...infrastructure.config.app_config import settings, get_node_timeout
+    from ...infrastructure.config.app_config import settings, get_node_timeout, get_node_effort
 
     repository, status_service = _build_services(session, ws_callback=ws_callback)
     nc = settings.node_agent_config
     default = settings.code_agent_type
 
     def _agent(node: str) -> str:
-        return nc.get(node, default)
+        val = nc.get(node, default)
+        if ":" in val:
+            return val.split(":")[0].strip()
+        return val
 
     def _progress(node_name: str):
         """Create an on_progress callback for a CodeAgent that pushes to the shared queue."""
@@ -656,21 +659,21 @@ def _compile_graph_with_services(
 
     # Repo analyzer
     analyzer = (
-        CodeAgentRepoAnalyzer(timeout=get_node_timeout("analyze_repo"), on_progress=_progress("analyze_repo"))
+        CodeAgentRepoAnalyzer(timeout=get_node_timeout("analyze_repo"), effort=get_node_effort("analyze_repo"), on_progress=_progress("analyze_repo"))
         if _agent("analyze_repo") == "claude_code"
         else LLMRepoAnalyzer()
     )
 
     # Trending scorer
     trending_scorer = (
-        CodeAgentTrendingScorer(timeout=get_node_timeout("github_trending"), on_progress=_progress("github_trending"))
+        CodeAgentTrendingScorer(timeout=get_node_timeout("github_trending"), effort=get_node_effort("github_trending"), on_progress=_progress("github_trending"))
         if _agent("github_trending") == "claude_code"
         else None
     )
 
     # Script composer
     composer = (
-        CodeAgentScriptComposer(timeout=get_node_timeout("compose_script"), on_progress=_progress("compose_script"))
+        CodeAgentScriptComposer(timeout=get_node_timeout("compose_script"), effort=get_node_effort("compose_script"), on_progress=_progress("compose_script"))
         if _agent("compose_script") == "claude_code"
         else LLMScriptComposer()
     )
@@ -678,14 +681,14 @@ def _compile_graph_with_services(
     # Twitter (scraper is always OpenCLI, only analyzer switches)
     twitter_scraper = OpenCLITwitterScraper()
     twitter_analyzer = (
-        CodeAgentTwitterAnalyzer(timeout=get_node_timeout("analyze_twitter"), on_progress=_progress("analyze_twitter"))
+        CodeAgentTwitterAnalyzer(timeout=get_node_timeout("analyze_twitter"), effort=get_node_effort("analyze_twitter"), on_progress=_progress("analyze_twitter"))
         if _agent("analyze_twitter") == "claude_code"
         else LLMTwitterAnalyzer()
     )
 
     # Blueprint composer
     blueprint_composer = (
-        CodeAgentBlueprintComposer(timeout=get_node_timeout("generate_blueprint"), on_progress=_progress("generate_blueprint"))
+        CodeAgentBlueprintComposer(timeout=get_node_timeout("generate_blueprint"), effort=get_node_effort("generate_blueprint"), on_progress=_progress("generate_blueprint"))
         if _agent("generate_blueprint") == "claude_code"
         else LLMBlueprintComposer()
     )

@@ -19,3 +19,8 @@ class ProjectRepository(ABC):
 
     @abstractmethod
     async def delete(self, project_id: uuid.UUID) -> bool: ...
+
+    @abstractmethod
+    async def get_task_counts_batch(self, project_ids: list[uuid.UUID]) -> dict[str, int]:
+        """Returns task counts for given project IDs (keys are str for easier JSON serialization)."""
+        pass

@@ -1,13 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 import uuid
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from ...domain.task.entities import PipelineTask, PipelineStatus
+from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.task.dag_definition import compute_dag_snapshot
-from ...infrastructure.task.connection import get_db_session
-from ...infrastructure.task.postgres_repository import PostgresPipelineTaskRepository
-from ...infrastructure.task.postgres_models import PipelineTaskDB
+from .dependencies import get_task_repo
 from ..dtos.task_dtos import (
     TaskSubmitRequest, TaskSubmitResponse, TaskStatusResponse, DagSnapshotResponse,
 )
@@ -24,9 +20,11 @@ async def get_default_dag() -> DagSnapshotResponse:
 
 
 @router.post("/submit", response_model=TaskSubmitResponse)
-async def submit_task(req: TaskSubmitRequest, session: AsyncSession = Depends(get_db_session)) -> TaskSubmitResponse:
+async def submit_task(
+    req: TaskSubmitRequest,
+    repo: PipelineTaskRepository = Depends(get_task_repo)
+) -> TaskSubmitResponse:
     """Submits a URL to register a pipeline task in the database."""
-    repo = PostgresPipelineTaskRepository(session)
     task_id = uuid.uuid4()
 
     repo_url = req.repo_url or req.twitter_url or ""
@@ -42,14 +40,16 @@ async def submit_task(req: TaskSubmitRequest, session: AsyncSession = Depends(ge
 
 
 @router.get("/{task_id}", response_model=TaskStatusResponse)
-async def get_task_status(task_id: str, session: AsyncSession = Depends(get_db_session)) -> TaskStatusResponse:
+async def get_task_status(
+    task_id: str,
+    repo: PipelineTaskRepository = Depends(get_task_repo)
+) -> TaskStatusResponse:
     """Retrieves the execution status and output files of a specific task."""
     try:
         uid = uuid.UUID(task_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid task ID format.")
 
-    repo = PostgresPipelineTaskRepository(session)
     task = await repo.get_by_id(uid)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")
@@ -76,29 +76,27 @@ async def get_task_status(task_id: str, session: AsyncSession = Depends(get_db_s
 
 
 @router.delete("/{task_id}")
-async def delete_task(task_id: str, session: AsyncSession = Depends(get_db_session)) -> dict:
+async def delete_task(
+    task_id: str,
+    repo: PipelineTaskRepository = Depends(get_task_repo)
+) -> dict:
     """Delete a task by ID."""
     try:
         uid = uuid.UUID(task_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid task ID format.")
 
-    result = await session.execute(
-        select(PipelineTaskDB).where(PipelineTaskDB.id == uid)
-    )
-    task_db = result.scalars().first()
-    if not task_db:
+    deleted = await repo.delete(uid)
+    if not deleted:
         raise HTTPException(status_code=404, detail="Task not found.")
-
-    await session.delete(task_db)
-    await session.commit()
+    
     return {"status": "deleted"}
 
 
 @router.get("/{task_id}/dag", response_model=DagSnapshotResponse)
 async def get_task_dag(
     task_id: str,
-    session: AsyncSession = Depends(get_db_session),
+    repo: PipelineTaskRepository = Depends(get_task_repo),
 ) -> DagSnapshotResponse:
     """Returns the full DAG structure with current node states for the frontend."""
     try:
@@ -106,7 +104,6 @@ async def get_task_dag(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid task ID format.")
 
-    repo = PostgresPipelineTaskRepository(session)
     task = await repo.get_by_id(uid)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found.")

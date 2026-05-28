@@ -4,11 +4,14 @@ import uuid
 from typing import Optional
 
 from langchain_core.prompts import ChatPromptTemplate
+import logging
 
 logger = logging.getLogger(__name__)
+
 from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ...domain.github_trending.entities import ScoredRepo, TrendingResponse, RawTrendingRepo
+from ...domain.github_trending.interfaces import TrendingScraper
 from ..workflow.state import PipelineState
 from ...infrastructure.llm.client import get_llm, LLMRole, structured_chain
 from ...infrastructure.llm.prompt_loader import load_prompt
@@ -21,12 +24,14 @@ class GithubTrendingUseCase:
         self,
         repository: PipelineTaskRepository,
         status_service: StatusTransitionService,
+        scraper: TrendingScraper,
         trending_scorer: Optional[object] = None,  # CodeAgentTrendingScorer or None for LLM
     ):
         self.llm = get_llm(LLMRole.SCORING) if trending_scorer is None else None
         self.trending_scorer = trending_scorer
         self.repository = repository
         self.status_service = status_service
+        self.scraper = scraper
 
     async def __call__(self, state: PipelineState) -> PipelineState:
         repo_url = state.get("repo_url", "")
@@ -48,8 +53,7 @@ class GithubTrendingUseCase:
         logger.info("[Graph] GithubTrendingUseCase: Fetching top trending repos autonomously...")
 
         try:
-            from ...infrastructure.github.tools import fetch_trending_repos
-            logger.info("[Graph] GithubTrendingUseCase: Calling fetch_trending_repos...")
+            logger.info("[Graph] GithubTrendingUseCase: Calling scraper.fetch_trending_repos...")
 
             exclude_urls: set[str] = set()
             try:
@@ -57,7 +61,7 @@ class GithubTrendingUseCase:
             except Exception:
                 await self.repository.session.rollback()
 
-            raw_repos = await fetch_trending_repos(limit=30, exclude_urls=exclude_urls)
+            raw_repos = await self.scraper.fetch_trending_repos(limit=30, exclude_urls=exclude_urls)
             logger.info(f"[Graph] GithubTrendingUseCase: Got {len(raw_repos)} repos")
 
             if not raw_repos:

@@ -12,14 +12,15 @@ from ...domain.twitter_analyzer.entities import TwitterContentModel
 from ..llm.prompt_loader import load_prompt
 from .claude_code import ClaudeCodeChatModel, parse_claude_json
 
+
 logger = logging.getLogger(__name__)
 
 
 class CodeAgentScriptComposer(ScriptComposer):
     """ScriptComposer backed by Claude Code CLI."""
 
-    def __init__(self, timeout: int = 900, on_progress: Optional[Callable[[str], None]] = None) -> None:
-        self.llm = ClaudeCodeChatModel.from_pydantic(Script, timeout=timeout, on_progress=on_progress)
+    def __init__(self, timeout: int = 900, effort: str = "medium", on_progress: Optional[Callable[[str], None]] = None) -> None:
+        self.llm = ClaudeCodeChatModel.from_pydantic(Script, timeout=timeout, effort=effort, on_progress=on_progress)
 
     async def compose_script(
         self,

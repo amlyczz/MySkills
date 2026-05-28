@@ -11,6 +11,7 @@ from ...domain.twitter_analyzer.entities import RawScrapeResult, TwitterContentM
 from ...domain.twitter_analyzer.interfaces import TwitterAnalyzer
 from .claude_code import ClaudeCodeChatModel, parse_claude_json
 
+
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """你是一个专业的社交媒体内容分析师。分析给定的 Twitter/X 帖子内容，提取结构化信息。
@@ -30,11 +31,12 @@ _SYSTEM_PROMPT = """你是一个专业的社交媒体内容分析师。分析给
 class CodeAgentTwitterAnalyzer(TwitterAnalyzer):
     """TwitterAnalyzer backed by Claude Code CLI."""
 
-    def __init__(self, timeout: int = 300, on_progress: Optional[Callable[[str], None]] = None) -> None:
+    def __init__(self, timeout: int = 300, effort: str = "medium", on_progress: Optional[Callable[[str], None]] = None) -> None:
         self.llm = ClaudeCodeChatModel.from_pydantic(
             TwitterContentModel,
             allowed_tools=["Read", "Glob", "Grep"],
             timeout=timeout,
+            effort=effort,
             on_progress=on_progress,
         )
 

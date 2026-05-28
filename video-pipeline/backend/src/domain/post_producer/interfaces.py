@@ -4,6 +4,19 @@ from typing import Optional
 from .entities import MixAudioRequest
 
 
+class MediaProcessor(ABC):
+
+    @abstractmethod
+    async def get_audio_duration(self, audio_path: str) -> float:
+        """Probe actual audio duration in seconds."""
+        pass
+
+    @abstractmethod
+    async def concat_audio(self, segment_paths: list[str], output_path: str) -> None:
+        """Concatenate multiple audio files into one."""
+        pass
+
+
 class VoiceoverGenerator(ABC):
 
     @abstractmethod

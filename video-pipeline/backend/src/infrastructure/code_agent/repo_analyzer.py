@@ -24,6 +24,7 @@ from ...domain.repo_analyzer.entities import (
 from ...domain.repo_analyzer.interfaces import RepoAnalyzer
 from ..llm.prompt_loader import load_prompt
 from .claude_code import ClaudeCodeChatModel, parse_claude_json
+
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -93,8 +94,13 @@ class CodeAgentRepoAnalyzer(RepoAnalyzer):
     grep and read files — no need to pre-fetch source code.
     """
 
-    def __init__(self, timeout: int = 720, on_progress: Optional[Callable[[str], None]] = None) -> None:
-        self.llm = ClaudeCodeChatModel.from_pydantic(AnalysisOutput, timeout=timeout, on_progress=on_progress)
+    def __init__(self, timeout: int = 720, effort: str = "medium", on_progress: Optional[Callable[[str], None]] = None) -> None:
+        self.llm = ClaudeCodeChatModel(
+            allowed_tools=["Bash", "Read", "Glob", "Grep"],
+            timeout=timeout,
+            effort=effort,
+            on_progress=on_progress,
+        )
         self._cached: Optional[CodeAgentAnalysisResult] = None
 
     # ── RepoAnalyzer interface ─────────────────────────────────────────

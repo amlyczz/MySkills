@@ -9,8 +9,7 @@ from ...domain.repo_analyzer.entities import ContentModel, MaterialManifest, Rep
 logger = logging.getLogger(__name__)
 from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...domain.repo_analyzer.interfaces import RepoAnalyzer
-from ...infrastructure.repo_analyzer.github_collector import GitHubMaterialCollector
+from ...domain.repo_analyzer.interfaces import RepoAnalyzer, MaterialCollector, MaterialDownloader
 from ..workflow.state import PipelineState
 from .output_dir import resolve_output_dir
 
@@ -22,11 +21,14 @@ class AnalyzeRepoUseCase:
         analyzer: RepoAnalyzer,
         repository: PipelineTaskRepository,
         status_service: StatusTransitionService,
+        collector: MaterialCollector,
+        downloader: MaterialDownloader,
     ) -> None:
         self.analyzer = analyzer
         self.repository = repository
         self.status_service = status_service
-        self.collector = GitHubMaterialCollector()
+        self.collector = collector
+        self.downloader = downloader
 
     async def __call__(self, state: PipelineState) -> PipelineState:
         if state.get("content_model") is not None:
@@ -96,7 +98,7 @@ class AnalyzeRepoUseCase:
 
         # 3.4 Lazy Fetch Curated Materials
         if content_model.curated_materials:
-            await self._download_curated_materials(
+            await self.downloader.download(
                 content_model.curated_materials, output_dir, material_manifest
             )
 
@@ -135,7 +137,6 @@ class AnalyzeRepoUseCase:
 
         parts.append("# 分析目标仓库")
         parts.append(f"**请分析以下 GitHub 仓库：** https://github.com/{repo_metadata.full_name}")
-        parts.append("不要分析任何本地文件。所有分析必须基于下方提供的信息，或通过 `gh api` 从远程获取。")
         parts.append("")
 
         parts.append("## Repository Metadata")
@@ -149,75 +150,11 @@ class AnalyzeRepoUseCase:
         parts.append(f"Homepage: {repo_metadata.homepage or 'N/A'}")
         parts.append("")
 
-        if repo_metadata.directory_tree:
-            parts.append("## Directory Structure (top 50)")
-            for item in repo_metadata.directory_tree[:50]:
-                prefix = "📁 " if item.type == "tree" else "📄 "
-                parts.append(f"{prefix}{item.path}")
-            if len(repo_metadata.directory_tree) > 50:
-                parts.append(f"... and {len(repo_metadata.directory_tree) - 50} more entries")
-            parts.append("")
-
-        if repo_metadata.core_files:
-            parts.append(f"## Core Source Files ({len(repo_metadata.core_files)} files)")
-            for cf in repo_metadata.core_files:
-                content = cf.content
-                if len(content) > 2000:
-                    content = content[:2000] + "\n... (truncated)"
-                parts.append(f"### {cf.path}")
-                parts.append("```")
-                parts.append(content)
-                parts.append("```")
-                parts.append("")
-
-        parts.append("## README Content")
-        parts.append("[请用 gh api 或 Read 工具自行获取 README 内容，不要依赖下方信息]")
+        parts.append("## Analysis Instructions (严格遵循)")
+        parts.append("请按以下逻辑自主完成分析任务（严禁执行 git clone 或 gh repo clone）：")
+        parts.append("1. **拉取目录树**: 使用 `gh api repos/{owner}/{repo}/git/trees/HEAD?recursive=1` 获取远程目录树。")
+        parts.append("2. **挑选核心文件**: 根据目录树结构，精准分析并挑选出最具代表性的核心源码文件（最多 30 个）。")
+        parts.append("3. **深度阅读与分析**: 使用 `Bash` 工具通过 `gh api` 拉取这 30 个文件的内容。为了避免逐个文件拉取耗时过长，强烈建议在 Bash 中使用小脚本（如 for 循环配合 `&` 并发，或批量请求）一次性获取，然后进行深度的源码和架构分析。")
 
         return "\n".join(parts)
 
-    async def _download_curated_materials(self, urls: list[str], output_dir: str, manifest: MaterialManifest) -> None:
-        from ...domain.repo_analyzer.entities import Material, MaterialSource, CaptureInfo, MaterialMetadata
-
-        assets_dir = os.path.join(output_dir, "assets")
-        os.makedirs(assets_dir, exist_ok=True)
-
-        for url in urls:
-            filename = os.path.basename(url.split("?")[0])
-            if not filename:
-                continue
-            file_path = os.path.join(assets_dir, filename)
-
-            try:
-                if "api.github.com" in url:
-                    cmd = ["gh", "api", url.replace("https://api.github.com", "")]
-                else:
-                    cmd = ["curl", "-sL", url]
-
-                process = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-                
-                try:
-                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30.0)
-                except asyncio.TimeoutError:
-                    process.kill()
-                    await process.communicate()
-                    raise TimeoutError(f"Command timed out after 30s: {' '.join(cmd)}")
-
-                if process.returncode == 0 and len(stdout) > 0:
-                    with open(file_path, "wb") as f:
-                        f.write(stdout)
-
-                    ext = os.path.splitext(filename)[1].lower()
-                    mat_type = "image" if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp") else "other"
-                    manifest.materials.append(Material(
-                        id=f"asset_curated_{filename.replace('.', '_')}",
-                        type=mat_type,
-                        path=file_path,
-                        source=MaterialSource(type="curated_download", url=url),
-                        capture=CaptureInfo(method="lazy_fetch")
-                    ))
-            except Exception as e:
-                logger.warning(f"[AnalyzeRepoUseCase] Failed to lazy fetch {url}: {e}")

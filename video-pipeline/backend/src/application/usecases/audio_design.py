@@ -5,42 +5,18 @@ BGM, and precise Timeline/SRT based on real audio timing.
 import asyncio
 import logging
 import os
-import subprocess
 import uuid
 
 logger = logging.getLogger(__name__)
 
 from ...domain.repo_analyzer.entities import Script, ScriptSegment
 from ...domain.post_producer.audio_timeline import AudioTimeline, AudioTimelineSegment
-from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator
+from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator, MediaProcessor
 from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
 from ..workflow.state import PipelineState
 from .output_dir import resolve_output_dir
 
-
-async def _get_audio_duration(audio_path: str) -> float:
-    """Probe actual audio duration in seconds using ffprobe (async)."""
-    try:
-        process = await asyncio.create_subprocess_exec(
-            "ffprobe", "-v", "quiet",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            audio_path,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
-        except asyncio.TimeoutError:
-            process.kill()
-            await process.communicate()
-            return 0.0
-        if process.returncode == 0 and stdout.strip():
-            return float(stdout.strip())
-    except (FileNotFoundError, ValueError):
-        pass
-    return 0.0
 
 
 def _format_srt_time(seconds: float) -> str:
@@ -57,11 +33,13 @@ class AudioDesignUseCase:
         self,
         voiceover_gen: VoiceoverGenerator,
         bgm_gen: BGMGenerator,
+        media_processor: MediaProcessor,
         repository: PipelineTaskRepository,
         status_service: StatusTransitionService,
     ) -> None:
         self.voiceover_gen = voiceover_gen
         self.bgm_gen = bgm_gen
+        self.media_processor = media_processor
         self.repository = repository
         self.status_service = status_service
 
@@ -100,7 +78,7 @@ class AudioDesignUseCase:
                 voice_id="Chinese (Mandarin)_Male_Announcer",
             )
 
-            actual_dur = await _get_audio_duration(seg_path)
+            actual_dur = await self.media_processor.get_audio_duration(seg_path)
             if actual_dur <= 0:
                 actual_dur = seg.duration_est
             segment_durations.append(actual_dur)
@@ -111,7 +89,7 @@ class AudioDesignUseCase:
 
         # ── 2. Concatenate segment audio into full voiceover ──
         voiceover_path = os.path.join(output_dir, "voiceover.mp3")
-        await self._concat_audio(segment_paths, voiceover_path)
+        await self.media_processor.concat_audio(segment_paths, voiceover_path)
 
         # ── 3. Generate BGM ──
         bgm_path = os.path.join(output_dir, "bgm.mp3")
@@ -151,36 +129,6 @@ class AudioDesignUseCase:
             "status": PipelineStatus.GENERATE_MEDIA,
         }
 
-    async def _concat_audio(self, segment_paths: list[str], output_path: str) -> None:
-        if not segment_paths:
-            return
-
-        if len(segment_paths) == 1:
-            import shutil
-            await asyncio.to_thread(shutil.copy2, segment_paths[0], output_path)
-            return
-
-        list_path = output_path + ".concat.txt"
-        with open(list_path, "w", encoding="utf-8") as f:
-            for p in segment_paths:
-                f.write(f"file '{p}'\n")
-
-        cmd = [
-            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-            "-i", list_path, "-c", "copy", output_path,
-        ]
-        process = await asyncio.create_subprocess_exec(
-            *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
-        stdout, stderr = await process.communicate()
-
-        if os.path.exists(list_path):
-            os.remove(list_path)
-
-        if process.returncode != 0:
-            import shutil
-            await asyncio.to_thread(shutil.copy2, segment_paths[0], output_path)
-            logger.warning("[AudioDesign] Warning: concat failed, using first segment only")
 
     def _build_timeline(self, script: Script, actual_durations: list[float]) -> AudioTimeline:
         segments: list[AudioTimelineSegment] = []

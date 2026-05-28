@@ -1,14 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 import uuid
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from ...domain.project.entities import Project
+from ...domain.project.interfaces import ProjectRepository
 from ...domain.task.entities import PipelineTask, PipelineStatus
-from ...infrastructure.project.postgres_models import ProjectDB
-from ...infrastructure.project.postgres_repository import PostgresProjectRepository
-from ...infrastructure.task.connection import get_db_session
-from ...infrastructure.task.postgres_models import PipelineTaskDB
+from ...domain.task.interfaces import PipelineTaskRepository
+from .dependencies import get_project_repo, get_task_repo
 from ..dtos.project_dtos import (
     CreateProjectRequest,
     ProjectResponse,
@@ -34,12 +30,10 @@ def _project_to_response(p: Project, task_count: int = 0) -> ProjectResponse:
 @router.post("", response_model=ProjectResponse)
 async def create_project(
     req: CreateProjectRequest,
-    session: AsyncSession = Depends(get_db_session),
+    repo: ProjectRepository = Depends(get_project_repo),
 ) -> ProjectResponse:
-    repo = PostgresProjectRepository(session)
     project = Project(name=req.name)
     saved = await repo.save(project)
-    await session.commit()
     return _project_to_response(saved)
 
 
@@ -48,22 +42,13 @@ async def list_projects(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = None,
-    session: AsyncSession = Depends(get_db_session),
+    repo: ProjectRepository = Depends(get_project_repo),
 ) -> ProjectListResponse:
-    repo = PostgresProjectRepository(session)
     projects, total = await repo.list_projects(page=page, page_size=page_size, search=search)
 
     # Get task counts for all projects in one query
     project_ids = [p.id for p in projects]
-    task_counts: dict[str, int] = {}
-    if project_ids:
-        stmt = (
-            select(PipelineTaskDB.project_id, func.count(PipelineTaskDB.id))
-            .where(PipelineTaskDB.project_id.in_(project_ids))
-            .group_by(PipelineTaskDB.project_id)
-        )
-        result = await session.execute(stmt)
-        task_counts = {str(row[0]): row[1] for row in result.all()}
+    task_counts = await repo.get_task_counts_batch(project_ids) if project_ids else {}
 
     return ProjectListResponse(
         projects=[_project_to_response(p, task_counts.get(str(p.id), 0)) for p in projects],
@@ -76,21 +61,20 @@ async def list_projects(
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: str,
-    session: AsyncSession = Depends(get_db_session),
+    repo: ProjectRepository = Depends(get_project_repo),
 ) -> ProjectResponse:
     try:
         uid = uuid.UUID(project_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid project ID format.")
 
-    repo = PostgresProjectRepository(session)
     project = await repo.get_by_id(uid)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
 
     # Task count
-    count_stmt = select(func.count(PipelineTaskDB.id)).where(PipelineTaskDB.project_id == uid)
-    task_count = (await session.execute(count_stmt)).scalar() or 0
+    counts = await repo.get_task_counts_batch([uid])
+    task_count = counts.get(str(uid), 0)
 
     return _project_to_response(project, task_count)
 
@@ -98,7 +82,7 @@ async def get_project(
 @router.get("/{project_id}/tasks", response_model=list[TaskListItem])
 async def list_project_tasks(
     project_id: str,
-    session: AsyncSession = Depends(get_db_session),
+    task_repo: PipelineTaskRepository = Depends(get_task_repo),
 ) -> list[TaskListItem]:
     """List all tasks belonging to a project."""
     try:
@@ -106,47 +90,33 @@ async def list_project_tasks(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid project ID format.")
 
-    stmt = (
-        select(
-            PipelineTaskDB.id,
-            PipelineTaskDB.repo_url,
-            PipelineTaskDB.status,
-            PipelineTaskDB.created_at,
-            PipelineTaskDB.updated_at,
-        )
-        .where(PipelineTaskDB.project_id == uid)
-        .order_by(PipelineTaskDB.created_at.desc())
-    )
-    result = await session.execute(stmt)
-    tasks = result.all()
+    tasks = await task_repo.list_by_project(uid)
 
     return [
         TaskListItem(
-            task_id=str(row.id),
-            repo_url=row.repo_url or "",
-            status=row.status.value if row.status else "pending",
-            created_at=row.created_at.isoformat() if row.created_at else None,
-            updated_at=row.updated_at.isoformat() if row.updated_at else None,
+            task_id=str(task.id),
+            repo_url=task.repo_url or "",
+            status=task.status.value if task.status else "pending",
+            created_at=task.created_at.isoformat() if task.created_at else None,
+            updated_at=task.updated_at.isoformat() if task.updated_at else None,
         )
-        for row in tasks
+        for task in tasks
     ]
 
 
 @router.delete("/{project_id}")
 async def delete_project(
     project_id: str,
-    session: AsyncSession = Depends(get_db_session),
+    repo: ProjectRepository = Depends(get_project_repo),
 ) -> dict:
     try:
         uid = uuid.UUID(project_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid project ID format.")
 
-    repo = PostgresProjectRepository(session)
     deleted = await repo.delete(uid)
     if not deleted:
         raise HTTPException(status_code=404, detail="Project not found.")
-    await session.commit()
     return {"status": "deleted"}
 
 
@@ -154,14 +124,14 @@ async def delete_project(
 async def submit_task_in_project(
     project_id: str,
     req: ProjectSubmitTaskRequest,
-    session: AsyncSession = Depends(get_db_session),
+    repo: ProjectRepository = Depends(get_project_repo),
+    task_repo: PipelineTaskRepository = Depends(get_task_repo),
 ) -> dict:
     try:
         uid = uuid.UUID(project_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid project ID format.")
 
-    repo = PostgresProjectRepository(session)
     project = await repo.get_by_id(uid)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
@@ -175,17 +145,10 @@ async def submit_task_in_project(
         id=task_id,
         repo_url=repo_url,
         status=PipelineStatus.PENDING,
-    )
-
-    # Save task with project_id
-    task_db = PipelineTaskDB(
-        id=task.id,
-        repo_url=task.repo_url,
-        status=task.status,
         project_id=uid,
     )
-    session.add(task_db)
-    await session.commit()
+
+    await task_repo.save(task)
 
     return {"task_id": str(task_id), "project_id": str(uid), "status": "created"}
 

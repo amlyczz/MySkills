@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from .claude_code import ClaudeCodeChatModel, parse_claude_json
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,6 +40,7 @@ class CodeAgentLLM:
         output_schema: Type[BaseModel],
         allowed_tools: list[str] | None = None,
         timeout: int = 600,
+        effort: str = "medium",
         on_progress: Optional[Callable[[str], None]] = None,
     ):
         self.system_prompt = system_prompt
@@ -47,6 +49,7 @@ class CodeAgentLLM:
             output_schema,
             allowed_tools=allowed_tools or ["Read", "Glob", "Grep", "Bash(gh:*)"],
             timeout=timeout,
+            effort=effort,
             on_progress=on_progress,
         )
 

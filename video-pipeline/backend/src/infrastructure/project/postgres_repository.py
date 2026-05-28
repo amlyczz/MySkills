@@ -62,3 +62,15 @@ class PostgresProjectRepository(ProjectRepository):
         stmt = sa_delete(ProjectDB).where(ProjectDB.id == project_id)
         result = await self._session.execute(stmt)
         return result.rowcount > 0
+
+    async def get_task_counts_batch(self, project_ids: list[uuid.UUID]) -> dict[str, int]:
+        from ...infrastructure.task.postgres_models import PipelineTaskDB
+        if not project_ids:
+            return {}
+        stmt = (
+            select(PipelineTaskDB.project_id, func.count(PipelineTaskDB.id))
+            .where(PipelineTaskDB.project_id.in_(project_ids))
+            .group_by(PipelineTaskDB.project_id)
+        )
+        result = await self._session.execute(stmt)
+        return {str(row[0]): row[1] for row in result.all()}

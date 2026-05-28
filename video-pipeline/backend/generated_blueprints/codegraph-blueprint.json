@@ -1,0 +1,3112 @@
+{
+  "meta": {
+    "id": "codegraph-deep-dive",
+    "name": "CodeGraph Architecture Deep Dive",
+    "description": "Pre-indexed code knowledge graph for AI coding agents — fewer tokens, fewer tool calls, 100% local"
+  },
+  "globalSettings": {
+    "safeArea": {
+      "top": 0,
+      "right": 0,
+      "bottom": 0,
+      "left": 0,
+      "unit": "px"
+    },
+    "theme": {
+      "colors": {
+        "background": "#0a0a0f",
+        "surface": "#12121a",
+        "surfaceAlt": "#1a1a2e",
+        "accent": "#00d4ff",
+        "accentSecondary": "#7c3aed",
+        "accentTertiary": "#10b981",
+        "text": "#f8fafc",
+        "textSecondary": "#94a3b8",
+        "textMuted": "#64748b",
+        "codeKeyword": "#c084fc",
+        "codeString": "#34d399",
+        "codeFunction": "#fbbf24",
+        "codeVariable": "#60a5fa",
+        "nodeColor": "#00d4ff",
+        "edgeColor": "#7c3aed",
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444"
+      },
+      "typography": {
+        "primaryFont": "Inter",
+        "fallbackFont": "system-ui, sans-serif",
+        "scales": {
+          "title": "80px",
+          "heading": "48px",
+          "subheading": "32px",
+          "body": "24px",
+          "caption": "18px",
+          "code": "20px"
+        }
+      },
+      "shape": {
+        "radii": {
+          "sm": "4px",
+          "md": "8px",
+          "lg": "16px",
+          "xl": "24px"
+        },
+        "shadows": {
+          "glow": "0 0 20px rgba(0, 212, 255, 0.3)",
+          "glowPurple": "0 0 20px rgba(124, 58, 237, 0.3)"
+        }
+      }
+    },
+    "motionTokens": {
+      "snappy": {
+        "easing": {
+          "type": "spring",
+          "params": {
+            "mass": 1,
+            "damping": 14,
+            "stiffness": 120
+          }
+        },
+        "duration": 20
+      },
+      "cinematic": {
+        "easing": {
+          "type": "spring",
+          "params": {
+            "mass": 1.5,
+            "damping": 20,
+            "stiffness": 60
+          }
+        },
+        "duration": 45
+      },
+      "overshoot": {
+        "easing": {
+          "type": "spring",
+          "params": {
+            "mass": 1.2,
+            "damping": 10,
+            "stiffness": 100
+          }
+        },
+        "duration": 30
+      }
+    },
+    "audio": {
+      "ducking": {
+        "enabled": true,
+        "duckToVolume": 0.3,
+        "fadeDurationFrames": 15
+      }
+    }
+  },
+  "scenes": [
+    {
+      "id": "scene_hook",
+      "type": "center-layout",
+      "startFrame": 0,
+      "durationInFrames": 180,
+      "narrativePhase": "hook",
+      "background": {
+        "type": "mesh-gradient-bg",
+        "props": {
+          "color1": "#0a0a0f",
+          "color2": "#1a1a2e",
+          "color3": "#0f0f1a"
+        }
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "你有没有想过一个问题：你花大价钱订阅的 AI 编程助手，到底把钱花在了哪儿？",
+        "startFrame": 0,
+        "endFrame": 180
+      },
+      "elements": [
+        {
+          "id": "title-main",
+          "type": "title",
+          "props": {
+            "text": "70%",
+            "fontSize": 160,
+            "fontWeight": 900,
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 180,
+            "width": "100%",
+            "height": 200,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 60,
+              "duration": 60
+            },
+            "startState": {
+              "scale": 0.5,
+              "opacity": 0
+            },
+            "endState": {
+              "scale": 1,
+              "opacity": 1
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1.2,
+                "damping": 10,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "subtitle-pie",
+          "type": "gradient-text",
+          "props": {
+            "text": "花在了文件发现上",
+            "fontSize": 48,
+            "gradient": ["#7c3aed", "#c084fc"]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 400,
+            "width": "100%",
+            "height": 80,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 120,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 120
+              }
+            }
+          }
+        },
+        {
+          "id": "pie-chart-visual",
+          "type": "custom-chart",
+          "props": {
+            "chartType": "donut",
+            "segments": [
+              { "value": 70, "color": "#00d4ff", "label": "文件发现" },
+              { "value": 30, "color": "#7c3aed", "label": "真正写代码" }
+            ],
+            "size": 300,
+            "strokeWidth": 40
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 600,
+            "y": 250,
+            "width": 300,
+            "height": 300,
+            "zIndex": 5
+          },
+          "animation": {
+            "type": "custom-donut",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 150,
+              "duration": 120
+            },
+            "startState": {
+              "progress": 0
+            },
+            "endState": {
+              "progress": 1
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1,
+                "damping": 14,
+                "stiffness": 120
+              }
+            }
+          }
+        },
+        {
+          "id": "film-grain-decor",
+          "type": "film-grain",
+          "props": {
+            "opacity": 0.05,
+            "blendMode": "overlay"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 0,
+            "width": "100%",
+            "height": "100%",
+            "zIndex": 100
+          },
+          "animation": {
+            "type": "none",
+            "loop": {
+              "type": "wiggle",
+              "durationInFrames": 120
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_problem",
+      "type": "split-layout",
+      "startFrame": 180,
+      "durationInFrames": 210,
+      "narrativePhase": "context",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "问题为什么这么难？因为代码不是扁平的文本，而是一张动态的关系网。",
+        "startFrame": 180,
+        "endFrame": 390
+      },
+      "elements": [
+        {
+          "id": "left-text",
+          "type": "text-block",
+          "props": {
+            "text": "人类程序员",
+            "fontSize": 36,
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 200,
+            "width": 400,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-left",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 60,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "x": -50
+            },
+            "endState": {
+              "opacity": 1,
+              "x": 0
+            }
+          }
+        },
+        {
+          "id": "left-desc",
+          "type": "text-block",
+          "props": {
+            "text": "靠的是多年积累的代码感",
+            "fontSize": 24,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 280,
+            "width": 500,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 120,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "right-text",
+          "type": "text-block",
+          "props": {
+            "text": "AI 代理",
+            "fontSize": 36,
+            "color": "#ef4444"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 600,
+            "y": 200,
+            "width": 400,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-right",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 60,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "x": 50
+            },
+            "endState": {
+              "opacity": 1,
+              "x": 0
+            }
+          }
+        },
+        {
+          "id": "right-desc",
+          "type": "text-block",
+          "props": {
+            "text": "靠的却是盲目的文本搜索",
+            "fontSize": 24,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 600,
+            "y": 280,
+            "width": 500,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 120,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "vs-divider",
+          "type": "decorative-line",
+          "props": {
+            "color": "#64748b",
+            "thickness": 2
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 540,
+            "y": 180,
+            "width": 2,
+            "height": 200,
+            "zIndex": 5
+          },
+          "animation": {
+            "type": "scale-y",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 90,
+              "duration": 60
+            },
+            "startState": {
+              "scaleY": 0
+            },
+            "endState": {
+              "scaleY": 1
+            }
+          }
+        },
+        {
+          "id": "metaphor-text",
+          "type": "gradient-text",
+          "props": {
+            "text": "用放大镜找星座",
+            "fontSize": 32,
+            "gradient": ["#f59e0b", "#fbbf24"]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 450,
+            "width": "100%",
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 120,
+              "outFrame": 180,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "dot-grid-bg",
+          "type": "dot-grid-bg",
+          "props": {
+            "color": "#1a1a2e",
+            "dotSize": 2,
+            "spacing": 30,
+            "opacity": 0.5
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 0,
+            "width": "100%",
+            "height": "100%",
+            "zIndex": 1
+          },
+          "animation": {
+            "type": "none"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_solution",
+      "type": "center-layout",
+      "startFrame": 390,
+      "durationInFrames": 150,
+      "narrativePhase": "climax",
+      "background": {
+        "type": "mesh-gradient-bg",
+        "props": {
+          "color1": "#0a0a0f",
+          "color2": "#1a1a2e",
+          "color3": "#0f172a"
+        }
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "预计算优于运行时搜索。提前把整个代码库的结构整张图都建好，AI 想查调用链，直接查图就行。",
+        "startFrame": 390,
+        "endFrame": 540
+      },
+      "elements": [
+        {
+          "id": "core-phrase",
+          "type": "title",
+          "props": {
+            "text": "预计算优于运行时搜索",
+            "fontSize": 56,
+            "fontWeight": 700,
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 200,
+            "width": "100%",
+            "height": 100,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 60,
+              "duration": 60
+            },
+            "startState": {
+              "scale": 0.8,
+              "opacity": 0
+            },
+            "endState": {
+              "scale": 1,
+              "opacity": 1
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1.2,
+                "damping": 10,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "metaphor-desc",
+          "type": "text-block",
+          "props": {
+            "text": "就像出发去陌生城市前，先下载好离线地图",
+            "fontSize": 28,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 340,
+            "width": "100%",
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 120,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "four-stages-label",
+          "type": "text-block",
+          "props": {
+            "text": "四个阶段流水线",
+            "fontSize": 24,
+            "color": "#7c3aed"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 450,
+            "width": "100%",
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 150,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "glow-effect",
+          "type": "glow-orb",
+          "props": {
+            "color": "#00d4ff",
+            "size": 400,
+            "blur": 100
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 450,
+            "y": 300,
+            "width": 400,
+            "height": 400,
+            "zIndex": 2
+          },
+          "animation": {
+            "type": "pulse",
+            "loop": {
+              "type": "pulse",
+              "durationInFrames": 120
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_pipeline_overview",
+      "type": "flow-layout",
+      "startFrame": 540,
+      "durationInFrames": 180,
+      "narrativePhase": "context",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "整个系统分为四个阶段流水线运转。",
+        "startFrame": 540,
+        "endFrame": 720
+      },
+      "elements": [
+        {
+          "id": "stage-extraction",
+          "type": "pipeline-stage",
+          "props": {
+            "label": "Extraction",
+            "subtitle": "抽取",
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 100,
+            "y": 280,
+            "width": 200,
+            "height": 120,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 60,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 50
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            },
+            "stagger": {
+              "delayPerChild": 5
+            }
+          }
+        },
+        {
+          "id": "arrow-1",
+          "type": "arrow-connector",
+          "props": {
+            "color": "#64748b",
+            "width": 80
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 310,
+            "y": 320,
+            "width": 80,
+            "height": 40,
+            "zIndex": 5
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 90,
+              "duration": 30
+            }
+          }
+        },
+        {
+          "id": "stage-storage",
+          "type": "pipeline-stage",
+          "props": {
+            "label": "Storage",
+            "subtitle": "存储",
+            "color": "#7c3aed"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 400,
+            "y": 280,
+            "width": 200,
+            "height": 120,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 90,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 50
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "arrow-2",
+          "type": "arrow-connector",
+          "props": {
+            "color": "#64748b",
+            "width": 80
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 610,
+            "y": 320,
+            "width": 80,
+            "height": 40,
+            "zIndex": 5
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 120,
+              "duration": 30
+            }
+          }
+        },
+        {
+          "id": "stage-resolution",
+          "type": "pipeline-stage",
+          "props": {
+            "label": "Resolution",
+            "subtitle": "解析",
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 700,
+            "y": 280,
+            "width": 200,
+            "height": 120,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 120,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 50
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "arrow-3",
+          "type": "arrow-connector",
+          "props": {
+            "color": "#64748b",
+            "width": 80
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 910,
+            "y": 320,
+            "width": 80,
+            "height": 40,
+            "zIndex": 5
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 120,
+              "outFrame": 150,
+              "duration": 30
+            }
+          }
+        },
+        {
+          "id": "stage-query",
+          "type": "pipeline-stage",
+          "props": {
+            "label": "Query",
+            "subtitle": "查询",
+            "color": "#f59e0b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 1000,
+            "y": 280,
+            "width": 200,
+            "height": 120,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 150,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 50
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "pipeline-label",
+          "type": "text-block",
+          "props": {
+            "text": "数据流从左到右",
+            "fontSize": 20,
+            "color": "#64748b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 500,
+            "width": "100%",
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 150,
+              "outFrame": 180,
+              "duration": 30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_extraction",
+      "type": "code-block-layout",
+      "startFrame": 720,
+      "durationInFrames": 240,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "第一阶段叫 Extraction——抽取。CodeGraph 用 tree-sitter 的 WASM 语法解析器，在主线程之外的 Web Worker 里并行解析源文件。",
+        "startFrame": 720,
+        "endFrame": 960
+      },
+      "elements": [
+        {
+          "id": "stage-title",
+          "type": "text-block",
+          "props": {
+            "text": "Stage 1: Extraction",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 600,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "ast-tree-visual",
+          "type": "tree-diagram",
+          "props": {
+            "nodes": [
+              { "id": "root", "label": "File", "type": "file" },
+              { "id": "func1", "label": "FunctionDecl", "type": "function" },
+              { "id": "func2", "label": "ClassDecl", "type": "class" },
+              { "id": "import1", "label": "ImportStatement", "type": "import" },
+              { "id": "method1", "label": "MethodDecl", "type": "method" }
+            ],
+            "edges": [
+              { "from": "root", "to": "func1" },
+              { "from": "root", "to": "func2" },
+              { "from": "root", "to": "import1" },
+              { "from": "func2", "to": "method1" }
+            ]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 160,
+            "width": 500,
+            "height": 350,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "tree-grow",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 180,
+              "duration": 150
+            },
+            "startState": {
+              "opacity": 0,
+              "scale": 0.9
+            },
+            "endState": {
+              "opacity": 1,
+              "scale": 1
+            }
+          }
+        },
+        {
+          "id": "extraction-types",
+          "type": "key-value-list",
+          "props": {
+            "items": [
+              { "key": "Node", "value": "符号：函数、类、变量", "color": "#00d4ff" },
+              { "key": "Edge", "value": "关系：调用、继承、引用", "color": "#7c3aed" }
+            ]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 650,
+            "y": 200,
+            "width": 500,
+            "height": 200,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "stagger-fade",
+            "timeline": {
+              "inFrame": 120,
+              "outFrame": 200,
+              "duration": 80
+            },
+            "stagger": {
+              "delayPerChild": 8
+            }
+          }
+        },
+        {
+          "id": "worker-note",
+          "type": "text-block",
+          "props": {
+            "text": "Web Worker 并行解析",
+            "fontSize": 22,
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 650,
+            "y": 420,
+            "width": 400,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 180,
+              "outFrame": 220,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "deterministic-badge",
+          "type": "badge",
+          "props": {
+            "text": "确定性解析，结果不会忽左忽右",
+            "bgColor": "#1a1a2e",
+            "textColor": "#f59e0b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 650,
+            "y": 480,
+            "width": 450,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-in",
+            "timeline": {
+              "inFrame": 200,
+              "outFrame": 240,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "dot-grid-decor",
+          "type": "dot-grid-bg",
+          "props": {
+            "color": "#1a1a2e",
+            "dotSize": 2,
+            "spacing": 25
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 0,
+            "width": "100%",
+            "height": "100%",
+            "zIndex": 1
+          },
+          "animation": {
+            "type": "none"
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_storage",
+      "type": "split-layout",
+      "startFrame": 960,
+      "durationInFrames": 240,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "第二阶段 Storage——存储。所有数据最终落在 codegraph.db 的 SQLite 数据库里，用了 FTS5 全文搜索。",
+        "startFrame": 960,
+        "endFrame": 1200
+      },
+      "elements": [
+        {
+          "id": "stage-title",
+          "type": "text-block",
+          "props": {
+            "text": "Stage 2: Storage",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#7c3aed"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 600,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "db-icon",
+          "type": "database-icon",
+          "props": {
+            "size": 80,
+            "color": "#7c3aed"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 100,
+            "y": 160,
+            "width": 80,
+            "height": 80,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 90,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "db-path",
+          "type": "code-block",
+          "props": {
+            "text": ".codegraph/codegraph.db",
+            "fontSize": 18
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 200,
+            "y": 175,
+            "width": 400,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 100,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "table-nodes",
+          "type": "table-card",
+          "props": {
+            "tableName": "nodes",
+            "description": "符号节点",
+            "fields": ["种类", "限定名", "文件路径", "代码位置", "文档注释"]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 260,
+            "width": 350,
+            "height": 150,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 150,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "table-edges",
+          "type": "table-card",
+          "props": {
+            "tableName": "edges",
+            "description": "关系边",
+            "highlight": "provenance",
+            "fields": ["源节点", "目标节点", "边的种类", "provenance"]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 480,
+            "y": 260,
+            "width": 350,
+            "height": 150,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 120,
+              "outFrame": 180,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "table-files",
+          "type": "table-card",
+          "props": {
+            "tableName": "files",
+            "description": "文件元数据",
+            "fields": ["路径", "内容哈希", "语言", "大小"]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 280,
+            "y": 440,
+            "width": 350,
+            "height": 120,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 150,
+              "outFrame": 210,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "fts5-badge",
+          "type": "badge",
+          "props": {
+            "text": "FTS5 毫秒级搜索",
+            "bgColor": "#10b981",
+            "textColor": "#0a0a0f"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 900,
+            "y": 180,
+            "width": 200,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-in",
+            "timeline": {
+              "inFrame": 180,
+              "outFrame": 220,
+              "duration": 40
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_resolution",
+      "type": "center-layout",
+      "startFrame": 1200,
+      "durationInFrames": 210,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "mesh-gradient-bg",
+        "props": {
+          "color1": "#0a0a0f",
+          "color2": "#1a1a2e",
+          "color3": "#0f172a"
+        }
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "第三阶段 Resolution——解析。import-resolver 处理导入路径解析，name-matcher 做符号名模糊匹配。",
+        "startFrame": 1200,
+        "endFrame": 1410
+      },
+      "elements": [
+        {
+          "id": "stage-title",
+          "type": "text-block",
+          "props": {
+            "text": "Stage 3: Resolution",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 600,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "problem-statement",
+          "type": "text-block",
+          "props": {
+            "text": "有些引用在 AST 里是解不开的",
+            "fontSize": 24,
+            "color": "#f59e0b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 150,
+            "width": 600,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 45,
+              "outFrame": 90,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "example-code",
+          "type": "code-block",
+          "props": {
+            "text": "onClick(handleClick)",
+            "language": "javascript",
+            "highlight": "handleClick"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 100,
+            "y": 220,
+            "width": 500,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 100,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "resolver-components",
+          "type": "component-list",
+          "props": {
+            "items": [
+              { "name": "import-resolver", "desc": "导入路径解析 + TypeScript path alias" },
+              { "name": "name-matcher", "desc": "符号名模糊匹配" },
+              { "name": "callback-synthesizer", "desc": "动态分发边界处理", "highlight": true }
+            ]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 650,
+            "y": 180,
+            "width": 500,
+            "height": 250,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "stagger-fade",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 180,
+              "duration": 90
+            },
+            "stagger": {
+              "delayPerChild": 10
+            }
+          }
+        },
+        {
+          "id": "callback-note",
+          "type": "text-block",
+          "props": {
+            "text": "EventEmitter / React setState / 中间件管道",
+            "fontSize": 18,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 650,
+            "y": 450,
+            "width": 500,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 150,
+              "outFrame": 190,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "glow-orb-purple",
+          "type": "glow-orb",
+          "props": {
+            "color": "#7c3aed",
+            "size": 300,
+            "blur": 80
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 900,
+            "y": 300,
+            "width": 300,
+            "height": 300,
+            "zIndex": 2
+          },
+          "animation": {
+            "type": "pulse",
+            "loop": {
+              "type": "pulse",
+              "durationInFrames": 90
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_callback_synth",
+      "type": "comparison-layout",
+      "startFrame": 1410,
+      "durationInFrames": 240,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "callback-synthesizer 是整个系统最精妙的设计——专门处理动态分发的边界。",
+        "startFrame": 1410,
+        "endFrame": 1650
+      },
+      "elements": [
+        {
+          "id": "title",
+          "type": "text-block",
+          "props": {
+            "text": "动态分发边界",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#c084fc"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 600,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "left-panel",
+          "type": "panel",
+          "props": {
+            "title": "AST 里看不到的",
+            "content": "隐式调用链",
+            "color": "#ef4444"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 160,
+            "width": 500,
+            "height": 280,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-left",
+            "timeline": {
+              "inFrame": 45,
+              "outFrame": 105,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "x": -30
+            },
+            "endState": {
+              "opacity": 1,
+              "x": 0
+            }
+          }
+        },
+        {
+          "id": "vs-circle",
+          "type": "circle",
+          "props": {
+            "text": "→",
+            "size": 60,
+            "bgColor": "#f59e0b",
+            "textColor": "#0a0a0f"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 590,
+            "y": 270,
+            "width": 60,
+            "height": 60,
+            "zIndex": 15
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 130,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "right-panel",
+          "type": "panel",
+          "props": {
+            "title": "callback-synthesizer 合成的",
+            "content": "虚拟边",
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 660,
+            "y": 160,
+            "width": 500,
+            "height": 280,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-right",
+            "timeline": {
+              "inFrame": 105,
+              "outFrame": 165,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "x": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "x": 0
+            }
+          }
+        },
+        {
+          "id": "honest-note",
+          "type": "text-block",
+          "props": {
+            "text": "部分覆盖有时候比不覆盖更糟糕——搭了一座桥却没搭完",
+            "fontSize": 18,
+            "color": "#f59e0b",
+            "italic": true
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 480,
+            "width": 1080,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 180,
+              "outFrame": 220,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "pattern-examples",
+          "type": "pattern-tags",
+          "props": {
+            "tags": ["EventEmitter", "React setState", "JSX 子→父", "Express 中间件"]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 530,
+            "width": 1080,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "stagger-fade",
+            "timeline": {
+              "inFrame": 200,
+              "outFrame": 260,
+              "duration": 60
+            },
+            "stagger": {
+              "delayPerChild": 5
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_frameworks",
+      "type": "grid-layout",
+      "startFrame": 1650,
+      "durationInFrames": 180,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "框架解析是 Resolution 阶段另一个亮点。25 个以上的框架专属解析器。",
+        "startFrame": 1650,
+        "endFrame": 1830
+      },
+      "elements": [
+        {
+          "id": "title",
+          "type": "text-block",
+          "props": {
+            "text": "25+ Framework Parsers",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 600,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "framework-grid",
+          "type": "framework-grid",
+          "props": {
+            "frameworks": [
+              "Express", "Laravel", "Rails", "Django", "Flask", "FastAPI",
+              "Spring", "Gin", "Axum", "ASP.NET", "Vapor", "React Router",
+              "SvelteKit", "Vue/Nuxt", "Swift-ObjC"
+            ]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 150,
+            "width": 1080,
+            "height": 300,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "grid-appear",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 150,
+              "duration": 120
+            },
+            "stagger": {
+              "delayPerChild": 3
+            }
+          }
+        },
+        {
+          "id": "route-note",
+          "type": "text-block",
+          "props": {
+            "text": "注入 route 节点和 references 边",
+            "fontSize": 20,
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 480,
+            "width": 500,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 140,
+              "outFrame": 170,
+              "duration": 30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_query_context",
+      "type": "split-layout",
+      "startFrame": 1830,
+      "durationInFrames": 240,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "第四阶段 Query & Context。GraphQueryManager 封装四个高级操作。",
+        "startFrame": 1830,
+        "endFrame": 2070
+      },
+      "elements": [
+        {
+          "id": "stage-title",
+          "type": "text-block",
+          "props": {
+            "text": "Stage 4: Query & Context",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#f59e0b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 700,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "query-op-1",
+          "type": "query-operation",
+          "props": {
+            "name": "getCallers",
+            "description": "谁调用了这个函数",
+            "direction": "reverse",
+            "color": "#ef4444"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 150,
+            "width": 500,
+            "height": 80,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 45,
+              "outFrame": 105,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "query-op-2",
+          "type": "query-operation",
+          "props": {
+            "name": "getCallees",
+            "description": "这个函数又调用了谁",
+            "direction": "forward",
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 250,
+            "width": 500,
+            "height": 80,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 75,
+              "outFrame": 135,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "query-op-3",
+          "type": "query-operation",
+          "props": {
+            "name": "getImpactRadius",
+            "description": "改了这个符号，有哪些调用链会受影响",
+            "direction": "both",
+            "color": "#7c3aed"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 600,
+            "y": 150,
+            "width": 550,
+            "height": 80,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 105,
+              "outFrame": 165,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "query-op-4",
+          "type": "query-operation",
+          "props": {
+            "name": "findPaths",
+            "description": "找两个节点之间的最短路径",
+            "direction": "shortest",
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 600,
+            "y": 250,
+            "width": 550,
+            "height": 80,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-up",
+            "timeline": {
+              "inFrame": 135,
+              "outFrame": 195,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "context-builder-note",
+          "type": "text-block",
+          "props": {
+            "text": "ContextBuilder 接收自然语言查询 → FTS5 → 图遍历 → TaskContext",
+            "fontSize": 20,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 400,
+            "width": 1070,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 180,
+              "outFrame": 220,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "graph-traverser-label",
+          "type": "badge",
+          "props": {
+            "text": "BFS / DFS 可配置深度遍历",
+            "bgColor": "#1a1a2e",
+            "textColor": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 470,
+            "width": 350,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-in",
+            "timeline": {
+              "inFrame": 200,
+              "outFrame": 230,
+              "duration": 30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_mcp_server",
+      "type": "flow-layout",
+      "startFrame": 2070,
+      "durationInFrames": 240,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "MCP Server 暴露六个核心工具。代码库小于 500 个文件时一次返回，超过 25000 个文件时分 5 次返回。",
+        "startFrame": 2070,
+        "endFrame": 2310
+      },
+      "elements": [
+        {
+          "id": "title",
+          "type": "text-block",
+          "props": {
+            "text": "MCP Server",
+            "fontSize": 44,
+            "fontWeight": 700,
+            "color": "#7c3aed"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 500,
+            "height": 70,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "mcp-subtitle",
+          "type": "text-block",
+          "props": {
+            "text": "Model Context Protocol",
+            "fontSize": 20,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 130,
+            "width": 400,
+            "height": 35,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 70,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "tool-grid",
+          "type": "tool-grid",
+          "props": {
+            "tools": [
+              { "name": "codegraph_search", "desc": "FTS5 符号搜索" },
+              { "name": "codegraph_node", "desc": "符号详情 + 引用" },
+              { "name": "codegraph_trace", "desc": "完整调用路径" },
+              { "name": "codegraph_explore", "desc": "BFS 探索" },
+              { "name": "codegraph_context", "desc": "完整任务上下文" },
+              { "name": "codegraph_affected", "desc": "变更影响范围" }
+            ]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 180,
+            "width": 700,
+            "height": 280,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "grid-appear",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 180,
+              "duration": 120
+            },
+            "stagger": {
+              "delayPerChild": 5
+            }
+          }
+        },
+        {
+          "id": "adaptive-badge",
+          "type": "panel",
+          "props": {
+            "title": "Adaptive Output Budget",
+            "content": "< 500 文件: 1次返回\n> 25000 文件: 最多5次返回",
+            "bgColor": "#1a1a2e",
+            "borderColor": "#f59e0b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 820,
+            "y": 180,
+            "width": 350,
+            "height": 180,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-in",
+            "timeline": {
+              "inFrame": 150,
+              "outFrame": 200,
+              "duration": 50
+            }
+          }
+        },
+        {
+          "id": "stdio-note",
+          "type": "text-block",
+          "props": {
+            "text": "通过标准输入输出与 AI 代理通信",
+            "fontSize": 18,
+            "color": "#64748b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 820,
+            "y": 400,
+            "width": 350,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 190,
+              "outFrame": 220,
+              "duration": 30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_installer",
+      "type": "hub-layout",
+      "startFrame": 2310,
+      "durationInFrames": 180,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "Installer 安装器负责把 CodeGraph 接入八种 AI 代理。添加新代理只需要新增一个文件。",
+        "startFrame": 2310,
+        "endFrame": 2490
+      },
+      "elements": [
+        {
+          "id": "title",
+          "type": "text-block",
+          "props": {
+            "text": "Multi-Agent Installer",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 700,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "center-hub",
+          "type": "circle",
+          "props": {
+            "text": "Installer",
+            "size": 100,
+            "bgColor": "#7c3aed",
+            "textColor": "#f8fafc"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 550,
+            "y": 250,
+            "width": 100,
+            "height": 100,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 30,
+              "outFrame": 90,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "agent-claude",
+          "type": "agent-node",
+          "props": {
+            "name": "Claude Code",
+            "x": 300,
+            "y": 160
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 300,
+            "y": 160,
+            "width": 140,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fly-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 120,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "agent-cursor",
+          "type": "agent-node",
+          "props": {
+            "name": "Cursor",
+            "x": 750,
+            "y": 160
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 750,
+            "y": 160,
+            "width": 100,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fly-in",
+            "timeline": {
+              "inFrame": 75,
+              "outFrame": 135,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "agent-codex",
+          "type": "agent-node",
+          "props": {
+            "name": "Codex CLI",
+            "x": 200,
+            "y": 320
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 200,
+            "y": 320,
+            "width": 130,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fly-in",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 150,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "agent-gemini",
+          "type": "agent-node",
+          "props": {
+            "name": "Gemini CLI",
+            "x": 850,
+            "y": 320
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 850,
+            "y": 320,
+            "width": 140,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fly-in",
+            "timeline": {
+              "inFrame": 105,
+              "outFrame": 165,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "agent-others",
+          "type": "text-block",
+          "props": {
+            "text": "+ OpenCode, Hermes, Antigravity, Kiro",
+            "fontSize": 18,
+            "color": "#64748b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 450,
+            "width": 600,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 140,
+              "outFrame": 170,
+              "duration": 30
+            }
+          }
+        },
+        {
+          "id": "one-file-badge",
+          "type": "badge",
+          "props": {
+            "text": "one-file operation",
+            "bgColor": "#10b981",
+            "textColor": "#0a0a0f"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 800,
+            "y": 450,
+            "width": 250,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-in",
+            "timeline": {
+              "inFrame": 150,
+              "outFrame": 180,
+              "duration": 30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_architecture",
+      "type": "comparison-layout",
+      "startFrame": 2490,
+      "durationInFrames": 180,
+      "narrativePhase": "deep_dive",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "v0.9.x 之后，CodeGraph 作为自包含完整包发布，内置 Node 24 运行时。彻底移除原生 addon。",
+        "startFrame": 2490,
+        "endFrame": 2670
+      },
+      "elements": [
+        {
+          "id": "title",
+          "type": "text-block",
+          "props": {
+            "text": "自包含打包架构",
+            "fontSize": 40,
+            "fontWeight": 700,
+            "color": "#c084fc"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 600,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "before-panel",
+          "type": "panel",
+          "props": {
+            "title": "之前",
+            "content": "需要 better-sqlite3 原生编译",
+            "borderColor": "#ef4444"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 160,
+            "width": 500,
+            "height": 200,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-left",
+            "timeline": {
+              "inFrame": 45,
+              "outFrame": 105,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "x": -30
+            },
+            "endState": {
+              "opacity": 1,
+              "x": 0
+            }
+          }
+        },
+        {
+          "id": "arrow-right",
+          "type": "arrow-connector",
+          "props": {
+            "color": "#10b981",
+            "width": 80
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 590,
+            "y": 240,
+            "width": 80,
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-x",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 120,
+              "duration": 30
+            }
+          }
+        },
+        {
+          "id": "after-panel",
+          "type": "panel",
+          "props": {
+            "title": "之后",
+            "content": "内置 Node 24 + node:sqlite\n零依赖、零编译、无数据库锁",
+            "borderColor": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 680,
+            "y": 160,
+            "width": 500,
+            "height": 200,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "slide-right",
+            "timeline": {
+              "inFrame": 105,
+              "outFrame": 165,
+              "duration": 60
+            },
+            "startState": {
+              "opacity": 0,
+              "x": 30
+            },
+            "endState": {
+              "opacity": 1,
+              "x": 0
+            }
+          }
+        },
+        {
+          "id": "install-channels",
+          "type": "install-channels",
+          "props": {
+            "channels": [
+              { "cmd": "curl | sh", "platform": "Unix" },
+              { "cmd": "npm i -g", "platform": "Cross-platform" },
+              { "cmd": "PowerShell", "platform": "Windows" }
+            ]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 420,
+            "width": 1100,
+            "height": 100,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "stagger-fade",
+            "timeline": {
+              "inFrame": 150,
+              "outFrame": 210,
+              "duration": 60
+            },
+            "stagger": {
+              "delayPerChild": 8
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_benchmarks",
+      "type": "metrics-layout",
+      "startFrame": 2670,
+      "durationInFrames": 210,
+      "narrativePhase": "climax",
+      "background": {
+        "type": "mesh-gradient-bg",
+        "props": {
+          "color1": "#0a0a0f",
+          "color2": "#1a1a2e",
+          "color3": "#0f172a"
+        }
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "真实数据：35% 成本降低、57% token 节省、71% 工具调用减少。在 Express 和 Django 上跑出来的。",
+        "startFrame": 2670,
+        "endFrame": 2880
+      },
+      "elements": [
+        {
+          "id": "title",
+          "type": "text-block",
+          "props": {
+            "text": "Benchmark Results",
+            "fontSize": 44,
+            "fontWeight": 700,
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 60,
+            "width": 600,
+            "height": 70,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 45,
+              "duration": 45
+            }
+          }
+        },
+        {
+          "id": "metric-cost",
+          "type": "metric-card",
+          "props": {
+            "value": "35%",
+            "label": "成本降低",
+            "color": "#ef4444"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 120,
+            "y": 180,
+            "width": 300,
+            "height": 180,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 45,
+              "outFrame": 105,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "metric-token",
+          "type": "metric-card",
+          "props": {
+            "value": "57%",
+            "label": "Token 节省",
+            "color": "#10b981"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 470,
+            "y": 180,
+            "width": 300,
+            "height": 180,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 75,
+              "outFrame": 135,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "metric-tools",
+          "type": "metric-card",
+          "props": {
+            "value": "71%",
+            "label": "工具调用减少",
+            "color": "#f59e0b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 820,
+            "y": 180,
+            "width": 300,
+            "height": 180,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 105,
+              "outFrame": 165,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "real-projects-note",
+          "type": "text-block",
+          "props": {
+            "text": "在 Express 和 Django 真实项目上测量",
+            "fontSize": 22,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 400,
+            "width": 600,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 150,
+              "outFrame": 190,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "root-cause",
+          "type": "text-block",
+          "props": {
+            "text": "预计算把 AI 代理从\"搜索者\"变成了\"查询者\"",
+            "fontSize": 26,
+            "fontWeight": 600,
+            "color": "#c084fc"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 80,
+            "y": 480,
+            "width": 1100,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": {
+              "inFrame": 170,
+              "outFrame": 210,
+              "duration": 40
+            },
+            "startState": {
+              "opacity": 0,
+              "y": 20
+            },
+            "endState": {
+              "opacity": 1,
+              "y": 0
+            }
+          }
+        },
+        {
+          "id": "glow-orb-center",
+          "type": "glow-orb",
+          "props": {
+            "color": "#00d4ff",
+            "size": 500,
+            "blur": 150
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 450,
+            "y": 250,
+            "width": 500,
+            "height": 500,
+            "zIndex": 2
+          },
+          "animation": {
+            "type": "pulse",
+            "loop": {
+              "type": "pulse",
+              "durationInFrames": 90
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_insight",
+      "type": "center-layout",
+      "startFrame": 2880,
+      "durationInFrames": 150,
+      "narrativePhase": "resolution",
+      "background": {
+        "type": "mesh-gradient-bg",
+        "props": {
+          "color1": "#0a0a0f",
+          "color2": "#1a1a2e",
+          "color3": "#0f172a"
+        }
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 20
+      },
+      "voiceover": {
+        "audioUrl": "",
+        "text": "改变工具描述和示例，不能可靠地改变代理的工具选择行为——这是低显著性的墙。但增加覆盖率可以。",
+        "startFrame": 2880,
+        "endFrame": 3030
+      },
+      "elements": [
+        {
+          "id": "wall-text",
+          "type": "text-block",
+          "props": {
+            "text": "低显著性的墙",
+            "fontSize": 28,
+            "color": "#ef4444",
+            "strike": true
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 200,
+            "width": "50%",
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 60,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "vs-text",
+          "type": "text-block",
+          "props": {
+            "text": "vs",
+            "fontSize": 24,
+            "color": "#64748b"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": "50%",
+            "y": 200,
+            "width": "10%",
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 45,
+              "outFrame": 75,
+              "duration": 30
+            }
+          }
+        },
+        {
+          "id": "coverage-text",
+          "type": "text-block",
+          "props": {
+            "text": "增加覆盖率",
+            "fontSize": 28,
+            "color": "#10b981",
+            "bold": true
+          },
+          "layout": {
+            "position": "absolute",
+            "x": "60%",
+            "y": 200,
+            "width": "40%",
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 100,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "explanation",
+          "type": "text-block",
+          "props": {
+            "text": "不需要代理行为做任何改变",
+            "fontSize": 22,
+            "color": "#94a3b8"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 300,
+            "width": "100%",
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 130,
+              "duration": 40
+            }
+          }
+        },
+        {
+          "id": "honest-design",
+          "type": "text-block",
+          "props": {
+            "text": "整个架构透着工程师的诚实",
+            "fontSize": 20,
+            "color": "#64748b",
+            "italic": true
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 400,
+            "width": "100%",
+            "height": 40,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 120,
+              "outFrame": 150,
+              "duration": 30
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "scene_outro",
+      "type": "outro",
+      "startFrame": 3030,
+      "durationInFrames": 150,
+      "narrativePhase": "resolution",
+      "background": {
+        "type": "solid-color",
+        "color": "#0a0a0f"
+      },
+      "transitionToNext": null,
+      "voiceover": {
+        "audioUrl": "",
+        "text": "让 AI 少搜索，多思考。",
+        "startFrame": 3030,
+        "endFrame": 3180
+      },
+      "elements": [
+        {
+          "id": "logo",
+          "type": "logo",
+          "props": {
+            "text": "CodeGraph",
+            "fontSize": 72,
+            "fontWeight": 800,
+            "color": "#00d4ff"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 200,
+            "width": "100%",
+            "height": 120,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": {
+              "inFrame": 0,
+              "outFrame": 60,
+              "duration": 60
+            },
+            "startState": {
+              "scale": 0.8,
+              "opacity": 0
+            },
+            "endState": {
+              "scale": 1,
+              "opacity": 1
+            },
+            "easing": {
+              "type": "spring",
+              "params": {
+                "mass": 1.2,
+                "damping": 10,
+                "stiffness": 100
+              }
+            }
+          }
+        },
+        {
+          "id": "tagline",
+          "type": "gradient-text",
+          "props": {
+            "text": "Pre-indexed code knowledge graph for AI coding agents",
+            "fontSize": 24,
+            "gradient": ["#7c3aed", "#c084fc"]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 340,
+            "width": "100%",
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 60,
+              "outFrame": 120,
+              "duration": 60
+            }
+          }
+        },
+        {
+          "id": "stats-row",
+          "type": "stats-row",
+          "props": {
+            "stats": [
+              { "value": "35%", "label": "成本" },
+              { "value": "57%", "label": "Token" },
+              { "value": "71%", "label": "工具调用" }
+            ]
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 250,
+            "y": 430,
+            "width": 900,
+            "height": 60,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "stagger-fade",
+            "timeline": {
+              "inFrame": 90,
+              "outFrame": 150,
+              "duration": 60
+            },
+            "stagger": {
+              "delayPerChild": 8
+            }
+          }
+        },
+        {
+          "id": "install-cmd",
+          "type": "code-block",
+          "props": {
+            "text": "curl -fsSL https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.sh | sh",
+            "fontSize": 16
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 200,
+            "y": 530,
+            "width": 900,
+            "height": 50,
+            "zIndex": 10
+          },
+          "animation": {
+            "type": "fade-in",
+            "timeline": {
+              "inFrame": 120,
+              "outFrame": 150,
+              "duration": 30
+            }
+          }
+        },
+        {
+          "id": "film-grain-final",
+          "type": "film-grain",
+          "props": {
+            "opacity": 0.03,
+            "blendMode": "overlay"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": 0,
+            "y": 0,
+            "width": "100%",
+            "height": "100%",
+            "zIndex": 100
+          },
+          "animation": {
+            "type": "none",
+            "loop": {
+              "type": "wiggle",
+              "durationInFrames": 120
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

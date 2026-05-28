@@ -7,14 +7,20 @@ logger = logging.getLogger(__name__)
 
 from ...domain.task.entities import PipelineStatus, StatusTransitionService
 from ...domain.task.interfaces import PipelineTaskRepository
-from ...infrastructure.media_generator.diagram_generator import DiagramGenerator
+from ...domain.media_generator.interfaces import DiagramGenerator
 from ..workflow.state import PipelineState
 from .output_dir import resolve_output_dir
 
 
 class GenerateDiagramsUseCase:
 
-    def __init__(self, repository: PipelineTaskRepository, status_service: StatusTransitionService) -> None:
+    def __init__(
+        self,
+        generator: DiagramGenerator,
+        repository: PipelineTaskRepository,
+        status_service: StatusTransitionService
+    ) -> None:
+        self.generator = generator
         self.repository = repository
         self.status_service = status_service
 
@@ -43,8 +49,7 @@ class GenerateDiagramsUseCase:
 
         output_dir = resolve_output_dir(state)
 
-        generator = DiagramGenerator(output_dir=output_dir)
-        generated = await generator.generate(script)
+        generated = await self.generator.generate(script, output_dir)
 
         if generated:
             logger.info(f"[UseCase] Generated {len(generated)} diagrams")

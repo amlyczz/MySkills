@@ -32,13 +32,16 @@ from ...domain.repo_analyzer.entities import (
     CoreFile,
     DirectoryEntry,
 )
+from ...domain.repo_analyzer.interfaces import MaterialCollector
+
 
 
 async def _run_gh_api(repo_full_name: str, endpoint: str) -> Optional[dict]:
     """Call `gh api` asynchronously."""
     try:
+        path = f"/repos/{repo_full_name}/{endpoint}".rstrip("/")
         proc = await asyncio.create_subprocess_exec(
-            "gh", "api", f"/repos/{repo_full_name}/{endpoint}",
+            "gh", "api", path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -103,7 +106,7 @@ def _playwright_launch_args() -> list[str]:
     return args
 
 
-class GitHubMaterialCollector:
+class GitHubMaterialCollector(MaterialCollector):
     """Collects real materials from a GitHub repository via API + Playwright."""
 
 

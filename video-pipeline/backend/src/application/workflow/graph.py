@@ -24,6 +24,8 @@ from ...domain.twitter_analyzer.interfaces import TwitterScraper, TwitterAnalyze
 from ...domain.script_composer.interfaces import ScriptComposer
 from ...domain.visual_blueprint.interfaces import BlueprintComposer, VideoRenderer
 from ...domain.post_producer.interfaces import VoiceoverGenerator, BGMGenerator, AudioMixer
+from ...infrastructure.repo_analyzer.github_collector import GitHubMaterialCollector
+from ...infrastructure.repo_analyzer.material_downloader import BashMaterialDownloader
 
 
 def route_source(state: PipelineState) -> str:
@@ -183,12 +185,22 @@ def compile_workflow(
     trending_scorer: Optional[object] = None,
 ) -> Any:
     """Compiles the LangGraph StateGraph with DDD-injected services and HITL support."""
-    analyze_repo_uc = AnalyzeRepoUseCase(analyzer, repository, status_service)
+    from ...infrastructure.media_generator.diagram_generator import DiagramGenerator
+    from ...infrastructure.post_producer.media_processor import FFmpegMediaProcessor
+    from ...infrastructure.github.trending_scraper import GitHubTrendingScraper
+
+    collector = GitHubMaterialCollector()
+    downloader = BashMaterialDownloader()
+    diagram_generator = DiagramGenerator()
+    media_processor = FFmpegMediaProcessor()
+    trending_scraper = GitHubTrendingScraper()
+    
+    analyze_repo_uc = AnalyzeRepoUseCase(analyzer, repository, status_service, collector, downloader)
     analyze_twitter_uc = AnalyzeTwitterUseCase(twitter_scraper, twitter_analyzer, repository, status_service)
     compose_script_uc = ComposeScriptUseCase(composer, repository, status_service)
-    generate_diagrams_uc = GenerateDiagramsUseCase(repository, status_service)
+    generate_diagrams_uc = GenerateDiagramsUseCase(diagram_generator, repository, status_service)
     generate_blueprint_uc = GenerateBlueprintUseCase(blueprint_composer, repository, status_service)
-    audio_design_uc = AudioDesignUseCase(voiceover_gen, bgm_gen, repository, status_service)
+    audio_design_uc = AudioDesignUseCase(voiceover_gen, bgm_gen, media_processor, repository, status_service)
     render_compose_uc = RenderComposeUseCase(video_renderer, audio_mixer, repository, semaphore, status_service)
 
     async def analyze_repo_node(state: PipelineState) -> PipelineState:
@@ -199,20 +211,87 @@ def compile_workflow(
             logger.exception("[analyze_repo] Unhandled exception, routing to review: %s", e)
             return {**state, "status": PipelineStatus.ERROR, "error": str(e)}
 
+    def make_logged_node(node_name: str, node_func_or_class: Any) -> Any:
+        async def logged_node(state: PipelineState) -> PipelineState:
+            logger.info("========================================")
+            logger.info(">>> [Node %s] INPUT STATE:", node_name)
+            for k, v in state.items():
+                if v is None or "qa_" in k:
+                    continue
+                elif isinstance(v, (str, int, float, bool)):
+                    logger.info("  %s: %s", k, v)
+                elif hasattr(v, "model_dump_json"):
+                    summary = v.model_dump_json(indent=2)
+                    if len(summary) > 500:
+                        summary = summary[:500] + "\n  ... (truncated due to length)"
+                    logger.info("  %s (Pydantic Model):\n%s", k, summary)
+                elif isinstance(v, dict):
+                    d_str = str(v)
+                    if len(d_str) > 500:
+                        d_str = d_str[:500] + " ... (truncated)"
+                    logger.info("  %s (Dict): %s", k, d_str)
+                elif isinstance(v, list):
+                    logger.info("  %s (List, len=%d): %s", k, len(v), str(v)[:500])
+                else:
+                    logger.info("  %s: %s", k, str(v)[:500])
+            logger.info("========================================")
+
+            if callable(node_func_or_class):
+                if asyncio.iscoroutinefunction(node_func_or_class) or (hasattr(node_func_or_class, '__call__') and asyncio.iscoroutinefunction(node_func_or_class.__call__)):
+                    result = await node_func_or_class(state)
+                else:
+                    res = node_func_or_class(state)
+                    if asyncio.iscoroutine(res):
+                        result = await res
+                    else:
+                        result = res
+            else:
+                raise ValueError(f"Node {node_name} is not callable")
+
+            logger.info("========================================")
+            logger.info("<<< [Node %s] OUTPUT STATE:", node_name)
+            for k, v in result.items():
+                if v is None or "qa_" in k:
+                    continue
+                elif isinstance(v, (str, int, float, bool)):
+                    logger.info("  %s: %s", k, v)
+                elif hasattr(v, "model_dump_json"):
+                    summary = v.model_dump_json(indent=2)
+                    if len(summary) > 500:
+                        summary = summary[:500] + "\n  ... (truncated due to length)"
+                    logger.info("  %s (Pydantic Model):\n%s", k, summary)
+                elif isinstance(v, dict):
+                    d_str = str(v)
+                    if len(d_str) > 500:
+                        d_str = d_str[:500] + " ... (truncated)"
+                    logger.info("  %s (Dict): %s", k, d_str)
+                elif isinstance(v, list):
+                    logger.info("  %s (List, len=%d): %s", k, len(v), str(v)[:500])
+                else:
+                    logger.info("  %s: %s", k, str(v)[:500])
+            logger.info("========================================")
+            return result
+
+        return logged_node
+
     workflow = StateGraph(PipelineState)
 
     # Nodes
-    workflow.add_node("github_trending", GithubTrendingUseCase(repository, status_service, trending_scorer=trending_scorer))
-    workflow.add_node("hitl_trending_review", hitl_trending_review_node)
-    workflow.add_node("analyze_repo", analyze_repo_node)
-    workflow.add_node("analyze_twitter", analyze_twitter_uc)
-    workflow.add_node("compose_script", compose_script_uc)
-    workflow.add_node("hitl_script_review", hitl_script_review_node)
-    workflow.add_node("generate_diagrams", generate_diagrams_uc)
-    workflow.add_node("generate_blueprint", generate_blueprint_uc)
-    workflow.add_node("hitl_blueprint_review", hitl_blueprint_review_node)
-    workflow.add_node("audio_design", audio_design_uc)
-    workflow.add_node("render_compose", render_compose_uc)
+    async def github_trending_node(state: PipelineState) -> PipelineState:
+        uc = GithubTrendingUseCase(repository, status_service, trending_scraper, trending_scorer)
+        return await uc(state)
+
+    workflow.add_node("github_trending", make_logged_node("github_trending", github_trending_node))
+    workflow.add_node("hitl_trending_review", make_logged_node("hitl_trending_review", hitl_trending_review_node))
+    workflow.add_node("analyze_repo", make_logged_node("analyze_repo", analyze_repo_node))
+    workflow.add_node("analyze_twitter", make_logged_node("analyze_twitter", analyze_twitter_uc))
+    workflow.add_node("compose_script", make_logged_node("compose_script", compose_script_uc))
+    workflow.add_node("hitl_script_review", make_logged_node("hitl_script_review", hitl_script_review_node))
+    workflow.add_node("generate_diagrams", make_logged_node("generate_diagrams", generate_diagrams_uc))
+    workflow.add_node("generate_blueprint", make_logged_node("generate_blueprint", generate_blueprint_uc))
+    workflow.add_node("hitl_blueprint_review", make_logged_node("hitl_blueprint_review", hitl_blueprint_review_node))
+    workflow.add_node("audio_design", make_logged_node("audio_design", audio_design_uc))
+    workflow.add_node("render_compose", make_logged_node("render_compose", render_compose_uc))
 
     # Edges
     workflow.set_conditional_entry_point(route_source)
