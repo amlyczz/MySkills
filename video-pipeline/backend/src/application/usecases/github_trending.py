@@ -26,8 +26,9 @@ class GithubTrendingUseCase:
         status_service: StatusTransitionService,
         scraper: TrendingScraper,
         trending_scorer: Optional[object] = None,  # CodeAgentTrendingScorer or None for LLM
+        model: Optional[str] = None,
     ):
-        self.llm = get_llm(LLMRole.SCORING) if trending_scorer is None else None
+        self.llm = get_llm(LLMRole.SCORING, model=model) if trending_scorer is None else None
         self.trending_scorer = trending_scorer
         self.repository = repository
         self.status_service = status_service

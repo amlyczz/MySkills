@@ -35,6 +35,7 @@ import { CohereShowcase } from "./CohereShowcase";
 import { ComponentCatalog, catalogTotalFrames } from "./ComponentCatalog";
 import { VideoComposer } from "./engine/VideoComposer";
 import { CommandAPlusShowcase } from "./CommandAPlusShowcase";
+import { ParticleDemo } from "./ParticleDemo";
 
 const makeBlueprintComp = (bp: any) => ({
   component: TemplateRenderer,
@@ -97,6 +98,17 @@ export const RemotionRoot: React.FC = () => {
       <Composition id="Fastlane-Showcase" component={FastlaneShowcase} durationInFrames={260} fps={DEFAULT_FPS} width={DEFAULT_WIDTH} height={DEFAULT_HEIGHT} />
       <Composition id="Cohere-Showcase" component={CohereShowcase} durationInFrames={1608} fps={DEFAULT_FPS} width={DEFAULT_WIDTH} height={DEFAULT_HEIGHT} />
       <Composition id="CommandAPlus-Showcase" component={CommandAPlusShowcase} durationInFrames={1890} fps={DEFAULT_FPS} width={DEFAULT_WIDTH} height={DEFAULT_HEIGHT} />
+      
+      {/* 实验性粒子系统 Demo */}
+      <Composition 
+        id="ParticleDemo" 
+        component={ParticleDemo} 
+        durationInFrames={300} 
+        fps={30} 
+        width={1080} 
+        height={1920} 
+        defaultProps={{ effectId: 'violet_bouquet', motionId: 'orbit' }} 
+      />
     </>
   );
 };

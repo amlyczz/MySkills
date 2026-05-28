@@ -62,7 +62,13 @@ class _FixupElement(pydantic.BaseModel):
     """Element that accepts missing id and string-style decorations."""
     type: str
     id: str = ""
-    style: Any = pydantic.Field(default_factory=dict)
+    style: dict | None = pydantic.Field(default_factory=dict)
+    props: dict | None = None
+    layout: dict | None = None
+    animation: dict | None = None
+    stagger: dict | None = None
+    loop: dict | None = None
+    children: list['_FixupElement'] | None = None
     model_config = pydantic.ConfigDict(extra="allow")
 
     @pydantic.model_validator(mode="after")
@@ -86,11 +92,11 @@ class _FixupScene(pydantic.BaseModel):
     type: str
     startFrame: int = 0
     durationInFrames: int
-    background: Any = pydantic.Field(default_factory=lambda: {"type": "solid-color", "color": "#0a0a0a"})
+    background: dict | None = pydantic.Field(default_factory=lambda: {"type": "solid-color", "color": "#0a0a0a"})
     elements: list[_FixupElement] = []
-    voiceover: Any = None
-    subtitles: Any = None
-    sfx: Any = None
+    voiceover: dict | None = None
+    subtitles: dict | None = None
+    sfx: list[dict] | None = None
     model_config = pydantic.ConfigDict(extra="allow")
 
     @pydantic.field_validator("background", mode="before")
@@ -115,9 +121,9 @@ class _FixupScene(pydantic.BaseModel):
 
 class _FixupGlobalSettings(pydantic.BaseModel):
     """GlobalSettings that accepts both list and dict motionTokens, and fixes flattened easing."""
-    motionTokens: Any = pydantic.Field(default_factory=dict)
-    theme: Any = pydantic.Field(default_factory=ThemeConfig)
-    audio: Any = None
+    motionTokens: dict | None = pydantic.Field(default_factory=dict)
+    theme: dict | None = pydantic.Field(default_factory=ThemeConfig)
+    audio: dict | None = None
     model_config = pydantic.ConfigDict(extra="allow")
 
     @pydantic.field_validator("theme", mode="before")
@@ -195,7 +201,7 @@ class _FixupGlobalSettings(pydantic.BaseModel):
 class _FixupBlueprint(pydantic.BaseModel):
     """Lenient wrapper that fixes LLM output then produces strict Blueprint."""
     globalSettings: _FixupGlobalSettings = pydantic.Field(default_factory=_FixupGlobalSettings)
-    globalBackground: Any = None
+    globalBackground: dict | None = None
     scenes: list[_FixupScene] = []
     meta: dict[str, Any] = pydantic.Field(
         default_factory=lambda: {
@@ -393,8 +399,8 @@ def _is_dark_color(hex_color: str) -> bool:
 
 class LLMBlueprintComposer(BlueprintComposer):
 
-    def __init__(self) -> None:
-        self.llm = get_llm(LLMRole.EXTRACTION)
+    def __init__(self, model: str | None = None) -> None:
+        self.llm = get_llm(LLMRole.EXTRACTION, model=model)
 
     async def compose_blueprint(
         self,
@@ -409,11 +415,15 @@ class LLMBlueprintComposer(BlueprintComposer):
         if not blueprint.scenes:
             raise ValueError("Step 1 produced zero scenes.")
 
-        # ── Step 2: Fill element trees for each scene ──
-        for i, scene in enumerate(blueprint.scenes):
+        import asyncio
+        # ── Step 2: Fill element trees for each scene (CONCURRENTLY) ──
+        async def fill_scene(i: int, s: _FixupScene):
             seg = script.segments[i] if i < len(script.segments) else None
-            filled_scene = await self._fill_scene_elements(scene, seg, content)
-            blueprint.scenes[i] = filled_scene
+            return await self._fill_scene_elements(s, seg, content)
+
+        tasks = [fill_scene(i, scene) for i, scene in enumerate(blueprint.scenes)]
+        filled_scenes = await asyncio.gather(*tasks)
+        blueprint.scenes = list(filled_scenes)
 
         # ── Step 3: Programmatic assembly (decoration, voiceover, subtitles, SFX) ──
         theme_colors = blueprint.globalSettings.theme.colors if blueprint.globalSettings and blueprint.globalSettings.theme else {}

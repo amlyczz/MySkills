@@ -10,12 +10,12 @@ from ..llm.prompt_loader import load_prompt
 
 class LLMScriptComposer(ScriptComposer):
 
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         # CREATIVE role: low reasoning_effort — lets the model briefly plan the narrative arc
         # (segment structure, pacing, story beats) before writing, without the token exhaustion
         # of max thinking mode. EXTRACTION (reasoning_effort=max) was burning 20-40k tokens
         # on chain-of-thought and leaving no budget for the actual JSON script output.
-        self.llm = get_llm(LLMRole.CREATIVE)
+        self.llm = get_llm(LLMRole.CREATIVE, model=model)
 
 
     async def compose_script(
@@ -26,11 +26,7 @@ class LLMScriptComposer(ScriptComposer):
         qa_feedback: Optional[str] = None,
         twitter_content: Optional[TwitterContentModel] = None,
     ) -> Script:
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", load_prompt("script_composer", "compose_script_system.md")),
-            ("user", load_prompt("script_composer", "compose_script_user.md")),
-        ])
-
+        # 1. Build common context payload
         if content is not None:
             # GitHub repo flow
             encyclopedia = content.content
@@ -56,7 +52,7 @@ class LLMScriptComposer(ScriptComposer):
                 else "No explicit assets provided."
             )
         elif twitter_content is not None:
-            # Twitter flow — build context from twitter_content object
+            # Twitter flow
             tc = twitter_content
             name = tc.title or "Twitter Thread"
             author = tc.author
@@ -93,7 +89,6 @@ class LLMScriptComposer(ScriptComposer):
         technical_depth = domain_analysis.technical_depth if domain_analysis else "Moderate"
         narrative_angle = domain_analysis.narrative.angle if domain_analysis else "Educational Breakdown"
 
-        # Inject HITL feedback
         feedback_section = ""
         if qa_feedback:
             feedback_section = (
@@ -107,17 +102,13 @@ class LLMScriptComposer(ScriptComposer):
         logger = logging.getLogger(__name__)
 
         from ..llm.prompt_loader import load_prompt as _lp
-        _lp.cache_clear()  # pick up edited prompt files without restart
-
-        chain = structured_chain(prompt, self.llm, Script)
+        _lp.cache_clear()
         
-        script: Script = await chain.ainvoke({
-            "target_duration": "360-600 (6-10 minutes), decide based on project complexity and depth of content",
-            "hook_pct": "~5-8%",
-            "context_pct": "~10-15%",
-            "deep_dive_pct": "~55-65%",
-            "climax_pct": "~10-15%",
-            "resolution_pct": "~3-5%",
+        target_mins = max(3, target_duration // 60) if target_duration > 0 else 4
+        total_duration_str = f"{target_mins-1}-{target_mins+1} minutes"
+
+        base_params = {
+            "target_duration": total_duration_str,
             "audience_primary": audience_primary,
             "audience_expertise": audience_expertise,
             "technical_depth": technical_depth,
@@ -131,6 +122,95 @@ class LLMScriptComposer(ScriptComposer):
             "architecture": architecture,
             "domain_specific_insights": domain_specific_insights,
             "feedback_section": feedback_section,
-        })
-        return script
+        }
 
+        # Step 1: Generate Plan
+        from ...domain.repo_analyzer.entities import ScriptPlan, ChapterScript
+        
+        plan_prompt = ChatPromptTemplate.from_messages([
+            ("system", _lp("script_composer", "compose_plan_system.md")),
+            ("user", _lp("script_composer", "compose_plan_user.md")),
+        ])
+        plan_chain = structured_chain(plan_prompt, self.llm, ScriptPlan)
+        
+        logger.info("[LLMScriptComposer] Generating script plan for duration: %s", total_duration_str)
+        plan: Optional[ScriptPlan] = None
+        for attempt in range(3):
+            try:
+                plan = await plan_chain.ainvoke(base_params)
+                break
+            except ValueError as e:
+                if "token limit" in str(e).lower() or "empty content" in str(e).lower() or "empty json" in str(e).lower():
+                    logger.warning("[LLMScriptComposer] Plan generation attempt %d failed: %s", attempt + 1, e)
+                    if attempt == 2:
+                        logger.warning("[LLMScriptComposer] Falling back to non-reasoning model for script plan")
+                        from ..config.app_config import settings
+                        fallback_llm = get_llm(LLMRole.GENERATION, model=settings.llm_model_fast)
+                        fallback_plan_chain = structured_chain(plan_prompt, fallback_llm, ScriptPlan)
+                        plan = await fallback_plan_chain.ainvoke(base_params)
+                else:
+                    raise e
+                    
+        logger.info("[LLMScriptComposer] Script plan generated with %d chapters", len(plan.chapters))
+        
+        # Step 2: Iteratively Generate Chapters
+        script_prompt = ChatPromptTemplate.from_messages([
+            ("system", _lp("script_composer", "compose_script_system.md")),
+            ("user", _lp("script_composer", "compose_script_user.md")),
+        ])
+        script_chain = structured_chain(script_prompt, self.llm, ChapterScript)
+        
+        all_segments = []
+        previous_summary = ""
+        last_few_sentences = ""
+        
+        for i, chapter in enumerate(plan.chapters):
+            logger.info("[LLMScriptComposer] Generating chapter %d/%d: %s", i+1, len(plan.chapters), chapter.chapter_title)
+            
+            chapter_params = base_params.copy()
+            chapter_params.update({
+                "overall_narrative_arc": plan.overall_narrative_arc,
+                "chapter_title": chapter.chapter_title,
+                "chapter_description": chapter.description,
+                "chapter_target_duration": chapter.target_duration_est,
+                "chapter_key_points": "\n".join(f"- {kp}" for kp in chapter.key_points),
+                "previous_summary": previous_summary or "This is the first chapter.",
+                "last_few_sentences": last_few_sentences or "None",
+            })
+            
+            chapter_script: Optional[ChapterScript] = None
+            for attempt in range(3):
+                try:
+                    chapter_script = await script_chain.ainvoke(chapter_params)
+                    break
+                except ValueError as e:
+                    if "token limit" in str(e).lower() or "empty content" in str(e).lower() or "empty json" in str(e).lower():
+                        logger.warning("[LLMScriptComposer] Chapter %d attempt %d failed: %s", i+1, attempt + 1, e)
+                        if attempt == 2:
+                            logger.warning("[LLMScriptComposer] Falling back to non-reasoning model for chapter %d", i + 1)
+                            from ..config.app_config import settings
+                            fallback_llm = get_llm(LLMRole.GENERATION, model=settings.llm_model_fast)
+                            fallback_chain = structured_chain(script_prompt, fallback_llm, ChapterScript)
+                            chapter_script = await fallback_chain.ainvoke(chapter_params)
+                    else:
+                        raise e
+            
+            all_segments.extend(chapter_script.segments)
+            previous_summary = chapter_script.chapter_summary
+            if chapter_script.segments:
+                last_few_sentences = chapter_script.segments[-1].text[-100:]
+                
+        # Step 3: Aggregate
+        full_text = "\n\n".join(seg.text for seg in all_segments)
+        total_duration = sum(seg.duration_est for seg in all_segments)
+        
+        if not all_segments:
+            raise ValueError("LLM generated no script segments.")
+            
+        logger.info("[LLMScriptComposer] Script generation complete. Total segments: %d, Duration: %.1fs", len(all_segments), total_duration)
+        
+        return Script(
+            full_text=full_text,
+            segments=all_segments,
+            total_duration_est=total_duration
+        )

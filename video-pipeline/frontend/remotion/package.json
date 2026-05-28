@@ -4,7 +4,8 @@
   "scripts": {
     "studio": "remotion studio",
     "render": "remotion render VideoComposer out/video.mp4",
-    "export": "remotion render VideoComposer"
+    "export": "remotion render VideoComposer",
+    "render-demo": "node scripts/render-particle-demo.mjs"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.0",
@@ -20,7 +21,12 @@
     "react-dom": "^18",
     "remotion": "^4.0.464",
     "zod": "^4.3.6",
-    "zod-to-json-schema": "^3.23.0"
+    "zod-to-json-schema": "^3.23.0",
+    "three": "^0.160.0",
+    "@remotion/three": "^4.0.464",
+    "@react-three/fiber": "^8.15.12",
+    "@react-three/drei": "^9.96.1",
+    "@react-three/postprocessing": "^2.16.0"
   },
   "devDependencies": {
     "@remotion/tailwind-v4": "^4.0.465",

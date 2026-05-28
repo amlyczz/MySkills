@@ -19,21 +19,24 @@ export function HitlPanel({ hasHitl, trendingRepos, hitlEvent, pipelineStatus, r
 
   useEffect(() => { if (hasHitl) setShowHitl(true) }, [hasHitl])
 
+  const isError = pipelineStatus === 'error' && !hasHitl
+  const isPanelOpen = (showHitl && hasHitl) || isError
+
   return (
-    <section className={`paper overflow-hidden border-2 transition-colors ${hasHitl ? 'border-[#8B6914] bg-[#FDF8EC]' : 'border-[#E2DED6] bg-white'}`}>
-      <button onClick={() => setShowHitl(!showHitl)}
-        className="w-full px-4 py-2 flex items-center justify-between hover:bg-[#FAF9F6] transition-colors">
+    <section className={`paper overflow-hidden border-2 transition-colors ${hasHitl ? 'border-[#8B6914] bg-[#FDF8EC]' : isError ? 'border-[#991B1B] bg-[#FEF2F2]' : 'border-[#E2DED6] bg-white'}`}>
+      <button onClick={() => !isError && setShowHitl(!showHitl)}
+        className={`w-full px-4 py-2 flex items-center justify-between ${isError ? 'cursor-default' : 'hover:bg-[#FAF9F6]'} transition-colors`}>
         <div className="flex items-center gap-2">
-          <Pause className={`w-4 h-4 ${hasHitl ? 'text-[#8B6914]' : 'text-[#A8A29E]'}`} />
-          <span className={`text-xs font-semibold uppercase tracking-wider ${hasHitl ? 'text-[#8B6914]' : 'text-[#A8A29E]'}`}>
-            Human-in-the-Loop
+          <Pause className={`w-4 h-4 ${hasHitl ? 'text-[#8B6914]' : isError ? 'text-[#991B1B]' : 'text-[#A8A29E]'}`} />
+          <span className={`text-xs font-semibold uppercase tracking-wider ${hasHitl ? 'text-[#8B6914]' : isError ? 'text-[#991B1B]' : 'text-[#A8A29E]'}`}>
+            {isError ? 'Pipeline Error' : 'Human-in-the-Loop'}
           </span>
           {hasHitl && <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#8B6914] text-white font-bold">ACTIVE</span>}
         </div>
-        <ChevronDown className={`w-4 h-4 ${hasHitl ? 'text-[#8B6914]' : 'text-[#A8A29E]'} transition-transform ${showHitl ? '' : '-rotate-90'}`} />
+        {!isError && <ChevronDown className={`w-4 h-4 ${hasHitl ? 'text-[#8B6914]' : 'text-[#A8A29E]'} transition-transform ${showHitl ? '' : '-rotate-90'}`} />}
       </button>
-      {showHitl && hasHitl && (
-        <div className="border-t border-[#E2DED6] p-3 space-y-3">
+      {isPanelOpen && (
+        <div className={`border-t p-3 space-y-3 ${isError ? 'border-[#991B1B]/20' : 'border-[#E2DED6]'}`}>
           {trendingRepos && (
             <div className="space-y-3">
               <p className="text-sm text-[#57534E]">Select a repository to analyze:</p>
@@ -156,6 +159,8 @@ export function HitlPanel({ hasHitl, trendingRepos, hitlEvent, pipelineStatus, r
                   className="flex-1 py-2 text-xs font-semibold rounded-md bg-[#166534] text-white hover:bg-[#145326]">Approve</button>
                 <button onClick={() => confirmAndSendHitl('reject', feedbackText)}
                   className="flex-1 py-2 text-xs font-semibold rounded-md bg-[#8B6914] text-white hover:bg-[#7A5B11]">Reject</button>
+                <button onClick={() => confirmAndSendHitl('retry', feedbackText)}
+                  className="flex-1 py-2 text-xs font-semibold rounded-md bg-[#2563EB] text-white hover:bg-[#1D4ED8]">Retry</button>
                 <button onClick={() => confirmAndSendHitl('abort')}
                   className="flex-1 py-2 text-xs font-semibold rounded-md border border-[#991B1B] text-[#991B1B] hover:bg-[#FEF2F2]">Abort</button>
               </div>

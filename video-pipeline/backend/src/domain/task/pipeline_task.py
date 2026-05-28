@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from ...infrastructure.config.app_config import now_east8
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -45,5 +46,5 @@ class PipelineTask(BaseModel):
     failed_node: Optional[str] = None
     node_error: Optional[str] = None
 
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=now_east8)
+    updated_at: datetime = Field(default_factory=now_east8)

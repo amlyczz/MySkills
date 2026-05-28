@@ -183,6 +183,7 @@ def compile_workflow(
     status_service: StatusTransitionService,
     checkpointer: Optional[BaseCheckpointSaver] = None,
     trending_scorer: Optional[object] = None,
+    trending_model: Optional[str] = None,
 ) -> Any:
     """Compiles the LangGraph StateGraph with DDD-injected services and HITL support."""
     from ...infrastructure.media_generator.diagram_generator import DiagramGenerator
@@ -278,7 +279,7 @@ def compile_workflow(
 
     # Nodes
     async def github_trending_node(state: PipelineState) -> PipelineState:
-        uc = GithubTrendingUseCase(repository, status_service, trending_scraper, trending_scorer)
+        uc = GithubTrendingUseCase(repository, status_service, trending_scraper, trending_scorer, model=trending_model)
         return await uc(state)
 
     workflow.add_node("github_trending", make_logged_node("github_trending", github_trending_node))

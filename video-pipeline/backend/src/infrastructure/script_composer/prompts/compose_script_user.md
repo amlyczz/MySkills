@@ -1,50 +1,41 @@
-## 🎯 编剧指引 (Directives)
-**输出语言：简体中文。** 所有口播文本、视觉提示必须用中文。技术名词可保留英文但解释用中文。
-根据项目的复杂度和素材丰富程度决定最佳时长（必须 6-10 分钟，不允许低于 6 分钟）。
-受众画像 (Audience Primary)：{audience_primary}
-受众水平 (Audience Expertise)：{audience_expertise}
-技术深度 (Technical Depth)：{technical_depth}
-叙事角度 (Narrative Angle)：{narrative_angle}
+## 🎯 本章编剧指引 (Directives)
+你现在需要撰写本视频的其中一个章节：
+**全局主线**：{overall_narrative_arc}
+**本章标题**：{chapter_title}
+**本章概述**：{chapter_description}
+**本章关键点**：
+{chapter_key_points}
 
-时长分配占比：
-- Hook：{hook_pct}
-- Context：{context_pct}
-- Deep Dive：{deep_dive_pct}
-- Climax：{climax_pct}
-- Resolution：{resolution_pct}
+**目标时长**：约 {chapter_target_duration} 秒
+**受众要求**：{audience_primary} ({audience_expertise})
 
-硬性指标（必须满足，不是建议）：
-- 最少 8 个 segment，推荐 10-15 个
-- 每段 duration_est：20-60 秒
-- 中文：full_text 总字数 ≥ 总时长秒数 × 4 字（例：360s → 1440 字）
-- 英文：full_text 总词数 ≥ 总时长秒数 × 2.5 词
+### 🔗 上下文衔接 (Context Continuity)
+【上一章节总结】：
+{previous_summary}
 
+【上一章节的最后几句话】（你的开场白必须与此自然衔接）：
+"{last_few_sentences}"
 
 ## 📖 可视素材库 (Curated Assets)
-以下是你可以在 `assigned_asset` 中引用的图片素材路径：
+你可以从中挑选 `assigned_asset`（如果为空则留空，或使用 Mermaid 代码）：
 {curated_materials}
 
-## 📚 Analyzer 产出翻译 (Source Material — 禁止重新分析，只做翻译)
-
-以下是 RepoAnalyzer 已经完成的结构化分析结果。你的工作是把这些知识翻译成口播语言，不要对以下内容做额外分析或补充。
-
-【项目概览】（用于 Hook / Context）
+## 📚 全局参考资料 (Source Material - 仅供提取本章相关内容，不要全部塞进本章)
 项目：{name}
 摘要：{summary}
 
-【快速入门】（按需引用，不强制使用）
+【快速入门】
 {quick_start}
 
-【痛点与适用场景】（用于 Hook / Context）
+【痛点与适用场景】
 {use_cases}
 
-【用法介绍】（按需引用，不强制使用）
-{usage_intro}
-
-【架构分析】（用于 Deep Dive — 这是 Analyzer 的结论，直接翻译）
+【架构分析】
 {architecture}
 
-【领域特化洞察】（用于 Deep Dive / Climax — 这是 Analyzer 的结论，直接翻译）
+【领域特化洞察】
 {domain_specific_insights}
 
 {feedback_section}
+
+现在，请开始输出该章节的分镜脚本 `ChapterScript`。

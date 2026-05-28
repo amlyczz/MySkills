@@ -56,7 +56,29 @@ class CodeAgentTwitterAnalyzer(TwitterAnalyzer):
     def _parse(self, raw_content: str, raw: RawScrapeResult, url: str) -> TwitterContentModel:
         try:
             data = parse_claude_json(raw_content)
-            return TwitterContentModel.model_validate(data)
+            if not isinstance(data, dict):
+                data = {}
+                
+            data["media_urls"] = raw.media_urls
+            data["screenshot_paths"] = raw.screenshot_paths
+            data["url"] = url
+            if not data.get("main_tweet_text"):
+                data["main_tweet_text"] = raw.main_tweet_text
+            if not data.get("author"):
+                data["author"] = raw.author_name or ""
+            if not data.get("handle"):
+                data["handle"] = raw.author_handle or ""
+            if not data.get("title"):
+                data["title"] = (raw.main_tweet_text or "Twitter Content")[:80]
+            if not data.get("summary"):
+                data["summary"] = (raw.main_tweet_text or "")[:200]
+                
+            model = TwitterContentModel.model_validate(data)
+            
+            if not model.main_tweet_text and not model.media_urls and not model.summary:
+                raise ValueError("Parsed model contains no usable tweet text or media")
+                
+            return model
         except Exception as e:
             logger.warning("[CodeAgentTwitterAnalyzer] parse/validate failed: %s, using fallback", e)
             return self._fallback(raw, url, str(e))

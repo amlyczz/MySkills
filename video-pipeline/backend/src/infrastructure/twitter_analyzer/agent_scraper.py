@@ -48,7 +48,7 @@ class FxTwitterScraper:
             logger.warning("[FxTwitterScraper] Could not extract tweet ID from: %s", url)
             return RawScrapeResult(error=f"Could not extract tweet ID from {url}")
 
-        api_url = f"https://api.fxtwitter.com/status/{tweet_id}"
+        api_url = f"https://api.vxtwitter.com/Twitter/status/{tweet_id}"
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:

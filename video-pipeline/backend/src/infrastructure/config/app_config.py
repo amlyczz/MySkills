@@ -1,6 +1,18 @@
 import os
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from pydantic import BaseModel, Field
+
+# East 8 Timezone (Asia/Shanghai)
+TZ_EAST8 = timezone(timedelta(hours=8))
+
+def now_east8() -> datetime:
+    """Return current time in East 8 timezone as a naive datetime.
+
+    Uses naive datetime to stay compatible with TIMESTAMP WITHOUT TIME ZONE
+    columns in PostgreSQL. The "East 8" semantic is managed at the application layer.
+    """
+    return datetime.now(TZ_EAST8).replace(tzinfo=None)
 
 # app_config.py is at:
 #   video-pipeline/backend/src/infrastructure/config/app_config.py
@@ -81,6 +93,28 @@ def get_node_effort(node: str) -> str:
                 if len(parts) >= 3:
                     return parts[2].strip()
     return default
+
+
+def get_node_model(node: str) -> str | None:
+    """Get model override for a specific node from NODE_AGENT_CONFIG.
+
+    Format: "analyze_repo=deepseek:300:medium:deepseek-v4-pro"
+    The model is the 4th colon-separated field (optional).
+    Returns None if no model specified → role's default model is used.
+    """
+    raw = os.getenv("NODE_AGENT_CONFIG", "")
+    if not raw:
+        return None
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            if k.strip() == node and ":" in v:
+                parts = v.split(":")
+                if len(parts) >= 4:
+                    model = parts[3].strip()
+                    return model if model else None
+    return None
 
 
 class AppConfig(BaseModel):

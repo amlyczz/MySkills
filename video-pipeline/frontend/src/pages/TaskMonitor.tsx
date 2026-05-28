@@ -61,6 +61,7 @@ export default function TaskMonitor() {
         const status: string = (data.status as string) || 'pending'
         const repoUrl: string = (data.repo_url as string) || ''
         setUrl(repoUrl)
+        setPipelineStatus(status)
 
         const restoreLogs: string[] = [`Task restored (status: ${status})`]
         for (const n of dag.nodes) {

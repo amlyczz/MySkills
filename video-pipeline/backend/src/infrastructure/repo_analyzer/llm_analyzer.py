@@ -42,8 +42,8 @@ def format_mixed_to_markdown(d: Any) -> str:
 
 class LLMRepoAnalyzer(RepoAnalyzer):
 
-    def __init__(self) -> None:
-        self.llm = get_llm(LLMRole.EXTRACTION)
+    def __init__(self, model: str | None = None) -> None:
+        self.llm = get_llm(LLMRole.EXTRACTION, model=model)
 
     async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
         # No automatic retries as requested by user. Let exceptions propagate so manual retry can handle it.

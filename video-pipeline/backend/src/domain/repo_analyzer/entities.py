@@ -7,7 +7,7 @@ from .project_encyclopedia import ProjectEncyclopedia
 from .project_category import ProjectCategory
 from .publish_copy import PublishCopy, PublishTitle
 from .repo_metadata import CoreFile, DirectoryEntry, RepoMetadata
-from .script import Script, ScriptSegment
+from .script import Script, ScriptSegment, ScriptChapterPlan, ScriptPlan, ChapterScript
 from .source_code_insight import SourceCodeInsight
 from .source_metadata import AnySourceMeta, GitHubSourceMeta, PodcastSourceMeta, ProductSourceMeta, SourceMeta
 from .tech_domain import TechDomain
@@ -36,6 +36,9 @@ __all__ = [
     "RepoMetadata",
     "Script",
     "ScriptSegment",
+    "ScriptChapterPlan",
+    "ScriptPlan",
+    "ChapterScript",
     "SourceCodeInsight",
     "AnySourceMeta",
     "GitHubSourceMeta",

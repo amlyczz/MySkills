@@ -1,6 +1,7 @@
 import uuid
-from datetime import datetime
 from typing import Optional
+
+from ...infrastructure.config.app_config import now_east8
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -125,7 +126,7 @@ class PostgresPipelineTaskRepository(PipelineTaskRepository):
             db_task.completed_nodes = task.completed_nodes or []
             db_task.failed_node = task.failed_node
             db_task.node_error = task.node_error
-            db_task.updated_at = datetime.utcnow()
+            db_task.updated_at = now_east8()
             await self.session.commit()
 
     async def delete(self, task_id: uuid.UUID) -> bool:

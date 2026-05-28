@@ -71,7 +71,7 @@ def _build(model_name: str, temperature: float, **kwargs) -> ChatDeepSeek:
         "api_key": api_key,
         "api_base": base_url,
         "max_retries": 2,
-        "max_tokens": 32000,
+        "max_tokens": 50000,
     }
     config.update(kwargs)
     return ChatDeepSeek(**config)
@@ -89,7 +89,7 @@ def _build_extraction(model: str | None = None, temperature: float = 0.2) -> Cha
         api_key=api_key,
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
-        max_tokens=32000,
+        max_tokens=50000,
         reasoning_effort=_thinking_effort(model_name, "max"),
     )
 
@@ -100,14 +100,15 @@ def _build_reasoning(model: str | None = None, temperature: float = 0.2) -> Chat
     return _build(model_name, temperature, reasoning_effort=_thinking_effort(model_name, "max"))
 
 
-def _build_scoring(temperature: float = 0.2) -> ChatDeepSeek:
+def _build_scoring(model: str | None = None, temperature: float = 0.2) -> ChatDeepSeek:
     """Fast model for scoring/classification — no thinking needed.
 
     Scoring tasks (trending repo ranking, sentiment labels) are simple
     input→number/label mappings. Thinking overhead adds latency with no
     accuracy benefit for these tasks.
     """
-    return _build(settings.llm_model_fast, temperature)
+    model_name = model or settings.llm_model_fast
+    return _build(model_name, temperature)
 
 
 def _build_creative(model: str | None = None, temperature: float = 0.6) -> ChatDeepSeek:
@@ -127,15 +128,15 @@ def _build_creative(model: str | None = None, temperature: float = 0.6) -> ChatD
         api_key=api_key,
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
-        max_tokens=32000,
+        max_tokens=50000,
         reasoning_effort=_thinking_effort(model_name, "high"),
     )
 
 
 
-def _build_qa(temperature: float = 0.7) -> ChatDeepSeek:
+def _build_qa(model: str | None = None, temperature: float = 0.7) -> ChatDeepSeek:
     """Pro model with higher temperature for critical review."""
-    qa_model = settings.qa_model or settings.llm_model_pro
+    qa_model = model or settings.qa_model or settings.llm_model_pro
     return _build(qa_model, temperature)
 
 
@@ -235,16 +236,23 @@ def structured_chain(prompt, llm, schema_cls, include_raw=False):
                 if isinstance(args, str):
                     if not args.strip():
                         raise ValueError("LLM returned empty tool_call arguments (likely hit token limit).")
-                    return schema_cls.model_validate_json(args)
+                    import json
+                    try:
+                        args = json.loads(args)
+                    except json.JSONDecodeError:
+                        return schema_cls.model_validate_json(args)
+                        
                 if not args:
                     raise ValueError("LLM returned empty tool_call arguments dict (likely hit token limit).")
+                    
+                # Fix for DeepSeek occasionally wrapping the response in an extra {"parameters": {...}} object
+                if isinstance(args, dict) and "parameters" in args and len(args) == 1 and isinstance(args["parameters"], dict):
+                    args = args["parameters"]
+                    
                 return schema_cls.model_validate(args)
                 
             # Fallback: parse from content
-            content = msg.content or ""
-            content = re.sub(r'^```(?:json)?\s*', '', content.strip())
-            content = re.sub(r'\s*```\s*$', '', content)
-            
+            content = msg.content if hasattr(msg, 'content') else str(msg)
             if not content.strip():
                 # Check if there's raw reasoning but no output
                 has_reasoning = getattr(msg, "reasoning_content", None) or msg.additional_kwargs.get("reasoning_content")
@@ -252,7 +260,30 @@ def structured_chain(prompt, llm, schema_cls, include_raw=False):
                     raise ValueError("LLM generated reasoning but output empty JSON (likely hit token limit).")
                 raise ValueError("LLM returned completely empty content.")
                 
-            return schema_cls.model_validate_json(content)
+            # Try to extract JSON from markdown block if the model was chatty
+            content_str = content.strip()
+            if "```json" in content_str:
+                content_str = content_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in content_str:
+                # Sometime models omit "json" in the code block
+                parts = content_str.split("```")
+                if len(parts) >= 3:
+                    content_str = parts[1].strip()
+                    if content_str.startswith("json\n"):
+                        content_str = content_str[5:].strip()
+            
+            try:
+                return schema_cls.model_validate_json(content_str)
+            except Exception as e:
+                # If still fails, maybe there's prefix text before first {
+                if "{" in content_str and "}" in content_str:
+                    start_idx = content_str.find("{")
+                    end_idx = content_str.rfind("}") + 1
+                    try:
+                        return schema_cls.model_validate_json(content_str[start_idx:end_idx])
+                    except:
+                        pass
+                raise e
         except Exception as e:
             # Re-raise as ValueError so caller can catch it and retry
             raise ValueError(f"LLM structured output parsing failed: {e}")

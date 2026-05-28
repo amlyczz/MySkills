@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # video-pipeline 一键启动脚本
-# 用法: ./start.sh          (启动前后端)
+# 用法: ./start.sh          (启动前后端及 Remotion)
 #       ./start.sh backend   (仅启动后端)
 #       ./start.sh frontend  (仅启动前端)
+#       ./start.sh remotion  (仅启动 Remotion)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -70,6 +71,19 @@ start_frontend() {
     exec npm run dev
 }
 
+start_remotion() {
+    log "启动 Remotion Studio (on :3000)..."
+    cd "$SCRIPT_DIR/frontend/remotion"
+
+    # 检查 node_modules
+    if [ ! -d node_modules ]; then
+        log "安装 Remotion 依赖..."
+        npm install --legacy-peer-deps
+    fi
+
+    exec npm run studio
+}
+
 case "${1:-all}" in
     backend)
         start_backend
@@ -77,8 +91,11 @@ case "${1:-all}" in
     frontend)
         start_frontend
         ;;
+    remotion)
+        start_remotion
+        ;;
     all)
-        log "同时启动前后端..."
+        log "同时启动前后端及 Remotion..."
 
         # 清理函数：杀掉子进程并退出
         _cleaned=0
@@ -87,8 +104,8 @@ case "${1:-all}" in
             _cleaned=1
             echo ""
             log "正在停止所有服务..."
-            kill $BACKEND_PID $FRONTEND_PID 2>/dev/null
-            wait $BACKEND_PID $FRONTEND_PID 2>/dev/null
+            kill $BACKEND_PID $FRONTEND_PID $REMOTION_PID 2>/dev/null
+            wait $BACKEND_PID $FRONTEND_PID $REMOTION_PID 2>/dev/null
             log "已停止"
             exit 0
         }
@@ -99,17 +116,20 @@ case "${1:-all}" in
         BACKEND_PID=$!
         start_frontend &
         FRONTEND_PID=$!
+        start_remotion &
+        REMOTION_PID=$!
 
         echo ""
         log "后端 PID: $BACKEND_PID (http://localhost:18274)"
         log "前端 PID: $FRONTEND_PID (http://localhost:15392)"
+        log "Remotion PID: $REMOTION_PID (http://localhost:3000)"
         echo ""
         log "按 Ctrl+C 停止所有服务"
 
         wait
         ;;
     *)
-        echo "用法: $0 [backend|frontend|all]"
+        echo "用法: $0 [backend|frontend|remotion|all]"
         exit 1
         ;;
 esac

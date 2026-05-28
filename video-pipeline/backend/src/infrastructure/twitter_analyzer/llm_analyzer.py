@@ -49,8 +49,8 @@ class LLMTwitterResponse(BaseModel):
 class LLMTwitterAnalyzer(TwitterAnalyzer):
     """LLM-powered analyzer that transforms raw Twitter scrape data into structured content."""
 
-    def __init__(self) -> None:
-        self.llm = get_llm(LLMRole.SCORING, temperature=0.3)
+    def __init__(self, model: str | None = None) -> None:
+        self.llm = get_llm(LLMRole.SCORING, model=model, temperature=0.3)
 
     async def _invoke_with_retry(self, chain: Any, kwargs: dict[str, Any], max_retries: int = 3) -> Any:
         # No automatic retries as requested by user. Let exceptions propagate so manual retry can handle it.

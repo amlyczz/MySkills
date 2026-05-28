@@ -179,7 +179,10 @@ async def _send_node_event(
         payload["detail"] = detail
     if error:
         payload["error"] = error
-    await websocket.send_json(payload)
+    try:
+        await websocket.send_json(payload)
+    except Exception as e:
+        logger.debug("WebSocket send_json failed in _send_node_event (client disconnected?): %s", e)
 
 
 async def _send_hitl_event(
@@ -192,15 +195,18 @@ async def _send_hitl_event(
     dag_snapshot: dict | None = None,
 ) -> None:
     """Send a unified hitl_event to the WebSocket."""
-    await websocket.send_json({
-        "type": "hitl_event",
-        "node": node,
-        "pipeline_status": pipeline_status,
-        "reason": reason,
-        "data": data,
-        "completed_nodes": completed_nodes,
-        "dag_snapshot": dag_snapshot,
-    })
+    try:
+        await websocket.send_json({
+            "type": "hitl_event",
+            "node": node,
+            "pipeline_status": pipeline_status,
+            "reason": reason,
+            "data": data,
+            "completed_nodes": completed_nodes,
+            "dag_snapshot": dag_snapshot,
+        })
+    except Exception as e:
+        logger.debug("WebSocket send_json failed in _send_hitl_event (client disconnected?): %s", e)
 
 
 async def _send_pipeline_event(
@@ -210,12 +216,15 @@ async def _send_pipeline_event(
     dag_snapshot: dict | None = None,
 ) -> None:
     """Send a pipeline_event (completed or error) to the WebSocket."""
-    await websocket.send_json({
-        "type": "pipeline_event",
-        "status": status,
-        "completed_nodes": completed_nodes,
-        "dag_snapshot": dag_snapshot,
-    })
+    try:
+        await websocket.send_json({
+            "type": "pipeline_event",
+            "status": status,
+            "completed_nodes": completed_nodes,
+            "dag_snapshot": dag_snapshot,
+        })
+    except Exception as e:
+        logger.debug("WebSocket send_json failed in _send_pipeline_event (client disconnected?): %s", e)
 
 
 async def _stream_graph(
@@ -634,7 +643,7 @@ def _compile_graph_with_services(
             CodeAgent implementations push stderr lines to this queue,
             and the caller drains it to send WebSocket events.
     """
-    from ...infrastructure.config.app_config import settings, get_node_timeout, get_node_effort
+    from ...infrastructure.config.app_config import settings, get_node_timeout, get_node_effort, get_node_model
 
     repository, status_service = _build_services(session, ws_callback=ws_callback)
     nc = settings.node_agent_config
@@ -661,7 +670,7 @@ def _compile_graph_with_services(
     analyzer = (
         CodeAgentRepoAnalyzer(timeout=get_node_timeout("analyze_repo"), effort=get_node_effort("analyze_repo"), on_progress=_progress("analyze_repo"))
         if _agent("analyze_repo") == "claude_code"
-        else LLMRepoAnalyzer()
+        else LLMRepoAnalyzer(model=get_node_model("analyze_repo"))
     )
 
     # Trending scorer
@@ -675,7 +684,7 @@ def _compile_graph_with_services(
     composer = (
         CodeAgentScriptComposer(timeout=get_node_timeout("compose_script"), effort=get_node_effort("compose_script"), on_progress=_progress("compose_script"))
         if _agent("compose_script") == "claude_code"
-        else LLMScriptComposer()
+        else LLMScriptComposer(model=get_node_model("compose_script"))
     )
 
     # Twitter (scraper is always OpenCLI, only analyzer switches)
@@ -683,14 +692,14 @@ def _compile_graph_with_services(
     twitter_analyzer = (
         CodeAgentTwitterAnalyzer(timeout=get_node_timeout("analyze_twitter"), effort=get_node_effort("analyze_twitter"), on_progress=_progress("analyze_twitter"))
         if _agent("analyze_twitter") == "claude_code"
-        else LLMTwitterAnalyzer()
+        else LLMTwitterAnalyzer(model=get_node_model("analyze_twitter"))
     )
 
     # Blueprint composer
     blueprint_composer = (
         CodeAgentBlueprintComposer(timeout=get_node_timeout("generate_blueprint"), effort=get_node_effort("generate_blueprint"), on_progress=_progress("generate_blueprint"))
         if _agent("generate_blueprint") == "claude_code"
-        else LLMBlueprintComposer()
+        else LLMBlueprintComposer(model=get_node_model("generate_blueprint"))
     )
     video_renderer = RemotionVideoRenderer()
 
@@ -719,6 +728,7 @@ def _compile_graph_with_services(
         status_service=status_service,
         trending_scorer=trending_scorer,
         checkpointer=checkpointer,
+        trending_model=get_node_model("github_trending"),
     )
     return graph, repository, status_service
 

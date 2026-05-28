@@ -1,5 +1,9 @@
 # MySkills 的 AI 操作指南
 
+## 运行环境要求
+
+- **操作系统**：该项目**必须**在 **WSL (Windows Subsystem for Linux)** 或 **macOS** 环境下运行。请勿直接在 Windows (CMD/PowerShell) 原生环境下执行任何构建、安装依赖（如 npm install / uv sync）或启动脚本，以防产生跨平台路径解析和软链接（.bin）冲突。
+
 ## 触发规则
 
 - **Plan Mode / Spec 驱动**：任何新功能、重构、或你认为需要设计方案的变更，需先写 spec，详见 `spec/` 目录下的已有 spec 文件，命名格式 `spec/<简短描述>.md`，包含问题陈述、设计方案、验收标准。文件命名格式：

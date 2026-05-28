@@ -31,7 +31,7 @@ class PostgresProjectRepository(ProjectRepository):
             description=project.description,
         )
         self._session.add(row)
-        await self._session.flush()
+        await self._session.commit()
         return project
 
     async def get_by_id(self, project_id: uuid.UUID) -> Optional[Project]:
@@ -61,6 +61,7 @@ class PostgresProjectRepository(ProjectRepository):
     async def delete(self, project_id: uuid.UUID) -> bool:
         stmt = sa_delete(ProjectDB).where(ProjectDB.id == project_id)
         result = await self._session.execute(stmt)
+        await self._session.commit()
         return result.rowcount > 0
 
     async def get_task_counts_batch(self, project_ids: list[uuid.UUID]) -> dict[str, int]:
