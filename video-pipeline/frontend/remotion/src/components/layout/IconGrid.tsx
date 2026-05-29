@@ -14,7 +14,7 @@ interface Props {
 }
 
 export const IconGrid: React.FC<Props> = ({
-  items,
+  items = [],
   columns = 4,
   className,
 }) => (

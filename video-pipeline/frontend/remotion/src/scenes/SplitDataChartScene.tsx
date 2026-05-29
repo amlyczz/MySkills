@@ -34,8 +34,8 @@ interface Props {
  *   4:6 split layout. Left: text. Right: animated bar charts.
  */
 export const SplitDataChartScene: React.FC<Props> = ({
-  leftLines,
-  chartData,
+  leftLines = [],
+  chartData = [],
   showComparison = false,
   isHighlight = false,
   chartStaggerDelay = 10,

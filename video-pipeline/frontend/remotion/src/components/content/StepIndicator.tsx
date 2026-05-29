@@ -12,7 +12,7 @@ interface Props {
   className?: string;
 }
 
-export const StepIndicator: React.FC<Props> = ({ steps, activeStep = -1, className }) => (
+export const StepIndicator: React.FC<Props> = ({ steps = [], activeStep = -1, className }) => (
   <div className={`flex flex-col gap-6 font-sans ${className || ""}`}>
     {steps.map((step, i) => {
       const isActive = activeStep === i;

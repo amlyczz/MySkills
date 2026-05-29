@@ -32,8 +32,8 @@ export const SceneRenderer: React.FC<Props> = ({ scene, globalBackground, dataCt
         (() => {
           const PresetComponent = presetSceneRegistry[scene.type];
           if (!PresetComponent) {
-            console.warn(`[SceneRenderer] Unknown preset scene type: "${scene.type}".`);
-            return null;
+            console.warn(`[SceneRenderer] Unknown preset scene type: "${scene.type}". Falling back to GenericScene.`);
+            return <GenericScene elements={scene.elements ?? []} style={scene.style} dataCtx={dataCtx} motionTokens={motionTokens} />;
           }
           return <PresetComponent {...(scene.props ?? {})} />;
         })()

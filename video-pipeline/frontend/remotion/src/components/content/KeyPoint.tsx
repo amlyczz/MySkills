@@ -5,7 +5,7 @@ interface Props {
   className?: string;
 }
 
-export const KeyPoint: React.FC<Props> = ({ points, className }) => (
+export const KeyPoint: React.FC<Props> = ({ points = [], className }) => (
   <div className={`flex flex-col gap-4 font-sans ${className || ""}`}>
     {points.map((point, i) => (
       <div key={i} className="flex items-center gap-4">

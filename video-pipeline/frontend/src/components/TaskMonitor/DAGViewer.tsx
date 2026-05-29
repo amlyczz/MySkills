@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronDown, Pause } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { ChevronDown, Pause, Play } from 'lucide-react'
 import {
   ReactFlow,
   Background,
@@ -34,10 +34,12 @@ function GlowEdge({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPo
 }
 
 // ── Custom Node Components ──
-function DagProcessNode({ data }: NodeProps) {
-  const { state, label, icon, status_label } = data as {
-    state: string; label: string; icon: string; status_label: string
+function DagProcessNode({ id, data }: NodeProps) {
+  const { state, label, icon, status_label, onStartFrom } = data as {
+    state: string; label: string; icon: string; status_label: string;
+    onStartFrom?: (nodeId: string) => void
   }
+  const [hovered, setHovered] = useState(false)
 
   let containerCls = 'border-[#D6D0C4] bg-white'
   let accentNode = <span className="w-1.5 h-1.5 rounded-full bg-[#D6D0C4]" />
@@ -61,8 +63,14 @@ function DagProcessNode({ data }: NodeProps) {
     state === 'active' ? 'text-[#2563EB] font-bold' :
     state === 'error' ? 'text-[#DC2626] font-extrabold' : 'text-[#A8A29E]'
 
+  const showStartBtn = state === 'completed' && onStartFrom
+
   return (
-    <div className={`relative rounded-lg border-2 ${containerCls} min-w-[130px] transition-all duration-500`}>
+    <div
+      className={`relative rounded-lg border-2 ${containerCls} min-w-[130px] transition-all duration-500`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <Handle type="target" position={Position.Left} className="!bg-[#7C2D2D] !w-2.5 !h-2.5 !border-2 !border-white !left-[-5px]" />
       <div className="px-4 py-2.5">
         <div className="flex items-center gap-1.5 mb-0.5">
@@ -74,6 +82,19 @@ function DagProcessNode({ data }: NodeProps) {
           <span className={`text-[9px] font-bold tracking-wider ${statusCls}`}>{status_label}</span>
         </div>
       </div>
+      {/* Start From button — visible on hover for completed nodes */}
+      {showStartBtn && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onStartFrom(id) }}
+          onMouseDown={(e) => e.stopPropagation()}
+          className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#7C2D2D] text-white
+                     flex items-center justify-center shadow-sm hover:bg-[#5C1D1D] cursor-pointer z-10"
+          style={{ opacity: hovered ? 1 : 0, transition: 'opacity 0.15s' }}
+          title={`Start from ${label}`}
+        >
+          <Play className="w-2.5 h-2.5" />
+        </button>
+      )}
       <Handle type="source" position={Position.Right} className="!bg-[#7C2D2D] !w-2.5 !h-2.5 !border-2 !border-white !right-[-5px]" />
     </div>
   )
@@ -159,10 +180,21 @@ interface DAGViewerProps {
   edges: Edge[]
   onNodesChange: any
   onEdgesChange: any
+  onStartFrom?: (nodeId: string) => void
 }
 
-export function DAGViewer({ nodes, edges, onNodesChange, onEdgesChange }: DAGViewerProps) {
+export function DAGViewer({ nodes, edges, onNodesChange, onEdgesChange, onStartFrom }: DAGViewerProps) {
   const [showDag, setShowDag] = useState(true)
+
+  // Inject onStartFrom callback into node data
+  const nodesWithCallback = useMemo(() =>
+    onStartFrom
+      ? nodes.map(n => n.type === 'dagProcess'
+          ? { ...n, data: { ...n.data, onStartFrom } }
+          : n)
+      : nodes,
+    [nodes, onStartFrom]
+  )
 
   return (
     <section className="paper overflow-hidden">
@@ -177,7 +209,7 @@ export function DAGViewer({ nodes, edges, onNodesChange, onEdgesChange }: DAGVie
       {showDag && (
         <div className="border-t border-[#E2DED6]" style={{ height: 'clamp(320px, 48vh, 520px)' }}>
           <ReactFlow
-            nodes={nodes}
+            nodes={nodesWithCallback}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}

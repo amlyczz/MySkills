@@ -18,7 +18,7 @@ interface Props {
 }
 
 export const DataBarChart: React.FC<Props> = ({
-  data,
+  data = [],
   maxValue: maxValueProp = "auto",
   showComparison = false,
   staggerDelay = 10,

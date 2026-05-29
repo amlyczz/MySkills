@@ -20,7 +20,7 @@ interface Props {
 }
 
 export const GlowBarChart: React.FC<Props> = ({
-  bars,
+  bars = [],
   delay = 0,
   barDuration = 35,
   barGap = 8,

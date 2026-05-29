@@ -170,11 +170,12 @@ export default function TaskMonitor() {
           confirmAndSendHitl={confirmAndSendHitl}
         />
 
-        <DAGViewer 
+        <DAGViewer
           nodes={rfNodes}
           edges={rfEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onStartFrom={handleRetry}
         />
 
         <TerminalLogs 

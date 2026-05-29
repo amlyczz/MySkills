@@ -29,8 +29,8 @@ interface Props {
  *   Scroll mode: bottom wireframe assets scrolling (reserved for future).
  */
 export const ScrollingGraphicScene: React.FC<Props> = ({
-  headline,
-  items,
+  headline = "",
+  items = [],
   layoutMode = "grid",
   columns = 3,
   bgIntensity = 0.05,

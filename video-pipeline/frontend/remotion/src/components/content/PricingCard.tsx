@@ -8,7 +8,9 @@ export interface CardData {
 
 interface Props { data: CardData; className?: string; }
 
-export const PricingCard: React.FC<Props> = ({ data, className = "" }) => {
+const defaultCardData: CardData = { title: "", slogan: "", features: [], price: "", accentColor: "#4285F4" };
+
+export const PricingCard: React.FC<Props> = ({ data = defaultCardData, className = "" }) => {
   const frame = useCurrentFrame();
   const shimmerX = interpolate(frame % 120, [0, 120], [-100, 200], {
     extrapolateLeft: "clamp",

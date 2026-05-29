@@ -20,8 +20,8 @@ interface Props {
  *   Used for opening (S1) and closing (S10).
  */
 export const IntroScene: React.FC<Props> = ({
-  title,
-  subtitle,
+  title = "Untitled",
+  subtitle = "",
   showDotLogo = false,
   bgIntensity = 1,
 }) => {

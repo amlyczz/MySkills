@@ -30,8 +30,8 @@ interface Props {
  *   4:6 split. Left: headline text. Right: animated UI cards stacking in.
  */
 export const SplitUIMockupScene: React.FC<Props> = ({
-  leftLines,
-  cards,
+  leftLines = [],
+  cards = [],
   cardStagger = 15,
   bgIntensity = 0.06,
 }) => {

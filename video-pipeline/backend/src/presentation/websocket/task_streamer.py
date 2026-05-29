@@ -48,6 +48,39 @@ def _build_services(session, ws_callback: Any = None):
     return repository, status_service
 
 
+# Map each node to the state fields it produces (used to clear downstream outputs)
+_NODE_OUTPUTS: dict[str, list[str]] = {
+    "github_trending": ["trending_repos", "repo_url", "content_model", "material_manifest", "script", "domain_analysis"],
+    "hitl_trending_review": [],
+    "analyze_repo": ["content_model", "material_manifest"],
+    "analyze_twitter": ["twitter_content", "content_model"],
+    "compose_script": ["script"],
+    "hitl_script_review": [],
+    "generate_diagrams": [],  # modifies script.segments in-place
+    "generate_blueprint": ["blueprint"],
+    "hitl_blueprint_review": [],
+    "audio_design": ["voiceover_path", "bgm_path", "segment_actual_durations"],
+    "render_compose": ["video_mp4_path", "final_mp4_path"],
+}
+
+
+def _clear_downstream_outputs(task, from_node: str) -> None:
+    """Clear outputs of from_node and all downstream nodes so they re-execute."""
+    nodes = list(_NODE_OUTPUTS.keys())
+    try:
+        start_idx = nodes.index(from_node)
+    except ValueError:
+        return
+
+    for node_name in nodes[start_idx:]:
+        for field in _NODE_OUTPUTS.get(node_name, []):
+            if hasattr(task, field):
+                setattr(task, field, None)
+        # Remove from completed_nodes
+        if node_name in (task.completed_nodes or []):
+            task.completed_nodes.remove(node_name)
+
+
 async def _mark_task_error(task_id: str, error_msg: str, node: str | None = None) -> None:
     """Update task status to ERROR in the database via FSM."""
     try:
@@ -977,12 +1010,22 @@ async def retry_task(websocket: WebSocket, task_id: str, node: str = "") -> None
                 return
 
             if task.status != PipelineStatus.ERROR:
-                await websocket.send_json({
-                    "type": "pipeline_event", "status": "error",
-                    "completed_nodes": task.completed_nodes or [],
-                })
-                await websocket.close()
-                return
+                # Not an error task — if node is specified, treat as "start from node"
+                if not node:
+                    await websocket.send_json({
+                        "type": "pipeline_event", "status": "error",
+                        "completed_nodes": task.completed_nodes or [],
+                    })
+                    await websocket.close()
+                    return
+                # start_from_node: jump directly to the specified node
+                logger.info("Start-from-node '%s' for task %s", node, task_id[:8])
+                start_from_node = node
+                # Clear downstream outputs so skip-if-done guards don't prevent re-execution
+                _clear_downstream_outputs(task, node)
+                await repository.update(task)
+            else:
+                start_from_node = None
 
             completed = list(task.completed_nodes or [])
 
@@ -1040,12 +1083,13 @@ async def retry_task(websocket: WebSocket, task_id: str, node: str = "") -> None
                 "qa_blueprint_retry_count": 0,
                 "qa_script_feedback": None,
                 "qa_blueprint_feedback": None,
-                "segment_actual_durations": [],
+                "segment_actual_durations": task.segment_actual_durations or [],
                 "voiceover_path": task.voiceover_path,
                 "bgm_path": task.bgm_path,
                 "video_mp4_path": task.video_mp4_path,
                 "final_mp4_path": task.final_mp4_path,
                 "error": None,
+                "start_from_node": start_from_node,
             }
 
             checkpointer_ctx = _get_checkpointer_context()

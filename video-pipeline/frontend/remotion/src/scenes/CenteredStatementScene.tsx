@@ -33,7 +33,7 @@ interface Props {
  *   Lines animate in sequentially with stagger.
  */
 export const CenteredStatementScene: React.FC<Props> = ({
-  lines,
+  lines = [],
   decoration,
   bgIntensity = 1,
   headingStyle,

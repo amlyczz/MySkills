@@ -5,7 +5,7 @@ interface Props {
   activeIndex?: number;
 }
 
-export const FilterPills: React.FC<Props> = ({ items, activeIndex = 0 }) => {
+export const FilterPills: React.FC<Props> = ({ items = [], activeIndex = 0 }) => {
   return (
     <div className="flex gap-2.5 justify-center items-center font-['Inter','Google_Sans',sans-serif]">
       {items.map((item, i) => {

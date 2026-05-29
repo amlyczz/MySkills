@@ -1,7 +1,7 @@
 import React from "react";
 import { AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 
-export const CoherenOutroScene: React.FC<{ title: string; subtitle?: string }> = ({ title }) => {
+export const CoherenOutroScene: React.FC<{ title: string; subtitle?: string }> = ({ title = "Thanks for watching", subtitle }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 

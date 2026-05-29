@@ -28,12 +28,37 @@ from ...infrastructure.repo_analyzer.github_collector import GitHubMaterialColle
 from ...infrastructure.repo_analyzer.material_downloader import BashMaterialDownloader
 
 
+# Ordered list of pipeline nodes (excluding HITL review nodes and conditional branches)
+_PIPELINE_NODES = [
+    "github_trending",
+    "hitl_trending_review",
+    "analyze_repo",
+    "analyze_twitter",
+    "compose_script",
+    "hitl_script_review",
+    "generate_diagrams",
+    "generate_blueprint",
+    "hitl_blueprint_review",
+    "audio_design",
+    "render_compose",
+]
+
+
 def route_source(state: PipelineState) -> str:
-    """Route to the correct entry node based on source_type."""
-    source_type = state.get("source_type", "github_trending")
+    """Route to the correct entry node based on source_type or start_from_node."""
     status = state.get("status")
     if status == PipelineStatus.ERROR:
         return END
+
+    # start_from_node: skip directly to the target node
+    start_from = state.get("start_from_node")
+    if start_from:
+        if start_from in _PIPELINE_NODES:
+            logger.info("[Router] start_from_node=%s, skipping upstream nodes", start_from)
+            return start_from
+        logger.warning("[Router] Unknown start_from_node=%s, falling back to normal routing", start_from)
+
+    source_type = state.get("source_type", "github_trending")
     if source_type == "twitter":
         return "analyze_twitter"
     if source_type == "github_url":

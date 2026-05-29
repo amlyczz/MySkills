@@ -62,3 +62,6 @@ class PipelineState(TypedDict):
 
     # Error
     error: Optional[str]
+
+    # Resume from a specific node (skip all upstream nodes)
+    start_from_node: Optional[str]

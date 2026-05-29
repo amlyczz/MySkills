@@ -21,9 +21,9 @@ interface Props {
 }
 
 export const BranchFlow: React.FC<Props> = ({
-  sourceLabel,
+  sourceLabel = "",
   sourceColor = "#4A7BF7",
-  branches,
+  branches = [],
   delay = 0,
   sourceWidth = 100,
   sourceHeight = 180,

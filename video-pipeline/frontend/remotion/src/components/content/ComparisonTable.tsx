@@ -15,7 +15,7 @@ interface Props {
   className?: string;
 }
 
-export const ComparisonTable: React.FC<Props> = ({ leftTitle, rightTitle, rows, className }) => (
+export const ComparisonTable: React.FC<Props> = ({ leftTitle = "", rightTitle = "", rows = [], className }) => (
   <div className={`w-full max-w-3xl font-sans rounded-[var(--radius-lg,16px)] overflow-hidden ${className || ""}`}
     style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
     <div className="flex border-b border-white/10">
