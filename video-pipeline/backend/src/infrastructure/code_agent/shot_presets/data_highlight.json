@@ -1,0 +1,34 @@
+{
+  "id": "data_highlight",
+  "name": "数据高光",
+  "description": "大数字飞入 + bar-grow 图表，展示关键数据指标",
+  "slots": {
+    "metric": { "type": "string", "description": "主要数值，如 '12.5K'" },
+    "label": { "type": "string", "description": "指标名称，如 'GitHub Stars'" },
+    "chartData": { "type": "string[]", "description": "图表数据标签列表" }
+  },
+  "template": {
+    "id": "data-scene",
+    "type": "generic",
+    "durationSec": 4,
+    "narrativePhase": "deep_dive",
+    "background": { "type": "dark-neon" },
+    "transitionToNext": { "type": "crossfade", "durationSec": 0.5 },
+    "elements": [
+      {
+        "id": "big-number",
+        "type": "animated-counter",
+        "props": { "value": "{{metric}}", "fontSize": "96px", "fontWeight": "bold", "color": "theme.colors.accent" },
+        "layout": { "align": "center", "y": "35%", "width": "60%" },
+        "animation": { "type": "scale-bounce", "timeline": { "inSec": 0, "durationSec": 1.2 } }
+      },
+      {
+        "id": "metric-label",
+        "type": "animated-text",
+        "props": { "text": "{{label}}", "fontSize": "28px", "color": "theme.colors.textMuted" },
+        "layout": { "align": "center", "y": "55%", "width": "60%" },
+        "animation": { "type": "fade-up", "timeline": { "inSec": 0.8, "durationSec": 0.6 } }
+      }
+    ]
+  }
+}

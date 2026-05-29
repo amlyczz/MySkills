@@ -1,0 +1,40 @@
+{
+  "id": "feature_showcase",
+  "name": "功能展示",
+  "description": "卡片轮播 + stagger 动画，逐个展示功能特性",
+  "slots": {
+    "title": { "type": "string", "description": "区块标题" },
+    "features": { "type": "string[]", "description": "功能特性名称列表" }
+  },
+  "template": {
+    "id": "features",
+    "type": "generic",
+    "durationSec": 5,
+    "narrativePhase": "deep_dive",
+    "transitionToNext": { "type": "crossfade", "durationSec": 0.5 },
+    "elements": [
+      {
+        "id": "section-title",
+        "type": "chapter-title",
+        "props": { "text": "{{title}}", "fontSize": "40px" },
+        "layout": { "align": "top-center", "y": "8%", "width": "80%" },
+        "animation": { "type": "fade-up", "timeline": { "inSec": 0, "durationSec": 0.6 } }
+      },
+      {
+        "id": "feature-list",
+        "type": "div",
+        "layout": { "align": "center", "y": "35%", "width": "80%", "flexDirection": "column", "gap": "16px" },
+        "repeat": {
+          "dataSource": "$data.features",
+          "itemAlias": "feature",
+          "template": {
+            "id": "feat-item",
+            "type": "stat-card",
+            "props": { "title": "$feature.name", "value": "$feature.desc" },
+            "animation": { "type": "fade-up", "timeline": { "inSec": 0.3, "durationSec": 0.5 }, "stagger": { "delayPerChild": 5 } }
+          }
+        }
+      }
+    ]
+  }
+}

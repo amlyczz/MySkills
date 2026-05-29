@@ -1,0 +1,38 @@
+{
+  "id": "suspense_intro",
+  "name": "悬念开场",
+  "description": "暗色背景，大字逐字揭示，配合旁白引入悬念",
+  "slots": {
+    "headline": { "type": "string", "description": "主标题文字" },
+    "subtitle": { "type": "string", "description": "副标题（可选）" },
+    "bgType": { "type": "string", "description": "背景类型", "default": "dark-neon" }
+  },
+  "template": {
+    "id": "intro",
+    "type": "intro",
+    "durationSec": 3,
+    "narrativePhase": "hook",
+    "background": { "type": "{{bgType}}" },
+    "transitionToNext": { "type": "crossfade", "durationSec": 0.5 },
+    "elements": [
+      {
+        "id": "headline",
+        "type": "animated-text",
+        "props": { "text": "{{headline}}", "fontSize": "72px", "fontWeight": "bold", "color": "theme.colors.primary" },
+        "layout": { "align": "center", "width": "80%" },
+        "animation": {
+          "type": "char-fly-in",
+          "timeline": { "inSec": 0.3, "durationSec": 1.5 },
+          "stagger": { "delayPerChild": 3 }
+        }
+      },
+      {
+        "id": "subtitle",
+        "type": "animated-text",
+        "props": { "text": "{{subtitle}}", "fontSize": "24px", "color": "theme.colors.textMuted" },
+        "layout": { "align": "bottom-center", "y": "70%", "width": "60%" },
+        "animation": { "type": "fade-up", "timeline": { "inSec": 1.5, "durationSec": 0.8 } }
+      }
+    ]
+  }
+}
