@@ -115,6 +115,10 @@ export interface ElementConfig {
   props?: Record<string, unknown>;
   layout?: {
     position?: "absolute" | "relative" | "flex-child";
+    /** Semantic alignment (replaces manual x/y) */
+    align?: "top-left" | "top-center" | "top-right"
+      | "center-left" | "center" | "center-right"
+      | "bottom-left" | "bottom-center" | "bottom-right";
     x?: number | string;
     y?: number | string;
     width?: number | string;
@@ -124,6 +128,11 @@ export interface ElementConfig {
     scale?: number;
     rotation?: number;   // degrees
     opacity?: number;    // 0-1
+    z?: number;          // 3D depth (translateZ)
+    flexDirection?: "row" | "column";
+    justifyContent?: "flex-start" | "center" | "flex-end" | "space-between" | "space-around";
+    alignItems?: "flex-start" | "center" | "flex-end" | "stretch";
+    gap?: number | string;
   };
   /** Raw CSS overrides (for values Tailwind can't express dynamically) */
   style?: React.CSSProperties;

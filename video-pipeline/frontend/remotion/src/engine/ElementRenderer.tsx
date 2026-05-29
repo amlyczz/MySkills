@@ -78,26 +78,69 @@ export const ElementRenderer: React.FC<Props> = ({ element, dataCtx = {}, motion
   // ── Static layout styles (baseline transform, no frame dependency) ──
   const layoutStyle: React.CSSProperties = {};
   if (element.layout) {
-    const { position, x, y, width, height, zIndex, scale, rotation, opacity } = element.layout;
+    const { position, x, y, width, height, zIndex, scale, rotation, opacity, z, align, flexDirection, justifyContent, alignItems, gap } = element.layout;
+
     if (position === "absolute") {
       layoutStyle.position = "absolute";
+    } else if (position === "flex-child") {
+      layoutStyle.position = "relative";
+    }
+
+    // Semantic alignment
+    if (align && position === "absolute") {
+      const alignMap: Record<string, { x: string | number; y: string | number }> = {
+        "top-left":      { x: 0,      y: 0 },
+        "top-center":    { x: "50%",  y: 0 },
+        "top-right":     { x: "100%", y: 0 },
+        "center-left":   { x: 0,      y: "50%" },
+        "center":        { x: "50%",  y: "50%" },
+        "center-right":  { x: "100%", y: "50%" },
+        "bottom-left":   { x: 0,      y: "100%" },
+        "bottom-center": { x: "50%",  y: "100%" },
+        "bottom-right":  { x: "100%", y: "100%" },
+      };
+      const mapped = alignMap[align];
+      if (mapped) {
+        layoutStyle.left = mapped.x;
+        layoutStyle.top = mapped.y;
+      }
+    } else if (position === "absolute") {
       if (x !== undefined) layoutStyle.left = x;
       if (y !== undefined) layoutStyle.top = y;
     }
+
     if (width !== undefined) layoutStyle.width = width;
     if (height !== undefined) layoutStyle.height = height;
     if (zIndex !== undefined) layoutStyle.zIndex = zIndex;
     // Static transform (always-on baseline)
     const transformParts: string[] = [];
     // Center-align when x/y are percentage values
-    if (position === "absolute") {
+    if (position === "absolute" && !align) {
       if (typeof x === "string" && x.endsWith("%")) transformParts.push("translateX(-50%)");
       if (typeof y === "string" && y.endsWith("%")) transformParts.push("translateY(-50%)");
     }
+    // align center cases always need translate
+    if (align) {
+      const xc = align.includes("center");
+      const yc = ["center-left", "center", "center-right"].includes(align)
+        || align === "center";
+      if (xc) transformParts.push("translateX(-50%)");
+      if (yc) transformParts.push("translateY(-50%)");
+    }
+    if (z !== undefined && z !== 0) transformParts.push(`translateZ(${z}px)`);
     if (scale !== undefined && scale !== 1) transformParts.push(`scale(${scale})`);
     if (rotation !== undefined && rotation !== 0) transformParts.push(`rotate(${rotation}deg)`);
     if (transformParts.length > 0) layoutStyle.transform = transformParts.join(" ");
     if (opacity !== undefined) layoutStyle.opacity = opacity;
+
+    // Flex layout props
+    if (flexDirection) layoutStyle.flexDirection = flexDirection;
+    if (justifyContent) layoutStyle.justifyContent = justifyContent;
+    if (alignItems) layoutStyle.alignItems = alignItems;
+    if (gap !== undefined) layoutStyle.gap = gap;
+    if (flexDirection || justifyContent || alignItems) {
+      layoutStyle.display = "flex";
+    }
   }
 
   // Merge raw style overrides

@@ -22,8 +22,10 @@ export const SceneRenderer: React.FC<Props> = ({ scene, globalBackground, dataCt
     bgProps = bgConfig.props ?? {};
   }
 
+  // Check if any element uses z-depth → enable perspective
+  const hasZ = JSON.stringify(scene).includes('"z":');
   return (
-    <AbsoluteFill style={scene.style}>
+    <AbsoluteFill style={{ ...scene.style, ...(hasZ ? { perspective: "1200px", perspectiveOrigin: "50% 50%" } : {}) }}>
       {BgComponent && <BgComponent {...bgProps} />}
 
       {scene.type === "generic" ? (
