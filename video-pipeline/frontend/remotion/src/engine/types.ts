@@ -298,6 +298,9 @@ export function resolveDataRefs(props: Record<string, unknown> | undefined, data
     if (typeof val === "string" && val.startsWith("$data.")) {
       const path = val.slice(6); // remove "$data."
       resolved[key] = path.split(".").reduce((obj: any, k) => obj?.[k], data) ?? val;
+    } else if (typeof val === "string" && val.startsWith("$item.")) {
+      // $item.xxx resolved by ElementRenderer via childCtx
+      resolved[key] = data[val.slice(1)] ?? val;
     } else if (typeof val === "object" && val !== null && !Array.isArray(val)) {
       resolved[key] = resolveDataRefs(val as Record<string, unknown>, data);
     } else {
@@ -305,6 +308,15 @@ export function resolveDataRefs(props: Record<string, unknown> | undefined, data
     }
   }
   return resolved;
+}
+
+/** Resolve a data path like "$data.features" to actual value */
+export function resolveDataPath(path: string, dataCtx: Record<string, unknown>): unknown {
+  if (path.startsWith("$data.")) {
+    const parts = path.slice(6).split(".");
+    return parts.reduce((obj: any, k) => obj?.[k], dataCtx);
+  }
+  return dataCtx[path];
 }
 
 /** Calculate total frame count for a Blueprint rendered with TransitionSeries */

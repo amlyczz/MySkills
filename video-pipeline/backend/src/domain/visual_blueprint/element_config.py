@@ -4,6 +4,13 @@ from pydantic import BaseModel, ConfigDict
 from .animation import AnimationConfig
 from .element_layout import ElementLayout
 
+class RepeatConfig(BaseModel):
+    """Data-driven repeat: expand one template per array item."""
+    model_config = ConfigDict(extra="allow")
+    dataSource: str           # e.g. "$data.features"
+    itemAlias: str = "item"   # variable name in child props
+    template: Optional[Any] = None  # ElementConfig dict (avoid recursive type)
+
 class ElementConfig(BaseModel):
     """Matches engine ElementConfig exactly.
 
@@ -18,5 +25,6 @@ class ElementConfig(BaseModel):
     animation: Optional[AnimationConfig] = None
     condition: Optional[str] = None
     children: Optional[list["ElementConfig"]] = None
+    repeat: Optional[RepeatConfig] = None
 
 ElementConfig.model_rebuild()

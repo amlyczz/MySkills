@@ -4,7 +4,7 @@ import { Video } from "@remotion/media";
 import type { ElementConfig, MotionToken } from "./types";
 import { componentRegistry } from "../registries/componentRegistry";
 import { applyAnimation } from "./applyAnimation";
-import { evalCondition, resolveDataRefs } from "./types";
+import { evalCondition, resolveDataRefs, resolveDataPath } from "./types";
 
 // ── Lottie sub-renderer ──
 let LottieModule: any = null;
@@ -177,6 +177,34 @@ export const ElementRenderer: React.FC<Props> = ({ element, dataCtx = {}, motion
       />
     );
   });
+
+  // ── Repeat (data-driven list rendering) ──
+  if ((element as any).repeat) {
+    const repeat = (element as any).repeat;
+    const items = resolveDataPath(repeat.dataSource, dataCtx);
+    if (Array.isArray(items) && repeat.template) {
+      const alias = repeat.itemAlias || "item";
+      const repeatChildren = items.map((item: any, i: number) => {
+        const childCtx = { ...dataCtx, [alias]: item };
+        const childConfig = { ...repeat.template, id: `${element.id}-${i}` };
+        const childOffset = stagger
+          ? (stagger.direction === "reverse"
+              ? (items.length - 1 - i) * stagger.delayPerChild
+              : i * stagger.delayPerChild)
+          : 0;
+        return (
+          <ElementRenderer
+            key={`${element.id}-${i}`}
+            element={childConfig}
+            dataCtx={childCtx}
+            motionTokens={motionTokens}
+            staggerOffset={childOffset}
+          />
+        );
+      });
+      return <div style={mergedStyle}>{repeatChildren}</div>;
+    }
+  }
 
   // ── Resolve component ──
   let content: React.ReactNode;
