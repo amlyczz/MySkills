@@ -1,5 +1,8 @@
 # Blueprint v2 Schema 升级 Spec
 
+> **状态：已实施 ✅**
+> 实施提交：`71951d3` → `65ad7bf` → `cc2ff00` → `ef8405f` → `44420a1` → `e510e7e`
+
 > 基于 LLM 生成 + Remotion 渲染的实际痛点，对 Blueprint Schema 进行结构性升级。
 > 核心目标：**让 LLM 只写"语义描述"，让引擎做"数学计算"**。
 
