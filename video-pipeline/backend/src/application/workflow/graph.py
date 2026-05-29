@@ -166,13 +166,14 @@ async def hitl_blueprint_review_node(state: PipelineState) -> PipelineState:
             os.makedirs(remotion_public, exist_ok=True)
             preview_path = remotion_public / "preview.json"
             with open(preview_path, "w", encoding="utf-8") as f:
-                json.dump(blueprint.model_dump(exclude_none=True, by_alias=True), f, ensure_ascii=False, indent=2)
+                json.dump(blueprint.to_engine_json(), f, ensure_ascii=False, indent=2)
             preview_url = "http://localhost:3333/?composition=VideoComposer"
         except Exception as e:
             logger.warning("Failed to write preview.json: %s", e)
 
-    total_frames = sum(s.durationInFrames for s in blueprint.scenes) if blueprint and blueprint.scenes else 0
-    total_seconds = total_frames / 30
+    # Calculate total duration from seconds (v2)
+    total_seconds = sum(s.durationSec for s in blueprint.scenes) if blueprint and blueprint.scenes else 0
+    total_frames = round(total_seconds * 30)
 
     decision = interrupt({
         "reason": "blueprint_review",

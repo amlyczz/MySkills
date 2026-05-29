@@ -7,11 +7,13 @@ from .enums import AnimationType, BackgroundType, ComponentType, PositionType, S
 from .global_settings import AudioDucking, GlobalAudioConfig, GlobalSettings, SafeArea, ShapeConfig, ThemeConfig, TypographyConfig
 from .loop_animation import LoopConfig
 from .motion import BezierEasing, LinearEasing, MotionToken, MotionTokenEasing, SpringEasing, SpringParams
+from .normalize import normalize_blueprint
 from .scene_background import SceneBackground
 from .scene_config import SceneConfig
 from .sfx import SfxTrigger
 from .subtitles import SubtitleConfig, SubtitleToken
 from .transition import TransitionToNext
+from .validate import BlueprintValidationError, auto_fix_blueprint, validate_and_fix, validate_blueprint
 from .variables import BlueprintVariables, ContentVariable, ThemeVariable
 from .voiceover import VoiceoverConfig
 
@@ -43,12 +45,17 @@ __all__ = [
     "MotionTokenEasing",
     "SpringEasing",
     "SpringParams",
+    "normalize_blueprint",
     "SceneBackground",
     "SceneConfig",
     "SfxTrigger",
     "SubtitleConfig",
     "SubtitleToken",
     "TransitionToNext",
+    "BlueprintValidationError",
+    "validate_blueprint",
+    "auto_fix_blueprint",
+    "validate_and_fix",
     "BlueprintVariables",
     "ContentVariable",
     "ThemeVariable",

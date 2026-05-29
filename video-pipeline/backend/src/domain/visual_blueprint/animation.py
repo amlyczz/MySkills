@@ -7,9 +7,9 @@ from .motion import BezierEasing, LinearEasing, SpringEasing
 
 class AnimationTimeline(BaseModel):
     model_config = ConfigDict(extra="allow")
-    inFrame: int = 0
-    outFrame: Optional[int] = None
-    duration: Optional[int] = None
+    inSec: float = 0.0
+    outSec: Optional[float] = None
+    durationSec: Optional[float] = None
 
 class StaggerConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -17,7 +17,7 @@ class StaggerConfig(BaseModel):
     direction: Optional[Literal["forward", "reverse"]] = None
 
 class AnimationConfig(BaseModel):
-    """Matches engine AnimationConfig exactly."""
+    """Blueprint v2: LLM writes seconds, normalize converts to frames."""
     model_config = ConfigDict(extra="allow")
     type: AnimationType = "fade-in"
     timeline: AnimationTimeline = Field(default_factory=AnimationTimeline)
@@ -26,3 +26,4 @@ class AnimationConfig(BaseModel):
     easing: Optional[Union[SpringEasing, BezierEasing, LinearEasing, str]] = None
     stagger: Optional[StaggerConfig] = None
     loop: Optional[LoopConfig] = None
+    loopStartDelaySec: Optional[float] = None

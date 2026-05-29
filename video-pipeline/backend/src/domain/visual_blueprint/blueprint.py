@@ -4,15 +4,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from .blueprint_meta import BlueprintMeta
 from .element_config import ElementConfig
 from .global_settings import GlobalSettings
+from .normalize import normalize_blueprint
 from .scene_background import SceneBackground
 from .scene_config import SceneConfig
+from .validate import validate_and_fix
 from .variables import BlueprintVariables
 
 class Blueprint(BaseModel):
-    """Complete Remotion Blueprint — mirrors engine types.ts Blueprint interface.
-
-    Serialized JSON from this model is directly consumable by the Remotion engine.
-    """
+    """Blueprint v2: LLM generates seconds, to_engine_json() normalizes to frames for Remotion."""
     model_config = ConfigDict(extra="allow")
     meta: BlueprintMeta
     data: Optional[dict[str, Any]] = None
@@ -22,28 +21,21 @@ class Blueprint(BaseModel):
     globalOverlays: Optional[list[ElementConfig]] = None
     scenes: list[SceneConfig] = Field(default_factory=list)
 
+    def to_engine_json(self) -> dict:
+        """Serialize + normalize + validate → Remotion-consumable dict.
+
+        Pipeline: LLM seconds → normalize_blueprint() → validate_and_fix() → frame JSON
+        """
+        raw = self.model_dump(by_alias=True, exclude_none=True)
+        normalized = normalize_blueprint(raw)
+        validated = validate_and_fix(normalized)
+        return validated
+
     def to_json(self) -> dict:
-        """Serialize to engine-consumable dict."""
+        """Legacy alias — use to_engine_json() for full pipeline."""
         return self.model_dump(by_alias=True, exclude_none=True)
 
     @classmethod
     def from_dict(cls, data: dict) -> "Blueprint":
-        """Deserialize from engine-compatible dict."""
+        """Deserialize from dict (seconds or frames accepted)."""
         return cls.model_validate(data)
-
-    def calculate_total_frames(self) -> int:
-        """Calculate total frame count for TransitionSeries rendering.
-
-        Mirrors the calculateTotalFrames helper from types.ts.
-        """
-        sorted_scenes = sorted(self.scenes, key=lambda s: s.startFrame)
-        total = 0
-        for i, scene in enumerate(sorted_scenes):
-            total += scene.durationInFrames
-            if (
-                i < len(sorted_scenes) - 1
-                and scene.transitionToNext
-                and scene.transitionToNext.type != "none"
-            ):
-                total -= scene.transitionToNext.durationInFrames
-        return max(1, total)

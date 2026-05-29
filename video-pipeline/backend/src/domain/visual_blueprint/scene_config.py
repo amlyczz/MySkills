@@ -9,12 +9,12 @@ from .transition import TransitionToNext
 from .voiceover import VoiceoverConfig
 
 class SceneConfig(BaseModel):
-    """Matches engine SceneConfig exactly."""
+    """Blueprint v2: LLM writes seconds, normalize_blueprint() converts to frames for Remotion."""
     model_config = ConfigDict(extra="allow")
     id: str
     type: str = "generic"  # SceneType —宽松处理
-    startFrame: int = 0
-    durationInFrames: int = 90
+    startSec: Optional[float] = None     # 场景起始秒数（通常省略，自动计算）
+    durationSec: float = 3.0             # 场景持续秒数
     narrativePhase: Optional[str] = None  # hook | context | deep_dive | climax | resolution
     description: Optional[str] = None
     background: Optional[Union[SceneBackground, None]] = None

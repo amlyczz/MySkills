@@ -20,7 +20,7 @@ class RemotionVideoRenderer(VideoRenderer):
         # Write blueprint to a temp file for the renderer to consume
         temp_dir = os.path.dirname(output_video_path)
         blueprint_path = os.path.join(temp_dir, "blueprint_render.json")
-        blueprint_json = blueprint.model_dump(exclude_none=True, by_alias=True)
+        blueprint_json = blueprint.to_engine_json()
         with open(blueprint_path, "w", encoding="utf-8") as f:
             json.dump(blueprint_json, f, ensure_ascii=False, indent=2)
 

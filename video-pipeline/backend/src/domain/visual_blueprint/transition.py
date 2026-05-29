@@ -6,5 +6,5 @@ from .enums import TransitionType
 class TransitionToNext(BaseModel):
     model_config = ConfigDict(extra="allow")
     type: TransitionType = "crossfade"
-    durationInFrames: int = 15
+    durationSec: float = 0.5
     props: Optional[dict[str, Any]] = None
