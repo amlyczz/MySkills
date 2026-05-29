@@ -12,17 +12,186 @@
 
 ## 顶层结构
 
-```typescript
-interface Blueprint {
-  meta: BlueprintMeta;           // 必填 - 蓝图元信息
-  data?: Record<string, unknown>; // 可选 - 共享数据，场景通过 $data.xxx 引用
-  variables?: BlueprintVariables; // 可选 - 模板变量，驱动 UI 表单
-  globalSettings: GlobalSettings; // 必填(有默认) - 全局主题/动效/音频
-  globalBackground?: SceneBackground; // 可选 - 全局背景
-  globalOverlays?: ElementConfig[];   // 可选 - 全局叠加层
-  scenes: SceneConfig[];          // 必填 - 场景列表
+```
+Blueprint
+├── meta                    ← 蓝图元信息（id, name）
+├── data?                   ← 共享数据，元素通过 "$data.xxx" 引用
+├── variables?              ← 模板变量（content + theme 两类）
+├── globalSettings          ← 全局设置
+│   ├── theme               ← 主题（colors, typography, shape）
+│   ├── safeArea?           ← 安全区域
+│   ├── motionTokens?       ← 动效预设（被 animation.easing 字符串引用）
+│   └── audio?              ← 全局音频（bgm, sfx 库, ducking）
+├── globalBackground?       ← 全局背景
+├── globalOverlays?         ← 全局叠加层元素
+└── scenes[]                ← 场景列表（核心！）
+    ├── id, type, durationInFrames, startFrame
+    ├── narrativePhase?     ← 叙事阶段
+    ├── background?         ← 场景背景
+    ├── transitionToNext?   ← 到下一场景的过渡
+    ├── voiceover?          ← 旁白
+    ├── subtitles?          ← 字幕
+    ├── sfx?[]              ← 音效触发器
+    └── elements[]          ← 元素列表（核心！）
+        ├── id, type        ← 组件类型（见 ComponentType 枚举）
+        ├── props?          ← 组件属性（各类型不同）
+        ├── layout?         ← 布局定位（x, y, width, height...）
+        ├── style?          ← CSS 覆盖
+        ├── animation?      ← 动画
+        │   ├── type        ← 动画类型（fade-up, scale-bounce...）
+        │   ├── timeline    ← 时间轴（inFrame, duration）
+        │   ├── easing?     ← 缓动（对象或 motionTokens 名字符串）
+        │   ├── stagger?    ← 子元素交错
+        │   └── loop?       ← 循环动画（pulse, float, spin, wiggle）
+        ├── condition?      ← 条件渲染
+        └── children?[]     ← 子元素（递归）
+```
+
+### 完整 JSON 示例
+
+```json
+{
+  "meta": {
+    "id": "github-repo-showcase",
+    "name": "GitHub Repo Showcase",
+    "description": "展示一个 GitHub 仓库的技术亮点"
+  },
+
+  "data": {
+    "repoName": "awesome-project",
+    "stars": 12500,
+    "language": "TypeScript"
+  },
+
+  "globalSettings": {
+    "theme": {
+      "colors": {
+        "primary": "#6366F1",
+        "secondary": "#8B5CF6",
+        "accent": "#F59E0B",
+        "bg": "#0F0F1A",
+        "background": "#0F0F1A",
+        "surface": "#1E1E2E",
+        "foreground": "#FFFFFF",
+        "text": "#FFFFFF",
+        "textMuted": "#9CA3AF"
+      },
+      "typography": {
+        "primaryFont": "Inter",
+        "fallbackFont": "sans-serif",
+        "scales": {
+          "h1": "48px",
+          "h2": "32px",
+          "body": "16px",
+          "caption": "12px"
+        }
+      },
+      "shape": {
+        "radii": { "md": "8px", "lg": "16px" },
+        "shadows": { "md": "0 4px 6px rgba(0,0,0,0.3)" }
+      }
+    },
+    "motionTokens": {
+      "bouncy": {
+        "easing": { "type": "spring", "params": { "mass": 1.2, "damping": 12, "stiffness": 120 } }
+      },
+      "smooth": {
+        "easing": { "type": "bezier", "bezier": [0.25, 0.1, 0.25, 1.0] },
+        "duration": 30
+      }
+    },
+    "audio": {
+      "bgmUrl": "https://example.com/bgm.mp3",
+      "bgmVolume": 0.3,
+      "sfx": { "pop": "https://example.com/pop.mp3" },
+      "ducking": { "enabled": true, "duckToVolume": 0.1 }
+    }
+  },
+
+  "scenes": [
+    {
+      "id": "intro-scene",
+      "type": "intro",
+      "startFrame": 0,
+      "durationInFrames": 90,
+      "narrativePhase": "hook",
+      "description": "开场：展示项目名称和星级",
+      "background": {
+        "type": "dark-neon"
+      },
+      "transitionToNext": {
+        "type": "crossfade",
+        "durationInFrames": 15
+      },
+      "voiceover": {
+        "audioUrl": "https://example.com/vo-intro.mp3",
+        "text": "今天给大家介绍一个超棒的开源项目",
+        "startFrame": 0,
+        "endFrame": 80,
+        "volume": 0.8
+      },
+      "subtitles": {
+        "tokens": [
+          { "text": "今天", "fromFrame": 0, "toFrame": 15 },
+          { "text": "给大家介绍", "fromFrame": 15, "toFrame": 40 },
+          { "text": "一个超棒的开源项目", "fromFrame": 40, "toFrame": 80 }
+        ],
+        "highlightColor": "#F59E0B"
+      },
+      "sfx": [
+        { "sfx": "pop", "atFrame": 0, "volume": 0.5 }
+      ],
+      "elements": [
+        {
+          "id": "title",
+          "type": "animated-text",
+          "props": {
+            "text": "$data.repoName",
+            "fontSize": "64px",
+            "color": "theme.colors.primary"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": "50%",
+            "y": "40%",
+            "width": "80%"
+          },
+          "animation": {
+            "type": "fade-up",
+            "timeline": { "inFrame": 0, "duration": 30 },
+            "easing": "bouncy"
+          }
+        },
+        {
+          "id": "star-badge",
+          "type": "stat-card",
+          "props": {
+            "value": "$data.stars",
+            "label": "GitHub Stars",
+            "icon": "star"
+          },
+          "layout": {
+            "position": "absolute",
+            "x": "50%",
+            "y": "65%"
+          },
+          "animation": {
+            "type": "scale-bounce",
+            "timeline": { "inFrame": 20, "duration": 30 },
+            "loop": {
+              "type": "float",
+              "durationInFrames": 60,
+              "amplitude": 0.05
+            }
+          }
+        }
+      ]
+    }
+  ]
 }
 ```
+
+> 以上示例展示了 `data` → `$data.repoName` 引用、`motionTokens` → `easing: "bouncy"` 引用、`audio.sfx` → `sfx.sfx` 引用等核心关联。
 
 ---
 
