@@ -299,10 +299,14 @@ export function applyAnimation(
 
   const base = animFn(frame, fps, resolvedConfig);
 
-  // Merge loop on top
+  // Merge loop on top — only after entrance animation finishes
   if (config.loop) {
-    const lp = loopStyle(frame, fps, config.loop);
-    base.transform = mergeTransform(base.transform as string | undefined, lp.transform as string);
+    const entranceEnd = (config.timeline.inFrame ?? 0) + (config.timeline.duration ?? 30);
+    const loopDelay = (config as any).loopStartDelay ?? 0;
+    if (frame >= entranceEnd + loopDelay) {
+      const lp = loopStyle(frame, fps, config.loop);
+      base.transform = mergeTransform(base.transform as string | undefined, lp.transform as string);
+    }
   }
 
   return base;

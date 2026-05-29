@@ -104,6 +104,8 @@ export interface AnimationConfig {
   };
   /** Continuous loop after entrance animation finishes */
   loop?: LoopConfig;
+  /** Frames to wait after entrance finishes before starting loop (set by normalize) */
+  loopStartDelay?: number;
 }
 
 // ── Element ──
