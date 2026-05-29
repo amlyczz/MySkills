@@ -71,7 +71,7 @@ def _build(model_name: str, temperature: float, **kwargs) -> ChatDeepSeek:
         "api_key": api_key,
         "api_base": base_url,
         "max_retries": 2,
-        "max_tokens": 50000,
+        "max_tokens": 80000,
     }
     config.update(kwargs)
     return ChatDeepSeek(**config)
@@ -89,7 +89,7 @@ def _build_extraction(model: str | None = None, temperature: float = 0.2) -> Cha
         api_key=api_key,
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
-        max_tokens=50000,
+        max_tokens=80000,
         reasoning_effort=_thinking_effort(model_name, "max"),
     )
 
@@ -128,7 +128,7 @@ def _build_creative(model: str | None = None, temperature: float = 0.6) -> ChatD
         api_key=api_key,
         api_base=_DEEPSEEK_BETA_BASE,
         max_retries=2,
-        max_tokens=50000,
+        max_tokens=80000,
         reasoning_effort=_thinking_effort(model_name, "high"),
     )
 
@@ -203,14 +203,61 @@ def structured_chain(prompt, llm, schema_cls, include_raw=False):
     tool_def = convert_to_openai_tool(schema_cls)
     tool_def["function"]["strict"] = True
 
+    def _resolve_anyof(schema: dict) -> dict:
+        """Convert anyOf: [{type: X}, {type: null}] → {type: X} for DeepSeek strict mode."""
+        if not isinstance(schema, dict):
+            return schema
+
+        # Convert anyOf with null → nullable type (must run before recursion)
+        if "anyOf" in schema and isinstance(schema["anyOf"], list):
+            non_null = [s for s in schema["anyOf"] if s.get("type") != "null"]
+            null_count = len(schema["anyOf"]) - len(non_null)
+            if null_count > 0 and non_null:
+                merged = {}
+                for s in non_null:
+                    if isinstance(s, dict):
+                        for sk, sv in s.items():
+                            if sk != "anyOf":
+                                merged[sk] = sv
+                        _resolve_anyof(s)
+                schema.pop("anyOf")
+                schema.update(merged)
+            elif not non_null:
+                pass
+            else:
+                for s in schema["anyOf"]:
+                    _resolve_anyof(s)
+
+        # Recurse into properties
+        if "properties" in schema:
+            for k, v in schema["properties"].items():
+                schema["properties"][k] = _resolve_anyof(v)
+        if "items" in schema and isinstance(schema["items"], dict):
+            schema["items"] = _resolve_anyof(schema["items"])
+        if "$defs" in schema:
+            for v in schema["$defs"].values():
+                _resolve_anyof(v)
+
+        # Fix empty items (self-referencing models generate items: {})
+        if "items" in schema and isinstance(schema["items"], dict) and not schema["items"]:
+            schema["items"] = {"type": "object", "additionalProperties": True}
+
+        return schema
+
     def _make_strict(schema: dict):
         if schema.get("type") == "object":
             props = schema.get("properties", {})
-            schema["required"] = list(props.keys())
-            schema["additionalProperties"] = False
-            for prop_schema in props.values():
-                if isinstance(prop_schema, dict):
-                    _make_strict(prop_schema)
+            if not props:
+                # Bare object with no properties (e.g. dict fields) —
+                # DeepSeek strict mode rejects empty-property objects.
+                # Allow arbitrary keys instead.
+                schema["additionalProperties"] = True
+            else:
+                schema["required"] = list(props.keys())
+                schema["additionalProperties"] = False
+                for prop_schema in props.values():
+                    if isinstance(prop_schema, dict):
+                        _make_strict(prop_schema)
         elif schema.get("type") == "array":
             if "items" in schema and isinstance(schema["items"], dict):
                 _make_strict(schema["items"])
@@ -223,6 +270,7 @@ def structured_chain(prompt, llm, schema_cls, include_raw=False):
                 if isinstance(s, dict):
                     _make_strict(s)
 
+    _resolve_anyof(tool_def["function"]["parameters"])
     _make_strict(tool_def["function"]["parameters"])
 
     # Bind tools WITHOUT specific tool_choice (thinking-compatible)

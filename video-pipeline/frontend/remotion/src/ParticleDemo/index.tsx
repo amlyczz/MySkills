@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill } from 'remotion';
+import { AbsoluteFill, useVideoConfig } from 'remotion';
 import { ThreeCanvas } from '@remotion/three';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { ParticleEffectId, MotionId } from './config';
@@ -12,12 +12,14 @@ export interface ParticleDemoProps {
 }
 
 export const ParticleDemo: React.FC<ParticleDemoProps> = ({ effectId, motionId }) => {
+  const { width, height } = useVideoConfig();
+
   return (
     <AbsoluteFill style={{ backgroundColor: '#000' }}>
       <ThreeCanvas
         linear
-        width={1920}
-        height={1080}
+        width={width}
+        height={height}
         camera={{ position: [0, 0, 5], fov: 75 }}
       >
         <CameraRig motionId={motionId} />

@@ -32,8 +32,7 @@ class CodeAgentTwitterAnalyzer(TwitterAnalyzer):
     """TwitterAnalyzer backed by Claude Code CLI."""
 
     def __init__(self, timeout: int = 300, effort: str = "medium", on_progress: Optional[Callable[[str], None]] = None) -> None:
-        self.llm = ClaudeCodeChatModel.from_pydantic(
-            TwitterContentModel,
+        self.llm = ClaudeCodeChatModel(
             allowed_tools=["Read", "Glob", "Grep"],
             timeout=timeout,
             effort=effort,
@@ -47,7 +46,10 @@ class CodeAgentTwitterAnalyzer(TwitterAnalyzer):
         if raw.thread_texts:
             user_text += f"\n\n帖子线程:\n{json.dumps(raw.thread_texts, ensure_ascii=False, indent=2)}"
 
-        messages = [SystemMessage(content=_SYSTEM_PROMPT), HumanMessage(content=user_text)]
+        schema_str = json.dumps(TwitterContentModel.model_json_schema(), ensure_ascii=False, indent=2)
+        system_content = _SYSTEM_PROMPT + "\n\n### 期望的 JSON Schema\n请严格遵守以下 JSON Schema 输出:\n```json\n" + schema_str + "\n```"
+
+        messages = [SystemMessage(content=system_content), HumanMessage(content=user_text)]
         result = self.llm._generate(messages)
         content = result.generations[0].message.content
 

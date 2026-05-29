@@ -91,13 +91,17 @@ class AudioDesignUseCase:
         voiceover_path = os.path.join(output_dir, "voiceover.mp3")
         await self.media_processor.concat_audio(segment_paths, voiceover_path)
 
-        # ── 3. Generate BGM ──
+        # ── 3. Generate BGM (optional — continue without if it fails) ──
         bgm_path = os.path.join(output_dir, "bgm.mp3")
-        await self.bgm_gen.generate_bgm(
-            prompt="tech atmospheric electronic",
-            duration=int(total_actual_duration or 60),
-            output_path=bgm_path,
-        )
+        try:
+            await self.bgm_gen.generate_bgm(
+                prompt="tech atmospheric electronic",
+                duration=int(total_actual_duration or 60),
+                output_path=bgm_path,
+            )
+        except Exception as e:
+            logger.warning("[AudioDesign] BGM generation failed, continuing without BGM: %s", e)
+            bgm_path = ""
 
         # ── 4. Build precise Timeline with actual durations ──
         timeline_path = os.path.join(output_dir, "timeline.json")

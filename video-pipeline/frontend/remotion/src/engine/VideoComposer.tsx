@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useVideoConfig } from "remotion";
+import { staticFile, useVideoConfig } from "remotion";
 import type { Blueprint } from "./types";
 import { TemplateRenderer } from "./TemplateRenderer";
 
@@ -23,7 +23,7 @@ export const VideoComposer: React.FC<Props> = ({ blueprintJson }) => {
     }
 
     // Fallback: fetch preview.json written by the pipeline
-    fetch("/preview.json")
+    fetch(staticFile("preview.json"))
       .then((r) => {
         if (!r.ok) throw new Error("no preview");
         return r.json();

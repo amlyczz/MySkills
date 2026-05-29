@@ -182,7 +182,37 @@ def get_video_duration(mp4_path: str) -> float:
 
 
 if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Remotion render wrapper")
+    parser.add_argument("--blueprint", help="Path to blueprint JSON file")
+    parser.add_argument("--output", help="Output video path")
+    parser.add_argument("--composition", default="VideoComposer", help="Composition ID")
+    parser.add_argument("--props", help="Path to props JSON file (alternative to --blueprint)")
+    args = parser.parse_args()
+
+    # Props mode: direct props JSON
+    if args.props and args.output:
+        with open(args.props, encoding="utf-8") as f:
+            props = json.load(f)
+        success = remotion_render(args.composition, args.output, props)
+        sys.exit(0 if success else 1)
+
+    # Blueprint mode: copy blueprint to public/preview.json, render with empty prop
+    if args.blueprint and args.output:
+        public_dir = os.path.join(REMOTION_DIR, "public")
+        os.makedirs(public_dir, exist_ok=True)
+        preview_dest = os.path.join(public_dir, "preview.json")
+        shutil.copy2(args.blueprint, preview_dest)
+        print(f"  Copied blueprint → {preview_dest}")
+        # VideoComposer fetches preview.json via staticFile() when blueprintJson is "{}"
+        props = {"blueprintJson": "{}"}
+        success = remotion_render(args.composition, args.output, props)
+        sys.exit(0 if success else 1)
+
+    # No valid args: print diagnostics
     print(f"render.py — Remotion 渲染工具")
     print(f"  REPO_ROOT:    {REPO_ROOT}")
     print(f"  REMOTION_DIR: {REMOTION_DIR}")
     print(f"  REMOTION_DIR exists: {os.path.isdir(REMOTION_DIR)}")
+    print(f"\nUsage: render.py --blueprint <path> --output <path> [--composition VideoComposer]")

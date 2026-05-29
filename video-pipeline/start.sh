@@ -72,7 +72,7 @@ start_frontend() {
 }
 
 start_remotion() {
-    log "启动 Remotion Studio (on :3000)..."
+    log "启动 Remotion Studio (on :3333)..."
     cd "$SCRIPT_DIR/frontend/remotion"
 
     # 检查 node_modules
@@ -122,7 +122,7 @@ case "${1:-all}" in
         echo ""
         log "后端 PID: $BACKEND_PID (http://localhost:18274)"
         log "前端 PID: $FRONTEND_PID (http://localhost:15392)"
-        log "Remotion PID: $REMOTION_PID (http://localhost:3000)"
+        log "Remotion PID: $REMOTION_PID (http://localhost:3333)"
         echo ""
         log "按 Ctrl+C 停止所有服务"
 

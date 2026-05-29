@@ -45,8 +45,7 @@ class CodeAgentLLM:
     ):
         self.system_prompt = system_prompt
         self.output_schema = output_schema
-        self.llm = ClaudeCodeChatModel.from_pydantic(
-            output_schema,
+        self.llm = ClaudeCodeChatModel(
             allowed_tools=allowed_tools or ["Read", "Glob", "Grep", "Bash(gh:*)"],
             timeout=timeout,
             effort=effort,
@@ -59,6 +58,9 @@ class CodeAgentLLM:
         system_text = self.system_prompt
         for k, v in variables.items():
             system_text = system_text.replace(f"{{{k}}}", str(v))
+            
+        schema_str = json.dumps(self.output_schema.model_json_schema(), ensure_ascii=False, indent=2)
+        system_text += "\n\n### 期望的 JSON Schema\n请严格遵守以下 JSON Schema 输出:\n```json\n" + schema_str + "\n```"
 
         # Build a simple user message with the remaining content
         user_parts = [f"{k}:\n{v}" for k, v in variables.items()]

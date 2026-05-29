@@ -2,10 +2,9 @@
 
 import asyncio
 import logging
-import re
+import shutil
+import tempfile
 from pathlib import Path
-
-import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -18,25 +17,21 @@ MERMAID_STARTS = (
 
 from ...domain.media_generator.interfaces import DiagramGenerator as IDiagramGenerator
 
-KROKI_URL = "https://kroki.io"
-
 
 class DiagramGenerator(IDiagramGenerator):
-    """Detects Mermaid code in script segments and renders to SVG files."""
+    """Detects Mermaid code in script segments and renders to SVG files via local mmdc CLI."""
 
-    def __init__(self, kroki_url: str = KROKI_URL) -> None:
-        self.kroki_url = kroki_url.rstrip("/")
+    def __init__(self) -> None:
+        self._mmdc = shutil.which("mmdc")
+        if not self._mmdc:
+            logger.warning("mmdc not found in PATH; diagram rendering will be skipped")
 
     async def generate(self, script, output_dir: str) -> list[str]:
-        """Walk script.segments, render Mermaid in assigned_asset to SVG.
+        """Walk script.segments, render Mermaid in assigned_asset to SVG via local mmdc."""
+        if not self._mmdc:
+            logger.warning("mmdc not available, skipping diagram generation")
+            return []
 
-        Args:
-            script: Script object with .segments list of ScriptSegment.
-            output_dir: The directory to save generated diagrams.
-
-        Returns:
-            List of generated file paths.
-        """
         generated: list[str] = []
         out_dir = Path(output_dir)
         diagrams_dir = out_dir / "diagrams"
@@ -69,16 +64,23 @@ class DiagramGenerator(IDiagramGenerator):
         return any(stripped.startswith(prefix) for prefix in MERMAID_STARTS)
 
     async def _render_mermaid(self, mermaid_code: str) -> str:
-        """Render Mermaid code to SVG via Kroki API.
+        """Render Mermaid code to SVG via local mmdc CLI."""
+        with tempfile.TemporaryDirectory() as tmp:
+            mmd_path = Path(tmp) / "input.mmd"
+            svg_path = Path(tmp) / "output.svg"
+            mmd_path.write_text(mermaid_code.strip(), encoding="utf-8")
 
-        Kroki accepts POST /mermaid/svg with plain-text Mermaid body
-        and returns SVG content.
-        """
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                f"{self.kroki_url}/mermaid/svg",
-                content=mermaid_code.strip(),
-                headers={"Content-Type": "text/plain"},
+            proc = await asyncio.create_subprocess_exec(
+                self._mmdc,
+                "-i", str(mmd_path),
+                "-o", str(svg_path),
+                "--quiet",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
             )
-            resp.raise_for_status()
-            return resp.text
+            _, stderr = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+
+            if proc.returncode != 0:
+                raise RuntimeError(f"mmdc exited {proc.returncode}: {stderr.decode().strip()}")
+
+            return svg_path.read_text(encoding="utf-8")

@@ -148,9 +148,11 @@ class GithubTrendingUseCase:
 
             # Merge and calculate final score
             final_repos: list[ScoredRepo] = []
+            raw_lookup = {(r.owner, r.name) for r in raw_repos}
             for sr in llm_res.repos:
                 raw = next((r for r in raw_repos if r.owner == sr.owner and r.name == sr.name), None)
                 if not raw:
+                    logger.debug(f"[Graph] GithubTrendingUseCase: LLM repo '{sr.owner}/{sr.name}' not found in raw repos")
                     continue
 
                 content_score = (sr.tech_depth + sr.video_friendly + sr.topic_heat + sr.onboarding_exp) / 4
@@ -176,6 +178,15 @@ class GithubTrendingUseCase:
                     final_score=final_score,
                     one_liner=sr.one_liner,
                 ))
+
+            if not final_repos:
+                logger.warning("[Graph] GithubTrendingUseCase: No repos matched after LLM scoring merge. "
+                               f"LLM returned {len(llm_res.repos)} scored repos, raw had {len(raw_repos)}.")
+                await self.status_service.transition(
+                    task_id, PipelineStatus.ERROR, node="github_trending",
+                    error="No trending repositories matched after scoring.",
+                )
+                return {**state, "status": PipelineStatus.ERROR, "error": "No trending repositories matched after scoring."}
 
             final_repos.sort(key=lambda x: (x.recent_stars_7d > 0, x.recent_stars_7d, x.final_score), reverse=True)
             final_repos = final_repos[:20]

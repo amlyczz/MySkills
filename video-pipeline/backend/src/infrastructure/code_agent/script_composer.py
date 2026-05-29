@@ -3,6 +3,7 @@
 Drop-in replacement for LLMScriptComposer. Same prompts, different LLM backend.
 """
 
+import json
 import logging
 from typing import Callable, Optional
 
@@ -20,7 +21,9 @@ class CodeAgentScriptComposer(ScriptComposer):
     """ScriptComposer backed by Claude Code CLI."""
 
     def __init__(self, timeout: int = 900, effort: str = "medium", on_progress: Optional[Callable[[str], None]] = None) -> None:
-        self.llm = ClaudeCodeChatModel.from_pydantic(Script, timeout=timeout, effort=effort, on_progress=on_progress)
+        # Do not use from_pydantic, as strict structured output enforcement 
+        # can cause error_max_structured_output_retries for complex schemas.
+        self.llm = ClaudeCodeChatModel(timeout=timeout, effort=effort, on_progress=on_progress)
 
     async def compose_script(
         self,
@@ -32,6 +35,10 @@ class CodeAgentScriptComposer(ScriptComposer):
     ) -> Script:
         system = load_prompt("script_composer", "compose_script_system.md")
         user_template = load_prompt("script_composer", "compose_script_user.md")
+
+        # Inject JSON schema into system prompt to guide generation without strict API enforcement
+        schema_str = json.dumps(Script.model_json_schema(), ensure_ascii=False, indent=2)
+        system += "\n\n### 期望的 JSON Schema\n请严格遵守以下 JSON Schema 输出:\n```json\n" + schema_str + "\n```"
 
         # Extract encyclopedia (may be None for incomplete content)
         encyclopedia = content.content if content else None

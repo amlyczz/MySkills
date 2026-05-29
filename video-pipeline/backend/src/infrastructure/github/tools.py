@@ -106,6 +106,12 @@ async def _gh_get(endpoint: str, extra_headers: dict | None = None) -> dict | li
         except httpx.ConnectError as e:
             logger.warning(f"Connect error for {endpoint}: {e}")
             return None
+        except httpx.ReadError as e:
+            if attempt == 2:
+                logger.warning(f"Read error for {endpoint}: {e}")
+                return None
+            logger.info(f"Read error for {endpoint} (attempt {attempt+1}/3): {e}")
+            await asyncio.sleep(1 * (attempt + 1))
     return None
 
 
@@ -124,6 +130,11 @@ async def _gh_get_text(url: str, headers: dict | None = None) -> str:
         except httpx.TimeoutException:
             if attempt == 2:
                 raise
+            await asyncio.sleep(1 * (attempt + 1))
+        except httpx.ReadError as e:
+            if attempt == 2:
+                raise
+            logger.info(f"Read error for {url} (attempt {attempt+1}/3): {e}")
             await asyncio.sleep(1 * (attempt + 1))
     return ""
 

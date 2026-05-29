@@ -142,7 +142,7 @@ async def hitl_blueprint_review_node(state: PipelineState) -> PipelineState:
             preview_path = remotion_public / "preview.json"
             with open(preview_path, "w", encoding="utf-8") as f:
                 json.dump(blueprint.model_dump(exclude_none=True, by_alias=True), f, ensure_ascii=False, indent=2)
-            preview_url = "http://localhost:31200/"
+            preview_url = "http://localhost:3333/?composition=VideoComposer"
         except Exception as e:
             logger.warning("Failed to write preview.json: %s", e)
 

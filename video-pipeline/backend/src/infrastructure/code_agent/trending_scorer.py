@@ -81,8 +81,7 @@ class CodeAgentTrendingScorer:
         self._chunk_size = 5
 
     def _create_llm(self) -> ClaudeCodeChatModel:
-        return ClaudeCodeChatModel.from_pydantic(
-            TrendingResponse,
+        return ClaudeCodeChatModel(
             allowed_tools=["Bash", "Read", "Glob", "Grep", "Agent"],
             timeout=self.timeout,
             effort=self.effort,
@@ -133,15 +132,21 @@ class CodeAgentTrendingScorer:
 
     async def _async_score_chunk(self, chunk: list[dict], index: int) -> TrendingResponse:
         """Score a single chunk using a dedicated ClaudeCodeChatModel."""
+        from langchain_core.messages import SystemMessage, HumanMessage
+
         llm = self._create_llm()
         repos_json = json.dumps(chunk, ensure_ascii=False, indent=2)
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", _SCORING_SYSTEM_PROMPT),
-            ("user", "待评估的仓库数据（块 {index}）：\n{repos_json}"),
-        ])
-        
-        chain = prompt | llm | self._parse_result
-        return await chain.ainvoke({"index": index, "repos_json": repos_json})
+        schema_str = json.dumps(TrendingResponse.model_json_schema(), ensure_ascii=False, indent=2)
+        system_content = _SCORING_SYSTEM_PROMPT + "\n\n### 期望的 JSON Schema\n请严格遵守以下 JSON Schema 输出:\n```json\n" + schema_str + "\n```"
+
+        messages = [
+            SystemMessage(content=system_content),
+            HumanMessage(content=f"待评估的仓库数据（块 {index}）：\n{repos_json}"),
+        ]
+
+        result = llm._generate(messages)
+        msg = result.generations[0].message
+        return self._parse_result(msg)
 
     @staticmethod
     def _parse_result(msg) -> TrendingResponse:

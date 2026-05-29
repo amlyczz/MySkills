@@ -135,14 +135,15 @@ class LLMScriptComposer(ScriptComposer):
         
         logger.info("[LLMScriptComposer] Generating script plan for duration: %s", total_duration_str)
         plan: Optional[ScriptPlan] = None
-        for attempt in range(3):
+        for attempt in range(2):
             try:
                 plan = await plan_chain.ainvoke(base_params)
                 break
             except ValueError as e:
-                if "token limit" in str(e).lower() or "empty content" in str(e).lower() or "empty json" in str(e).lower():
+                err_str = str(e).lower()
+                if "token limit" in err_str or "empty content" in err_str or "empty json" in err_str or "eof" in err_str or "json_invalid" in err_str:
                     logger.warning("[LLMScriptComposer] Plan generation attempt %d failed: %s", attempt + 1, e)
-                    if attempt == 2:
+                    if attempt == 1:
                         logger.warning("[LLMScriptComposer] Falling back to non-reasoning model for script plan")
                         from ..config.app_config import settings
                         fallback_llm = get_llm(LLMRole.GENERATION, model=settings.llm_model_fast)
@@ -179,14 +180,15 @@ class LLMScriptComposer(ScriptComposer):
             })
             
             chapter_script: Optional[ChapterScript] = None
-            for attempt in range(3):
+            for attempt in range(2):
                 try:
                     chapter_script = await script_chain.ainvoke(chapter_params)
                     break
                 except ValueError as e:
-                    if "token limit" in str(e).lower() or "empty content" in str(e).lower() or "empty json" in str(e).lower():
+                    err_str = str(e).lower()
+                    if "token limit" in err_str or "empty content" in err_str or "empty json" in err_str or "eof" in err_str or "json_invalid" in err_str:
                         logger.warning("[LLMScriptComposer] Chapter %d attempt %d failed: %s", i+1, attempt + 1, e)
-                        if attempt == 2:
+                        if attempt == 1:
                             logger.warning("[LLMScriptComposer] Falling back to non-reasoning model for chapter %d", i + 1)
                             from ..config.app_config import settings
                             fallback_llm = get_llm(LLMRole.GENERATION, model=settings.llm_model_fast)

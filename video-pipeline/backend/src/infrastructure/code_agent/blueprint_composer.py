@@ -37,7 +37,7 @@ class CodeAgentBlueprintComposer(BlueprintComposer):
 
         # Inject JSON schema into system prompt to guide generation without strict API enforcement
         schema_str = json.dumps(Blueprint.model_json_schema(), ensure_ascii=False, indent=2)
-        system += f"\n\n### 期望的 JSON Schema\n请严格遵守以下 JSON Schema 输出:\n```json\n{schema_str}\n```"
+        system += "\n\n### 期望的 JSON Schema\n请严格遵守以下 JSON Schema 输出:\n```json\n" + schema_str + "\n```"
 
         context_parts = []
         context_parts.append(f"脚本:\n{script.model_dump_json(indent=2)}")
