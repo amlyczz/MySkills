@@ -258,6 +258,9 @@ export const animationRegistry: Record<AnimationType, AnimationFn> = {
   "stamp-drop": stampDrop,
   "brush-strike": brushStrike,
   "blur-in": blurIn,
+  "char-fly-in": noneAnim,   // handled by component internals (stagger per char)
+  "word-slide": noneAnim,    // handled by component internals (stagger per word)
+  "mask-reveal": noneAnim,   // handled by component internals (clip-path)
 };
 
 /**

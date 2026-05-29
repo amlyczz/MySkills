@@ -54,7 +54,8 @@ export type AnimationType =
   | "scale-in" | "scale-bounce"
   | "slide-left" | "slide-right" | "slide-up" | "slide-down"
   | "bar-grow" | "typewriter"
-  | "reveal" | "stamp-drop" | "brush-strike" | "blur-in";
+  | "reveal" | "stamp-drop" | "brush-strike" | "blur-in"
+  | "char-fly-in" | "word-slide" | "mask-reveal";
 
 // ── Transition ──
 export type TransitionType =
@@ -261,6 +262,29 @@ export interface Blueprint {
         enabled: boolean;
         duckToVolume?: number;
         fadeDurationFrames?: number;
+      };
+    };
+    /** Global post-processing effects */
+    postProcessing?: {
+      colorGrading?: {
+        preset?: "none" | "warm" | "cool" | "vintage" | "cinematic" | "noir";
+        brightness?: number;
+        contrast?: number;
+        saturate?: number;
+      };
+      vignette?: {
+        enabled: boolean;
+        intensity?: number;
+        softness?: number;
+      };
+      bloom?: {
+        enabled: boolean;
+        intensity?: number;
+        threshold?: number;
+      };
+      chromaticAberration?: {
+        enabled: boolean;
+        intensity?: number;
       };
     };
   };

@@ -13,6 +13,39 @@ interface Props {
   blueprint: Blueprint;
 }
 
+/** Post-processing overlay: color grading, vignette, bloom via CSS */
+const PostProcessingOverlay: React.FC<{ config: any }> = ({ config }) => {
+  const filterParts: string[] = [];
+
+  // Color grading
+  const cg = config.colorGrading;
+  if (cg) {
+    if (cg.brightness) filterParts.push(`brightness(${1 + cg.brightness})`);
+    if (cg.contrast) filterParts.push(`contrast(${1 + cg.contrast})`);
+    if (cg.saturate !== undefined) filterParts.push(`saturate(${cg.saturate})`);
+  }
+
+  // Bloom (approximate with blur + brightness)
+  const bloom = config.bloom;
+  if (bloom?.enabled) {
+    filterParts.push(`brightness(${1 + (bloom.intensity ?? 0.3)})`);
+  }
+
+  const style: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    ...(filterParts.length > 0 ? { filter: filterParts.join(" ") } : {}),
+    // Vignette via inset box-shadow
+    ...(config.vignette?.enabled ? {
+      boxShadow: `inset 0 0 ${200 * (config.vignette.softness ?? 0.5)}px rgba(0,0,0,${config.vignette.intensity ?? 0.4})`,
+    } : {}),
+    zIndex: 9999,
+  };
+
+  return <div style={style} />;
+};
+
 export const TemplateRenderer: React.FC<Props> = ({ blueprint }) => {
   const { globalSettings, globalBackground, globalOverlays, scenes, data } = blueprint;
   const { fps } = useVideoConfig();
@@ -188,6 +221,9 @@ export const TemplateRenderer: React.FC<Props> = ({ blueprint }) => {
           motionTokens={motionTokens}
         />
       ))}
+
+      {/* Layer 3: Post-processing overlay */}
+      {globalSettings.postProcessing && <PostProcessingOverlay config={globalSettings.postProcessing} />}
     </AbsoluteFill>
   );
 };

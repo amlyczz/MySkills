@@ -46,6 +46,7 @@ AnimationType = Literal[
     "slide-left", "slide-right", "slide-up", "slide-down",
     "bar-grow", "typewriter",
     "reveal", "stamp-drop", "brush-strike", "blur-in",
+    "char-fly-in", "word-slide", "mask-reveal",
 ]
 
 TransitionType = Literal[

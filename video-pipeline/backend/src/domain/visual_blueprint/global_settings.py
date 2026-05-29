@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from .motion import MotionToken
@@ -49,9 +49,17 @@ class GlobalAudioConfig(BaseModel):
     sfx: Optional[dict[str, str]] = None
     ducking: Optional[AudioDucking] = None
 
+class PostProcessingConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    colorGrading: Optional[dict[str, Any]] = None
+    vignette: Optional[dict[str, Any]] = None
+    bloom: Optional[dict[str, Any]] = None
+    chromaticAberration: Optional[dict[str, Any]] = None
+
 class GlobalSettings(BaseModel):
     model_config = ConfigDict(extra="allow")
     safeArea: Optional[SafeArea] = None
     theme: ThemeConfig = Field(default_factory=ThemeConfig)
     motionTokens: Optional[dict[str, MotionToken]] = None
     audio: Optional[GlobalAudioConfig] = None
+    postProcessing: Optional[PostProcessingConfig] = None
